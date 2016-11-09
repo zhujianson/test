@@ -1,0 +1,28 @@
+//
+//  OneExpertViewController.h
+//  jiuhaohealth2.1
+//
+//  Created by wangmin on 14-8-31.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "Common.h"
+//#import "IconOperationQueue.h"
+
+@interface OneExpertViewController : CommonViewController
+//<IconOperationQueueDelegate>
+{
+//	IconOperationQueue *m_OperationQueue;
+	
+//	BOOL m_isTabbarDown;
+//	BOOL m_down;
+//	float m_lastScrollOfferY;
+}
+
+@property (nonatomic, assign) UIView *tabbarView;
+
+@property (nonatomic,retain) NSString *postId;
+@property (nonatomic,retain) NSString *doctorId;
+
+@end

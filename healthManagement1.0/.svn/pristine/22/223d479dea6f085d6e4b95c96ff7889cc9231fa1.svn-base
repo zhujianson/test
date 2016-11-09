@@ -1,0 +1,28 @@
+//
+//  LoginViewController.h
+//  waimaidan2.0
+//
+//  Created by sunzhf on 13-4-3.
+//  Copyright (c) 2013年 qianliqianxun. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "SSCheckBoxView.h"
+#import "Common.h"
+
+@interface LoginViewController : CommonViewController<UITextFieldDelegate, UIActionSheetDelegate,UIAlertViewDelegate>{
+    
+    UITextField *m_txtUserName;
+    UITextField *m_txtPassWord;
+    
+    UITextField *m_txtURL;
+    
+    SSCheckBoxView *m_checkBox;
+    id m_fvc;
+}
+- (void)setFid:(id)vc;
+
++ (NSString *)getUserName;
++ (NSString *)getUserPswd;
+
+@end

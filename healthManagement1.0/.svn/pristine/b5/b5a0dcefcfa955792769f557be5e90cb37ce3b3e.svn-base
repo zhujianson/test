@@ -1,0 +1,443 @@
+//
+//  PerfectInformation.m
+//  jiuhaohealth4.0
+//
+//  Created by xjs on 15/4/22.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "PerfectInformation.h"
+#import "PickerView.h"
+#import "InputDueDatePicker.h"
+#import "SelectedView.h"
+#import "PickerView.h"
+#import "HMHomeViewController.h"
+#import "PerfectCell.h"
+#import "AppDelegate.h"
+#import "LocationManager.h"
+
+
+@implementation PerfectInformation
+{
+    UIScrollView * m_scroll;
+    NSInteger tagNum;
+    SelectedView * selectedView;
+    UITableView * m_myTable;
+    NSMutableArray* dataArray;
+    UIScrollView*m_scrollView;
+    BOOL isPush_Vip;
+
+}
+@synthesize m_infoDic;
+
+- (void)dealloc
+{
+    [m_scroll release];
+    [m_infoDic release];
+    [m_scrollView release];
+    [_pasWod release];
+    [_photoStr release];
+    [_m_token release];
+
+    for (NSDictionary *dic in dataArray) {
+        [dic release];
+    }
+    [dataArray release];
+    [m_myTable release];
+    [super dealloc];
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    [self hiddenNavigationBarLine];
+
+    /* Listen for keyboard */
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    /* No longer listen for keyboard */
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+
+    self.title = @"完善资料";
+    UIBarButtonItem *left = [Common CreateNavBarButton:self setEvent:nil setImage:nil setTitle:nil];
+    self.navigationItem.leftBarButtonItem = left;
+
+    if (!g_nowUserInfo.userToken) {
+        NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+        [dic setObject:_photoStr forKey:@"username"];
+        [dic setObject:_pasWod forKey:@"password"];
+//        [dic setObject:@"13126516214" forKey:@"username"];
+//        [dic setObject:@"111111" forKey:@"password"];
+
+        [[CommonHttpRequest defaultInstance] sendNewPostRequest:LOGIN_API_URL values:dic requestKey:LOGIN_API_URL delegate:self controller:self actiViewFlag:0 title:NSLocalizedString(@"加载中...", nil)];
+    }
+    [self createPerfect];
+}
+
+- (void)createPerfect
+{
+    UIView * whiteView = [[[UIView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, 0)]autorelease];
+    whiteView.backgroundColor = [CommonImage colorWithHexString:Color_fafafa];
+    [self.view addSubview:whiteView];
+    
+    m_infoDic = [[NSMutableDictionary alloc]initWithObjectsAndKeys:@"",@"nickName",@"男",@"sex",@"",@"birthday",@"",@"Diabetes",@"",@"time",@"无",@"complications",@"",@"history", nil];
+    
+    dataArray = [[NSMutableArray alloc] initWithObjects:
+                  [@{ @"title" : @"姓名",@"value" : @"" } mutableCopy],
+                  [@{ @"title" : @"性别",@"value" : [Common isNULLString3:[m_infoDic objectForKey:@"sex"]] } mutableCopy],
+                  [@{ @"title" : @"生日",@"value" : [Common isNULLString3:[m_infoDic objectForKey:@"birthday"]] } mutableCopy],
+                  [@{ @"title" : @"既往病史",@"value" : [Common isNULLString3:[m_infoDic objectForKey:@"history"]] } mutableCopy],
+                 nil];
+    
+    m_scrollView = [[UIScrollView alloc]initWithFrame:CGRectMake(0, whiteView.bottom+20, kDeviceWidth, kDeviceHeight)];
+    m_scrollView.delegate = self;
+    m_scrollView.backgroundColor = [UIColor clearColor];
+    m_scrollView.showsVerticalScrollIndicator = NO;
+    [self.view addSubview:m_scrollView];
+
+    m_scroll = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, 45*5)];
+    m_scroll.backgroundColor = [UIColor clearColor];
+    m_scroll.pagingEnabled = YES;
+    m_scroll.delegate = self;
+    m_scroll.showsHorizontalScrollIndicator = NO;
+    [m_scrollView addSubview:m_scroll];
+    m_scroll.contentSize = CGSizeMake(kDeviceWidth*2, 0);
+    m_scroll.scrollEnabled = NO;
+
+    m_myTable = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, m_scroll.height-45) style:UITableViewStylePlain];
+    m_myTable.layer.borderWidth = 0.5;
+    m_myTable.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+    m_myTable.showsVerticalScrollIndicator = NO;
+    m_myTable.delegate = self;
+    m_myTable.dataSource = self;
+    m_myTable.scrollEnabled = NO;
+    
+    m_myTable.backgroundColor = [UIColor clearColor];
+    [m_scroll addSubview:m_myTable];
+    m_myTable.rowHeight = 45;
+    m_myTable.separatorColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_QIAN];
+    [Common setExtraCellLineHidden:m_myTable];
+    
+    [self withdrawFromAccount:m_scrollView];
+}
+
+- (void)withdrawFromAccount:(UIScrollView*)object
+{
+    UIView* cleanView =
+    [[[UIView alloc] initWithFrame:CGRectMake(0, m_scroll.bottom-45, kDeviceWidth, 110)] autorelease];
+    cleanView.tag = 212;
+    cleanView.backgroundColor = [UIColor clearColor];
+    
+    UIImage* backImage =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:@"ff5232"]];
+    UIButton * determine = nil;
+    determine = [UIButton buttonWithType:UIButtonTypeCustom];
+    determine.frame = CGRectMake(15, 30, kDeviceWidth-30, 45);
+    [determine addTarget:self action:@selector(withdraw:) forControlEvents:UIControlEventTouchUpInside];
+    [determine setTitle:@"完成注册" forState:UIControlStateNormal];
+    determine.tag = 77;
+    [determine setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [determine setBackgroundImage:backImage forState:UIControlStateNormal];
+    determine.layer.cornerRadius = 4;
+    determine.clipsToBounds = YES;
+    [cleanView addSubview:determine];
+    
+//    UILabel * lab = [Common createLabel:CGRectMake(15, determine.bottom+20, 200, 20) TextColor:@"999999" Font:[UIFont systemFontOfSize:13] textAlignment:NSTextAlignmentLeft labTitle:@"扫一扫绑定康迅360智能设备"];
+//    [cleanView addSubview:lab];
+    [object addSubview:cleanView];
+    object.contentSize = CGSizeMake(0, cleanView.bottom+80);
+}
+
+- (void)withdraw:(UIButton*)btn
+{
+    
+    [self textResignFirst];
+    if (btn.tag == 77) {
+        if (isPush_Vip) {
+            [self goToMainViewController];
+            return;
+        }
+        isPush_Vip = NO;
+    }else{
+        isPush_Vip = YES;
+    }
+    NSDictionary * m_dic = [NSDictionary dictionary];
+    m_dic = m_infoDic;
+    if (![m_dic[@"nickName"] length]) {
+        [Common TipDialog2:@"姓名不能为空"];
+        return;
+    } else if (![m_dic[@"sex"] length]) {
+        [Common TipDialog2:@"请选择性别"];
+        return;
+    } else if (![m_dic[@"birthday"] length]) {
+        [Common TipDialog2:@"请选择生日"];
+        return;
+    }
+
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:m_dic[@"nickName"] forKey:@"nick_name"];
+    [dic setObject:m_dic[@"birthday"] forKey:@"birthday"];
+    [dic setObject:@"5" forKey:@"diabetic_type"];
+    [dic setObject:m_dic[@"history"] forKey:@"history"];
+    [dic setObject:@"" forKey:@"is_complication"];
+    [dic setObject:@"" forKey:@"confirm_date"];
+
+    NSString * url = DIABETIC_API_URL;
+    [dic setObject:[self setSexWithStr:m_dic[@"sex"]] forKey:@"sex"];
+    [dic setObject:[LocationManager sharedManager].localStateString forKey:@"province"];
+    [dic setObject:[LocationManager sharedManager].localSubLocationString forKey:@"city"];
+
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:url values:dic requestKey:url delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"完善中...", nil)];
+
+}
+
+- (NSString*)setSexWithStr:(NSString*)sex
+{
+    NSString * type = nil;
+    if ([sex isEqualToString:@"男"]) {
+        type = @"1";
+    }else{
+        type = @"2";
+    }
+    return type;
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView*)tableView
+{
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView*)tableView numberOfRowsInSection:(NSInteger)section
+{
+        return [dataArray count];
+}
+
+- (UITableViewCell*)tableView:(UITableView*)tableView cellForRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    static NSString* cellF = @"cell";
+    PerfectCell* cell = [tableView dequeueReusableCellWithIdentifier:cellF];
+    if (!cell) {
+        cell = [[[PerfectCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:cellF] autorelease];
+        cell.backgroundColor = [UIColor whiteColor];
+        //自定义右箭头
+        cell.accessoryView = [CommonImage creatRightArrowX:cell.frame.size.width-22 Y:(cell.frame.size.height-12)/2 cell:cell];
+        //cell点击背景颜色
+        cell.selectedBackgroundView = [Common creatCellBackView];
+        
+        [cell setP_block:^(NSDictionary *dic) {
+                [m_infoDic setObject:dic[@"nickName"] forKey:@"nickName"];
+                [m_infoDic setObject:dic[@"photo"] forKey:@"photo"];
+        }];
+    }
+    NSDictionary* dic;
+        dic = dataArray[indexPath.row];
+    [cell setInfoWithDic:dic row:indexPath.row];
+    return cell;
+}
+
+- (void)tableView:(UITableView*)tableView didSelectRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    if (!indexPath.row || indexPath.row == 7) {
+        return;
+    }
+    [self textResignFirst];
+    
+    NSMutableDictionary * dic = [NSMutableDictionary dictionary];
+    NSMutableArray * arr = [NSMutableArray array];
+        dic = m_infoDic;
+        arr = dataArray;
+//    NSMutableDictionary * m_arrDic = arr[indexPath.section][indexPath.row];
+    if (indexPath.row == 2) {
+        [self setTimePickerWithString:dic[@"birthday"] type:0 dictory:dic array:arr table:tableView];
+        return;
+    }else if(indexPath.row == 4)
+    {
+        [self setTimePickerWithString:dic[@"time"] type:1 dictory:dic array:arr table:tableView];
+        return;
+    }
+    NSMutableArray* fiisrtArray;
+    NSString* defualt, *titl;
+    PickerView* myPicker = [[PickerView alloc] init];
+    switch (indexPath.row) {
+        case 1:
+                titl = @"请选择性别";
+                fiisrtArray = [NSMutableArray arrayWithObjects:@"男", @"女",  nil];
+            defualt = dic[@"sex"];
+            [myPicker createPickViewWithArray:[NSArray arrayWithObject:fiisrtArray] andWithSelectString:defualt setTitle:titl isShow:NO];
+            [myPicker setPickerViewBlock:^(NSString* content) {
+                [dic setObject:content forKey:@"sex"];
+                [arr[indexPath.row] setObject:content forKey:@"value"];
+                [tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:indexPath.row inSection:indexPath.section]] withRowAnimation:UITableViewRowAnimationNone];
+            }];
+            break;
+        case 3:
+            titl = @"请选择既往病史";
+            fiisrtArray = [CommonUser getHistoryDisease];
+            defualt = dic[@"history"];
+            [myPicker createPickViewWithArray:[NSArray arrayWithObject:fiisrtArray] andWithSelectString:defualt setTitle:titl isShow:NO];
+            [myPicker setPickerViewBlock:^(NSString* content) {
+                [dic setObject:content forKey:@"history"];
+                [arr[indexPath.row] setObject:content forKey:@"value"];
+                [tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:indexPath.row inSection:indexPath.section]] withRowAnimation:UITableViewRowAnimationNone];
+            }];
+            break;
+        default:
+            break;
+    }
+}
+
+- (void)setTimePickerWithString:(NSString *)timeString type:(int)type dictory:(NSMutableDictionary*)dic array:(NSMutableArray*)arr table:(UITableView*)table
+{
+    if (!timeString.length)
+    {
+        timeString = @"1980-06-15";
+    }
+    //时间日期选择器
+    InputDueDatePicker* inputDueDateView = [[InputDueDatePicker alloc] initWithTitle:@"请选择出生年月日"];
+    
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+    NSDate* dateTime = [dateFormatter dateFromString:timeString];
+    inputDueDateView.inputDueDatePicker.date = dateTime;
+    [dateFormatter release];
+    
+    [self.view addSubview:inputDueDateView];
+    [inputDueDateView setInputDueDatePickerBlock:^(NSDate* date) {
+        NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+        [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+        NSString * datestr = [dateFormatter stringFromDate:date];
+        [dateFormatter release];
+        [dic setObject:datestr forKey:@"birthday"];
+        [arr[2] setObject:datestr forKey:@"value"];
+        [table reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:2 inSection:0]] withRowAnimation:UITableViewRowAnimationNone];
+        
+    }];
+    [inputDueDateView release];
+}
+
+- (void)textFieldDidEndEditing:(UITextField *)textField
+{
+        [m_infoDic setObject:textField.text forKey:@"nickName"];
+}
+
+- (UITextField*)createTextField:(NSString*)title
+{
+    UITextField* text = [[[UITextField alloc] init]autorelease];
+    text.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+    text.contentMode = UIViewContentModeCenter;
+    text.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    text.placeholder = title;
+    text.returnKeyType = UIReturnKeyDone;
+    
+    //    text.clearButtonMode = YES;
+    text.delegate = self;
+    [text setTextColor:[CommonImage colorWithHexString:@"#666666"]];
+    [text setFont:[UIFont systemFontOfSize:14]];
+    return text;
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+{
+}
+
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
+{
+    [self textResignFirst];
+}
+
+- (void)textResignFirst
+{
+    UITableView * tab;
+        tab = m_myTable;
+    PerfectCell *cell = (PerfectCell*)[tab cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+    UITextField * field = (UITextField*)[cell viewWithTag:110];
+    [field resignFirstResponder];
+}
+
+//进入首页
+- (void)goToMainViewController
+{
+    HMHomeViewController* home = [[HMHomeViewController alloc] init];
+    UIImage* nowViewImage = [CommonImage imageWithView:self.view];
+    CommonNavViewController*view = [[CommonNavViewController alloc] initWithRootViewController:home];
+    APP_DELEGATE.rootViewController = view;
+    [view release];
+    
+    UIImageView* nowView = [[UIImageView alloc] initWithImage:nowViewImage];
+    nowView.frame = CGRectMake(0, 0, kDeviceWidth, kDeviceHeight + 64);
+    [APP_DELEGATE addSubview:nowView];
+    [nowView release];
+    [APP_DELEGATE bringSubviewToFront:nowView];
+    
+    [UIView animateWithDuration:0.35 animations:^{
+        nowView.transform = CGAffineTransformMakeTranslation(0, kDeviceHeight+64);
+    } completion:^(BOOL finished) {
+        [nowView removeFromSuperview];
+    }];
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dict = [responseString KXjSONValueObject];
+    NSDictionary * dic = dict[@"head"];
+    
+    if ([[dic objectForKey:@"state"] intValue] != 0) {
+        [Common TipDialog:[dic objectForKey:@"msg"]];
+        isPush_Vip = NO;
+        return;
+    }
+    else {
+        if([loader.username isEqualToString:LOGIN_API_URL]){
+            _m_token = dict[@"body"][@"token"];
+            g_nowUserInfo = [Common initWithUserInfoDict:[dict objectForKey:@"body"]];
+        }
+        else if([loader.username isEqualToString:DIABETIC_API_URL] || [loader.username isEqualToString:DIABETIC_Fam_API_URL]){
+                //进入首页
+                [self goToMainViewController];
+        }
+    }
+}
+
+- (void)getMyInfo
+{
+    //获取个人信息
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GETMYINFO_API_URL values:dic requestKey:GETMYINFO_API_URL delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"获取个人信息...", nil)];
+}
+
+
+#pragma mark - 键盘移坐标
+//当键盘出现时候上移坐标
+- (void	)keyboardWillShow:(NSNotification *)aNotification {
+}
+
+//当键盘消失时候下移坐标
+- (void)keyboardWillHide:(NSNotification *)aNotification {
+    if (kDeviceHeight-260 < 9*45) {
+        [UIView animateWithDuration:0.35 animations:^{
+            if (IOS_7) {
+                self.view.frame = [Common rectWithOrigin:self.view.frame x:0 y:64];
+            }else{
+                self.view.frame = APP_DELEGATE.frame;
+            }
+        }];
+    }
+}
+
+@end

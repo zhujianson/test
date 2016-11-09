@@ -1,0 +1,214 @@
+//
+//  ImproveSubscribeTableViewCell.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-8-20.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "ImproveSubscribeTableViewCell.h"
+//#import "UIImageView+WebCache.h"
+#define TITLECOLOR @"56b2ff"
+
+@implementation ImproveSubscribeTableViewCell {
+    UIImageView* imageView;
+    UIImageView* headerImage;
+    UIView* whiteView;
+}
+@synthesize delegate;
+
+- (void)dealloc
+{
+    [whiteView release];
+    [imageView release];
+    [headerImage release];
+
+    [super dealloc];
+}
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString*)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        // Initialization code
+        whiteView = [[UIView alloc] initWithFrame:CGRectMake(10, 0, 300, self.frame.size.height)];
+        whiteView.backgroundColor = [UIColor whiteColor];
+        whiteView.layer.cornerRadius = 4;
+        whiteView.layer.borderWidth = 0.5;
+        whiteView.layer.borderColor =
+            [[CommonImage colorWithHexString:@"DADADA"] CGColor];
+        [self addSubview:whiteView];
+        //
+        UILabel* dateLable = [Common createLabel:CGRectMake(15, 0, 100, 40) TextColor:@"333333" Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentLeft labTitle:@""];
+        dateLable.tag = 1;
+        [whiteView addSubview:dateLable];
+        //
+        UILabel* timeLable = [Common createLabel:CGRectMake(190, 0, 100, 40) TextColor:@"7B7B7B" Font:[UIFont systemFontOfSize:12] textAlignment:NSTextAlignmentRight labTitle:@""];
+        timeLable.tag = 2;
+        [whiteView addSubview:timeLable];
+
+        //线
+        UIView* lineView = [[UIView alloc] initWithFrame:CGRectMake(0, 40, 300, 1)];
+        lineView.backgroundColor = [CommonImage colorWithHexString:@"f4f4f4"];
+        [whiteView addSubview:lineView];
+        [lineView release];
+
+        headerImage = [[UIImageView alloc] initWithFrame:CGRectMake(10, 45 + 1, 280, 155)];
+        headerImage.image = [UIImage imageNamed:@"common.bundle/common/conversation_logo.png"];
+        [whiteView addSubview:headerImage];
+
+        imageView = [[UIImageView alloc] initWithFrame:CGRectMake(10, 40 + 5 + 160, 280, 155)];
+        imageView.image = [UIImage imageNamed:@"common.bundle/common/conversation_logo.png"];
+        [whiteView addSubview:imageView];
+
+        UILabel* textLable = [Common createLabel:CGRectMake(15, 40, 280, 46) TextColor:TITLECOLOR Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentLeft labTitle:@""];
+        textLable.tag = 3;
+        textLable.numberOfLines = 0;
+        [whiteView addSubview:textLable];
+
+//        UILabel* titleLab;
+//        UILabel* dataLab;
+//        for (int i = 0; i < 6; i++) {
+//            titleLab = [Common createLabel:CGRectMake(15, 0, 270, 0) TextColor:TITLECOLOR Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentLeft labTitle:nil];
+//            titleLab.numberOfLines = 0;
+//            titleLab.tag = i + 100;
+//            [whiteView addSubview:titleLab];
+//            dataLab = [Common createLabel:CGRectMake(15, 0, 270, 0) TextColor:@"666666" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:nil];
+//            dataLab.numberOfLines = 0;
+//            dataLab.tag = i + 200;
+//            [whiteView addSubview:dataLab];
+//        }
+    }
+    return self;
+}
+
+- (void)setPlanText:(NSArray*)arr Data:(NSMutableDictionary*)dic days:(int)days date:(NSString*)date image:(NSDictionary*)imageStr section:(int)section
+{
+    //今天和日期，第一个标题
+    UILabel* lab;
+    lab = (UILabel*)[whiteView viewWithTag:1];
+    lab.text = dic[@"text"];
+    CGRect rect = lab.frame;
+    rect.size.width = 280;
+    lab.frame = rect;
+
+    lab = (UILabel*)[whiteView viewWithTag:2];
+    lab.text = [self dateWithStr:section];
+//    [CommonImage setPicImageQiniu:dic[@"img"] View:headerImage Type:2 Delegate:nil];
+    [CommonImage setImageFromServer:dic[@"img"] View:headerImage Type:2];
+
+    //各种标题和内容和图片
+    CGFloat imageH = 0.0;
+    imageView.hidden = YES;
+    if (imageStr[[NSString stringWithFormat:@"%d", section]]) {
+        imageView.hidden = NO;
+        imageH = [[dic objectForKey:@"imageSize"] floatValue];
+    }
+    CGFloat heiht = 46 + 160;
+    UILabel* titleLab;
+    UILabel* dataLab;
+    CGFloat h;
+    for (int i = 0; i < 9; i++) {
+        //清空标题和内容
+        titleLab = (UILabel*)[whiteView viewWithTag:i + 100];
+        dataLab = (UILabel*)[whiteView viewWithTag:i + 200];
+//        if (titleLab) {
+            dataLab.text = nil;
+            titleLab.text = nil;
+//        }else{
+//            break;
+//        }
+    }
+    for (int i = 0; i < [arr count]; i++) {
+        //标题
+        titleLab = (UILabel*)[whiteView viewWithTag:i + 100];
+        //内容
+        dataLab = (UILabel*)[whiteView viewWithTag:i + 200];
+        if (!titleLab) {
+            titleLab = [Common createLabel:CGRectMake(15, 0, 270, 0) TextColor:TITLECOLOR Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentLeft labTitle:nil];
+            titleLab.numberOfLines = 0;
+            titleLab.tag = i + 100;
+            [whiteView addSubview:titleLab];
+            dataLab = [Common createLabel:CGRectMake(15, 0, 270, 0) TextColor:@"666666" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:nil];
+            dataLab.numberOfLines = 0;
+            dataLab.tag = i + 200;
+            [whiteView addSubview:dataLab];
+        }
+//
+//        
+        if (arr[i][@"title"]) {
+            h = [Common heightForString:arr[i][@"title"] Width:270 Font:[UIFont systemFontOfSize:16]].height + 10;
+            titleLab.frame = [Common rectWithOrigin:titleLab.frame x:0 y:heiht];
+            titleLab.frame = [Common rectWithSize:titleLab.frame width:0 height:h];
+            titleLab.text = arr[i][@"title"];
+            heiht += h;
+        }
+        if (!imageView.hidden) {
+            if (i == [imageStr[imageStr[[NSString stringWithFormat:@"%d", section]]] intValue]) {
+                NSString * strCon = [imageStr[[NSString stringWithFormat:@"%d", section]] stringByAppendingString:@"?imageView/2/w/560"];
+                NSLog(@"%@",strCon);
+//                [CommonImage setPicImageQiniu:strCon View:imageView Type:3 Delegate:^(NSString* path) {
+//                    NSString * strCon3 = [imageStr[[NSString stringWithFormat:@"%d", section]] stringByAppendingString:@"?imageView/2/w/560"];
+//                    NSString* strCon12 = [strCon3 stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
+//                    
+//                    if ([path isEqualToString:strCon12]) {
+//                        if (!imageH) {
+//                            UIImage *image = [UIImage imageWithContentsOfFile:[[Common getImagePath] stringByAppendingFormat:@"/%@",path]];
+//                            imageView.image = image;
+//                            CGSize size = image.size;
+//                            [dic setObject:[NSNumber numberWithFloat:size.height/2] forKey:@"imageSize"];
+//                            [delegate reloadData:self];
+//                        }
+//                    }
+//                }];
+                [CommonImage setImageFromServer:strCon View:imageView Type:3];
+
+                imageView.frame = [Common rectWithSize:imageView.frame width:0 height:imageH];
+                imageView.frame = [Common rectWithOrigin:imageView.frame x:0 y:heiht];
+                heiht += imageH;
+            }
+        }
+        if (arr[i][@"content"]) {
+            h = [Common heightForString:arr[i][@"content"] Width:270 Font:[UIFont systemFontOfSize:15]].height + 10;
+            dataLab.frame = [Common rectWithOrigin:dataLab.frame x:0 y:heiht];
+            dataLab.frame = [Common rectWithSize:dataLab.frame width:0 height:h];
+            dataLab.text = arr[i][@"content"];
+            heiht += h;
+        }
+    }
+    whiteView.frame = [Common rectWithSize:whiteView.frame width:0 height:heiht + 10];
+}
+
+- (NSString*)dateWithStr:(int)daystr
+{
+    NSString* days = nil;
+    //    NSDate * date = [CommonDate convertDateFromString:daystr];
+    NSDate* date = [CommonDate offsetDay:-daystr];
+    days = [CommonDate getServerTime:[date timeIntervalSince1970] type:13];
+    return days;
+}
+
+- (NSString*)daysWithDay:(int)day
+{
+    NSString* days = nil;
+    if (day == 0) {
+        days = @"今天";
+    } else {
+        days = [NSString stringWithFormat:@"第%d天", day];
+    }
+    return days;
+}
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

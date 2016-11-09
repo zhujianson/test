@@ -1,0 +1,53 @@
+//
+//  HeaderCollectionReusableView.m
+//  healthManagement1.0
+//
+//  Created by xjs on 16/7/5.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "HeaderCollectionReusableView.h"
+
+@implementation HeaderCollectionReusableView
+
+- (id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self)
+    {
+        UIView *viewheader = [[UIView alloc] initWithFrame:CGRectMake(15, (45-16)/2, 2, 16)];
+        viewheader.backgroundColor = [CommonImage colorWithHexString:@"42dc83"];
+        [self addSubview:viewheader];
+        
+        _label = [Common createLabel:CGRectMake(viewheader.right+10, 0, 200, 45) TextColor:@"999999" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        [self addSubview:_label];
+        
+//        viewheader = [[UIView alloc] initWithFrame:CGRectMake(0, 39.5+7, kDeviceWidth, 0.5)];
+//        viewheader.backgroundColor = [CommonImage colorWithHexString:LINE_COLOR];
+//        [self addSubview:viewheader];
+        
+        UIButton *butMore = [UIButton buttonWithType:UIButtonTypeCustom];
+        butMore.frame = CGRectMake(kDeviceWidth-85, 0, 80, 45);
+        [butMore setTitle:@"更多" forState:UIControlStateNormal];
+        [butMore setTitleColor:[CommonImage colorWithHexString:@"999999"] forState:UIControlStateNormal];
+        [butMore addTarget:self action:@selector(butEventMoreNews) forControlEvents:UIControlEventTouchUpInside];
+        butMore.titleLabel.font = [UIFont systemFontOfSize:14];
+        [self addSubview:butMore];
+        
+        UIImageView * rightI = [[UIImageView alloc]initWithFrame:CGRectMake(butMore.right-20, butMore.top, 10, butMore.height)];
+        rightI.image = [UIImage imageNamed:@"common.bundle/common/smallR.png"];
+        //        rightI.backgroundColor = [UIColor redColor];
+        rightI.contentMode =  UIViewContentModeCenter;
+        [self addSubview:rightI];
+
+        
+    }
+    return self;
+}
+
+- (void)butEventMoreNews
+{
+    
+}
+
+@end

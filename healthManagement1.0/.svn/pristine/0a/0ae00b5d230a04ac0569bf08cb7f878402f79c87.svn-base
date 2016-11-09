@@ -1,0 +1,18 @@
+//
+//  ActivationViewController.h
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-8-19.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "Common.h"
+
+@interface ActivationViewController : CommonViewController<UITextFieldDelegate>
+{
+    UITextField *m_txtUserName;
+
+}
+@property (nonatomic,copy) NSString* phoneStr;
+
+@end

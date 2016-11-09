@@ -1,0 +1,122 @@
+//
+//  HealthRemindViewController.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-8-5.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "HealthRemindViewController.h"
+#import "HealthAlertListTableViewController.h"
+#import "HealthAlertViewController.h"
+#import "DBOperate.h"
+
+//#import "DiaryViewController.h"
+
+@interface HealthRemindViewController ()<HealthAlertTableViewDelegate>
+
+@end
+
+@implementation HealthRemindViewController
+
+@synthesize moreAlertGet;
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        self.moreAlertGet = NO;
+        self.title = @"健康提醒";
+        self.log_pageID = 94;
+        [self createSaveBtn];
+    }
+    return self;
+
+}
+
+- (BOOL)closeNowView
+{
+    [super closeNowView];
+    
+    //日记进去跳到日记页面
+    for (UIViewController *controller in self.navigationController.viewControllers) {
+//        if ([controller isKindOfClass:[DiaryViewController class]]) {
+//            [self.navigationController popToViewController:controller animated:YES];
+//            return NO;
+//        }
+    }
+    
+    if (self.navigationController.viewControllers.count > 2)
+    {
+        [self.navigationController popToRootViewControllerAnimated:YES];
+        return NO;
+    }
+    return YES;
+}
+
+- (void)createSaveBtn
+{
+    UIButton *but = [UIButton buttonWithType:UIButtonTypeCustom];
+    but.frame = CGRectMake(0, 0, 31, 44);
+    [but addTarget:self action:@selector(butEventAddAlert) forControlEvents:UIControlEventTouchUpInside];
+    [but setImage:[UIImage imageNamed:@"common.bundle/nav/newadd_btn_pre.png"] forState:UIControlStateNormal];
+    UIBarButtonItem *saveBar = [[UIBarButtonItem alloc] initWithCustomView:but];
+    self.navigationItem.rightBarButtonItem = saveBar;
+    [saveBar release];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    
+    HealthAlertListTableViewController* healthAlert = [[HealthAlertListTableViewController alloc] init];
+    healthAlert.tableView.frame = CGRectMake(0, 0, kDeviceWidth, kDeviceHeight+64);
+//    healthAlert.moreAlertGet = self.moreAlertGet;
+    healthAlert.view.backgroundColor = [CommonImage colorWithHexString:ANSWERBACKBACKCOLOR];
+    healthAlert.myDelegate = self;
+    [self.view addSubview:healthAlert.tableView];
+    
+
+//    NSString *jsonString = [[NSBundle mainBundle]pathForResource:@"alert" ofType:@"txt"];
+//    NSString *htmlString = [NSString stringWithContentsOfFile:jsonString encoding:NSUTF8StringEncoding error:nil];
+//    NSData* jsonData = [htmlString dataUsingEncoding:NSUTF8StringEncoding];
+//    NSDictionary * dictionary = [NSJSONSerialization JSONObjectWithData:jsonData options:NSJSONReadingMutableLeaves error:nil];
+//    NSArray *dic_data = [dictionary objectForKey:@"rs"];
+    
+//    UIButton *btn_Login = [UIButton buttonWithType:UIButtonTypeCustom];
+//	btn_Login.frame = CGRectMake(20,kDeviceHeight-75, 280, 50);
+//    NSString *imageName = @"img.bundle/common/green_normal.png";
+//    UIImage *image = [[UIImage imageNamed:imageName] stretchableImageWithLeftCapWidth:5 topCapHeight:5];
+//    [btn_Login setBackgroundImage:image forState:UIControlStateNormal];
+//    btn_Login.layer.cornerRadius = 4;
+//	[btn_Login setTitleColor:[CommonImage colorWithHexString:@"#ffffff"] forState:UIControlStateNormal];
+//	[btn_Login setTitle:NSLocalizedString(@"添加提醒", nil) forState:UIControlStateNormal];
+//	btn_Login.titleLabel.font = [UIFont systemFontOfSize:20];
+//	[btn_Login addTarget:self action:@selector(butEventAddAlert) forControlEvents:UIControlEventTouchUpInside];
+//	[self.view addSubview:btn_Login];
+
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+- (void)butEventAddAlert
+{
+    HealthAlertViewController *alert = [[HealthAlertViewController alloc] initWithUpdate:NO andWithAlertID:nil];
+    [self.navigationController pushViewController:alert animated:YES];
+    [alert release];
+}
+
+- (void)showView:(NSDictionary *)dic Type:(id)type
+{
+    HealthAlertViewController *alert = [[HealthAlertViewController alloc] initWithUpdate:YES andWithAlertID:dic];
+    alert.log_pageID = 95;
+    [self.navigationController pushViewController:alert animated:YES];
+    [alert release];
+}
+
+@end

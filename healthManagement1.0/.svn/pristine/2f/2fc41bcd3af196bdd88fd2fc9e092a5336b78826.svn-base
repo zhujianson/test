@@ -1,0 +1,23 @@
+//
+//  CommunityViewController.h
+//  jiuhaohealth4.0
+//
+//  Created by 徐国洪 on 15-4-16.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+//#import "IconOperationQueue.h"
+
+@interface CommunityViewController : CommonViewController
+{
+    NSMutableArray *m_array;
+    UITableView *m_tableView;
+    
+//    IconOperationQueue *m_OperationQueue;
+}
+
+@property (nonatomic, assign) BOOL m_isShowSearchView;
+@property (nonatomic, assign) float m_tableHeight;
+
+@end

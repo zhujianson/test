@@ -1,0 +1,371 @@
+//
+//  ConfirmViewController.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-8-19.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "ConfirmViewController.h"
+#import "LoginViewController.h"
+#import "AppDelegate.h"
+#import "CommonHttpRequest.h"
+#import "SFHFKeychainUtils.h"
+#import "RetrievePasswordViewController.h"
+#import  "AccountInformationViewController.h"
+
+@interface ConfirmViewController ()
+{
+    BOOL stateFromThird;
+}
+@end
+
+@implementation ConfirmViewController
+
+- (id)initWithNibName:(NSString*)nibNameOrNil bundle:(NSBundle*)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+    }
+    return self;
+}
+
+- (id)initWithType:(int)type
+{
+    self = [super init];
+    if (self) {
+        // Custom initialization
+        _type = type;
+        self.title = @"重置密码";
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    [m_txtUserName release];
+    [m_txtPassWord release];
+    [super dealloc];
+}
+
+/**
+ *  返回输入手机号页面
+ */
+- (void)butEventQushyi
+{
+    NSLog(@"222");
+    [self.navigationController popToViewController:[self.navigationController.viewControllers objectAtIndex:1] animated:YES];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    
+//    NSArray *vcs = self.navigationController.viewControllers;
+//    NSLog(@"%@",vcs);
+//     stateFromThird = NO;
+//    for (UIViewController *clas in vcs)
+//    {
+//        if ([clas isKindOfClass:[AccountInformationViewController class]]) {
+//            stateFromThird = YES;
+//        }
+//    }
+//    UIBarButtonItem *left = nil;
+//    if (!stateFromThird)
+//    {
+//        left = [Common CreateNavBarButton:self setEvent:@selector(butEventQushyi) setImage:@"common.bundle/nav/back_nor.png" setTitle:nil];
+//    }
+//    else
+//    {
+//        left = [Common CreateNavBarButton:self setEvent:nil setImage:nil setTitle:nil];
+//    }
+//    self.navigationItem.leftBarButtonItem = left;
+//    if (_type == 1) {
+//        //设置密码
+//        [self creatResetPrass];
+//    } else {
+        //重置密码
+        [self creatResetPrass];
+//    }
+}
+
+- (UITextField*)createTextField:(NSString*)title
+{
+    UITextField* text = [[UITextField alloc] init];
+    text.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+    text.contentMode = UIViewContentModeCenter;
+    text.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    text.placeholder = title;
+    text.clearButtonMode = YES;
+    text.delegate = self;
+    [text setTextColor:[CommonImage colorWithHexString:@"#666666"]];
+    [text setFont:[UIFont systemFontOfSize:14]];
+    return text;
+}
+
+//设置密码
+- (void)creatResetPrass
+{
+    UILabel* textLable = [Common createLabel:CGRectMake(20, 0, kDeviceWidth-40, 45) TextColor:@"6B6B6B" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:@"登录密码至少是6位数字或字母的组合！"];
+    [self.view addSubview:textLable];
+
+    UIView* backView = [[UIView alloc] initWithFrame:CGRectMake(0, 40, kDeviceWidth, 90)];
+    backView.layer.borderWidth = 0.5;
+    backView.layer.borderColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_QIAN].CGColor;
+    backView.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:backView];
+    [backView release];
+    
+    m_txtUserName = [self createTextField:NSLocalizedString(@"输入密码:", nil)];
+    m_txtUserName.returnKeyType = UIReturnKeyNext;
+    [m_txtUserName setSecureTextEntry:YES];
+    m_txtUserName.font = [UIFont systemFontOfSize:16];
+    //    m_txtUserName.keyboardType = UIKeyboardTypeNamePhonePad;
+    m_txtUserName.frame = CGRectMake(20, 0, kDeviceWidth-40, 45);
+    [backView addSubview:m_txtUserName];
+    m_txtPassWord = [self createTextField:NSLocalizedString(@"再次输入密码:", nil)];
+    m_txtPassWord.returnKeyType = UIReturnKeyDone;
+    [m_txtPassWord setSecureTextEntry:YES];
+
+    m_txtPassWord.font = [UIFont systemFontOfSize:16];
+    //    m_txtUserName.keyboardType = UIKeyboardTypeNamePhonePad;
+    m_txtPassWord.frame = CGRectMake(20, 45, kDeviceWidth-40, 45);
+    [backView addSubview:m_txtPassWord];
+
+    UIView* lineView = [[UIView alloc] initWithFrame:CGRectMake(20, 45, kDeviceWidth-20, 0.5)];
+    lineView.backgroundColor = [CommonImage colorWithHexString:@"f4f4f4"];
+    [backView addSubview:lineView];
+    [lineView release];
+
+    [self creatBtn:backView.frame.size.height + 60];
+}
+
+//重置密码
+- (void)creatSetingPrass
+{
+    UILabel* textLable = [Common createLabel:CGRectMake(20, 0, kDeviceWidth-40, 50) TextColor:@"6B6B6B" Font:[UIFont systemFontOfSize:18] textAlignment:NSTextAlignmentLeft labTitle:@"请填写新的密码"];
+    [self.view addSubview:textLable];
+
+    UIView* backView = [[UIView alloc] initWithFrame:CGRectMake(0, 50, kDeviceWidth, 90)];
+    backView.backgroundColor = [UIColor whiteColor];
+    backView.layer.borderWidth = 0.5;
+    backView.layer.borderColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_QIAN].CGColor;
+
+    [self.view addSubview:backView];
+    [backView release];
+    m_txtUserName = [self createTextField:NSLocalizedString(@"新密码:", nil)];
+    m_txtUserName.returnKeyType = UIReturnKeyNext;
+    [m_txtUserName setSecureTextEntry:YES];
+
+    m_txtUserName.font = [UIFont systemFontOfSize:16];
+    //    m_txtUserName.keyboardType = UIKeyboardTypeNamePhonePad;
+    m_txtUserName.frame = CGRectMake(80, 0, kDeviceWidth-40, 45);
+    [backView addSubview:m_txtUserName];
+
+    m_txtPassWord = [self createTextField:NSLocalizedString(@"重复密码:", nil)];
+    m_txtPassWord.returnKeyType = UIReturnKeyDone;
+    [m_txtPassWord setSecureTextEntry:YES];
+
+    m_txtPassWord.font = [UIFont systemFontOfSize:16];
+    //    m_txtUserName.keyboardType = UIKeyboardTypeNamePhonePad;
+    m_txtPassWord.frame = CGRectMake(80, 45, kDeviceWidth-40, 45);
+    [backView addSubview:m_txtPassWord];
+
+    UIView* lineView = [[UIView alloc] initWithFrame:CGRectMake(20, 45, kDeviceWidth-20, 0.5)];
+    lineView.backgroundColor = [CommonImage colorWithHexString:@"f4f4f4"];
+    [backView addSubview:lineView];
+    [lineView release];
+
+    [self creatBtn:backView.frame.size.height + 60];
+}
+
+- (void)creatBtn:(CGFloat)piont
+{
+    UIButton* nextBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    nextBtn.frame = CGRectMake(17.5, piont, kDeviceWidth-35, 44);
+    nextBtn.layer.cornerRadius = 4;
+    nextBtn.clipsToBounds = YES;
+    UIImage* image =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:COLOR_FF5351]];
+    [nextBtn setBackgroundImage:image forState:UIControlStateNormal];
+    [nextBtn setTitle:stateFromThird?@"确定": NSLocalizedString(@"下一步", nil) forState:UIControlStateNormal];
+    [nextBtn addTarget:self action:@selector(nextdraw) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:nextBtn];
+}
+
+/**
+ *  下一步
+ */
+- (void)nextdraw
+{
+    [m_txtPassWord resignFirstResponder];
+    [m_txtUserName resignFirstResponder];
+//
+    if ([self judgeThePass]) {
+        return;
+    }
+    NSLog(@"重置密码");
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:_verificationStr forKey:@"code"];
+    [dic setObject:_phoneStr forKey:@"phone"];
+    [dic setObject:m_txtUserName.text forKey:@"password"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:EMAILTHREE_API_URL values:dic requestKey:EMAILTHREE_API_URL delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"加载中...", nil)];
+}
+
+- (BOOL)judgeThePass
+{
+    if ([m_txtUserName.text length] == 0 ) {
+        [Common createAlertViewWithString:@"密码不能为空！" withDeleagte:nil];
+        return YES;
+    }else
+    if ([m_txtPassWord.text length] == 0) {
+        [Common createAlertViewWithString:@"确认密码不能为空！" withDeleagte:nil];
+        return YES;
+    }else
+    if ([m_txtUserName.text length] < 6) {
+        [Common createAlertViewWithString:@"密码长度必须大于6位！" withDeleagte:nil];
+        return YES;
+    }else
+    if (![m_txtUserName.text isEqualToString:m_txtPassWord.text]) {
+        [Common createAlertViewWithString:@"两次输入的密码不一致！" withDeleagte:nil];
+        return YES;
+    }else
+    if ([m_txtUserName.text length] >14) {
+        [Common createAlertViewWithString:@"密码长度必须小于15位！" withDeleagte:nil];
+        return YES;
+    }
+    return NO;
+}
+
+- (void)didFinishFail:(ASIHTTPRequest*)loader
+{
+    [Common TipDialog:NSLocalizedString(@"网络异常", nil)];
+    [SFHFKeychainUtils deleteItemForUsername:@"" andServiceName:BUNDLE_IDENTIFIER error:NULL];
+    [[NSUserDefaults standardUserDefaults] setObject:@"0" forKey:@"checkstatus"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dict = [responseString KXjSONValueObject];
+    NSDictionary * dic = dict[@"head"];
+    NSLog(@"%@", dict);
+    if (![[dic objectForKey:@"state"] intValue] == 0 ) {
+        [Common TipDialog:dic[@"msg"]];
+        return;
+    }
+    if ([[dict objectForKey:@"state"] intValue] == 0) {
+          if([loader.username isEqualToString:EMAILTHREE_API_URL]){
+            //找回密码
+            UIAlertView* alert = [[UIAlertView alloc]
+                                  initWithTitle:@""
+                                  message:NSLocalizedString(@"您的密码已重置成功！", nil)
+                                  delegate:self
+                                  cancelButtonTitle:NSLocalizedString(@"去登录", nil)
+                                  otherButtonTitles:nil];
+            [alert show];
+            [alert release];
+            [self saveUserAccount];
+        } else if ([loader.username isEqualToString:SEND_THIRD_STEP_THREE])
+        {
+            //第三方登录设置密码
+            if (stateFromThird)
+            {
+                NSArray *vcs = self.navigationController.viewControllers;
+                NSLog(@"%@",vcs);
+                for (UIViewController *clas in vcs)
+                {
+                    if ([clas isKindOfClass:[AccountInformationViewController class]]) {
+                        [self.navigationController popToViewController:clas animated:YES];
+                    }
+                }
+            }
+            [self saveUserAccount];
+        }
+    }else{
+        [Common TipDialog:[dict objectForKey:@"msg"]];
+    }
+
+}
+
+- (void)saveUserAccount
+{
+    NSString* name = _phoneStr;
+    NSString* pswd = m_txtPassWord.text;
+    [SFHFKeychainUtils storeUsername:name andPassword:pswd forServiceName:BUNDLE_IDENTIFIER updateExisting:YES error:NULL];
+    [[NSUserDefaults standardUserDefaults] setObject:name forKey:@"username"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
+- (void)alertView:(UIAlertView*)alertView
+    clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    //切换用户，重新上传push信息
+    AppDelegate* myDelegate = [Common getAppDelegate];
+    myDelegate.isUploadPushInfo = NO;
+    [self performSelector:@selector(qweqwe) withObject:nil afterDelay:0.3];
+}
+
+/**
+ *  返回登录界面
+ */
+- (void)qweqwe
+{
+    LoginViewController* LoginViewCon = [[LoginViewController alloc] init];
+    UIImage* loginViewImage = [CommonImage imageWithView:LoginViewCon.view];
+    UIImageView* loginView = [[UIImageView alloc] initWithImage:loginViewImage];
+    loginView.frame = CGRectMake(0, kDeviceHeight + 64, kDeviceWidth, kDeviceHeight + 64);
+    [self.navigationController.view addSubview:loginView];
+    [loginView release];
+
+    [UIView animateWithDuration:0.35 animations:^{
+        CGRect rect = loginView.frame;
+        rect.origin.y = 0;
+        loginView.frame = rect;
+    } completion:^(BOOL finished) {
+        
+        //      LoginViewController *view1 = [[LoginViewController alloc] init];
+        CommonNavViewController *view1 = [[CommonNavViewController alloc] initWithRootViewController:LoginViewCon];
+        [LoginViewCon release];
+        APP_DELEGATE.rootViewController = view1;
+        [view1 release];
+    }];
+}
+
+- (void)touchesBegan:(NSSet*)touches withEvent:(UIEvent*)event
+{
+    [m_txtUserName resignFirstResponder];
+    [m_txtPassWord resignFirstResponder];
+}
+
+- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string
+{
+    NSMutableString *changeString = [NSMutableString stringWithString:textField.text];
+    [changeString replaceCharactersInRange:range withString:string];
+
+    if ([changeString length]>13) {
+        return NO;
+    }
+    return YES;
+    
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+{
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

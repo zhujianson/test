@@ -1,0 +1,28 @@
+//
+//  TopicViewController.h
+//  jiuhaohealth2.1
+//
+//  Created by 徐国洪 on 14-8-16.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+//#import "IconOperationQueue.h"
+#import "EScrollerView.h"
+
+@interface TopicViewController : CommonViewController <EScrollerViewDelegate>
+{
+//	IconOperationQueue *m_OperationQueue;
+
+	BOOL m_isTabbarDown;
+	BOOL m_down;
+	float m_lastScrollOfferY;
+    
+    NSMutableArray *m_arrayImage;
+	EScrollerView *m_advScroller;
+}
+
+@property (nonatomic, assign) UIView *tabbarView;
+
+
+@end

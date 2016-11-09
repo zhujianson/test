@@ -1,0 +1,346 @@
+//
+//  FamilyListView.m
+//  jiuhaohealth3.0
+//
+//  Created by jiuhao-yangshuo on 15-1-13.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "FamilyListView.h"
+#import "FamilyListViewCell.h"
+#import "GetFamilyList.h"
+#import "AppDelegate.h"
+#import "FamilyListViewController.h"
+#import "ModifyInformationViewController.h"
+#import "DiaryModelView.h"
+
+#define CELL_HEIGHT 50
+#define TABLE_WEIGHT 150
+
+extern NSString *const kIdKeyString;
+@interface FamilyListView ()<UITableViewDataSource,UITableViewDelegate>
+
+@end
+
+@implementation FamilyListView
+{
+    UIView* m_view;
+    FamilyListViewBlock _inBlock;
+    __block  UITableView * table;
+    __block NSMutableArray *familyArray;
+    float tableOrigelY;//初始化的位置
+    NSDictionary *selectDictInfo;
+    UIImageView *triangleImgeView;
+}
+
+- (void)dealloc
+{
+    [triangleImgeView release];
+    if (_inBlock)
+    {
+        [_inBlock release];
+        _inBlock = nil;
+    }
+    [table release];
+    [familyArray release];
+    [m_view release];
+    [super dealloc];
+}
+
+-(id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight)];
+    if (self)
+    {
+        familyArray = [[NSMutableArray alloc]init];
+        
+        m_view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight)];
+        m_view.backgroundColor = [UIColor clearColor];
+        [self addSubview:m_view];
+        
+        tableOrigelY = 6;
+        table = [[UITableView alloc]initWithFrame:CGRectMake(10, 6, TABLE_WEIGHT, 162) style:UITableViewStylePlain];
+        table.backgroundColor = [UIColor whiteColor];
+        table.delegate = self;
+        table.dataSource = self;
+        table.bounces = NO;
+        table.layer.cornerRadius = 2.5f;
+        table.showsVerticalScrollIndicator = NO;
+        [self addSubview:table];
+        table.separatorColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_QIAN];
+        if ([table respondsToSelector:@selector(setSeparatorInset:)]) {
+            [table setSeparatorInset:UIEdgeInsetsZero];//ios7
+        }
+        table.layer.shadowColor = [UIColor blackColor].CGColor;//shadowColor阴影颜色
+        table.layer.shadowOffset = CGSizeMake(4,4);//shadowOffset阴影偏移,x向右偏移4，y向下偏移4，默认(0, -3),这个跟shadowRadius配合使用
+        table.layer.shadowOpacity = 0.75;//阴影透明度，默认0
+        table.layer.shadowRadius = 3;//阴影半径，默认3
+        table.layer.masksToBounds = YES;//tableview 默认是开启的
+        table.layer.cornerRadius = 2.5;
+//        table.clipsToBounds = YES;
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(removeView)];
+        [m_view addGestureRecognizer:tap];
+        [tap release];
+        
+        UIImage *normalImage =[self createHeaderViewWithBackColor:[UIColor whiteColor]];//非高亮
+        UIImage *hilightImage =[self createHeaderViewWithBackColor:[CommonImage colorWithHexString:@"ebebeb"]];//高亮
+        triangleImgeView = [[UIImageView alloc]initWithImage:normalImage highlightedImage:hilightImage];
+        [m_view addSubview:triangleImgeView];
+        triangleImgeView.tag = 999;
+//        [triangleImgeView setFrameY:0];
+        if (!g_familyList.lastObject[@"id"]) {
+            [g_familyList.lastObject removeAllObjects];
+        }else{
+            if(g_familyList.count <7){
+                [g_familyList addObject:[[[NSMutableDictionary alloc] init] autorelease]];
+            }
+        }
+        __block FamilyListView* weakSelf = self;
+        if (!g_familyList) {
+            [[GetFamilyList alloc] initWithBlcok:^(NSMutableArray *farray){
+                if (!farray.count) {
+                    NSMutableDictionary *dic = [[[NSMutableDictionary alloc] init] autorelease];
+                    [dic setObject:g_nowUserInfo.userid forKey:kIdKeyString];
+                    [dic setObject:g_nowUserInfo.filePath forKey:@"filePath"];
+                    [g_familyList addObject:dic];
+                }
+                [weakSelf updateSizeTable];
+                [table reloadData];
+                
+            } withView:self];
+        }
+
+        [self updateSizeTable];
+        [self bringSubviewToFront:triangleImgeView];
+    }
+    return self;
+}
+
+-(void)setTriangleImgeViewOrigelPointWithTapView:(UIView *)tapView
+{
+    CGRect frameRect = [tapView.superview convertRect:tapView.frame toView:nil];
+    triangleImgeView.centerX = frameRect.origin.x + frameRect.size.width/2.0;
+    if (frameRect.origin.x > kDeviceWidth/2.0) //右边
+    {
+         table.frameX = kDeviceWidth-TABLE_WEIGHT-10;
+    }
+    else
+    {
+         table.frameX = 10;
+    }
+}
+
+-(UIImage *)createHeaderViewWithBackColor:(UIColor *)backColor
+{
+    if (!backColor)
+    {
+        backColor = [UIColor whiteColor];
+    }
+    CGRect rect = CGRectMake(0.0f, 0.0f, 12.0f, 6.0f);
+    UIGraphicsBeginImageContextWithOptions(rect.size, NO, [UIScreen mainScreen].scale);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetFillColorWithColor(context, [backColor CGColor]);
+    CGContextSetLineWidth(context, 0.5);
+    CGContextMoveToPoint(context, 0,(rect.size.height-6)/2.0 +6.0);
+    CGContextAddLineToPoint(context, rect.size.width,(rect.size.height-6)/2.0+6.0);
+    CGContextAddLineToPoint(context, rect.size.width/2.0, (rect.size.height-6)/2.0);
+    CGContextClosePath(context);
+    CGContextFillPath(context);
+    
+    UIImage* theImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return theImage;
+}
+
+- (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if ([cell respondsToSelector:@selector(setSeparatorInset:)]) {
+        [cell setSeparatorInset:UIEdgeInsetsZero];
+    }
+    if ([cell respondsToSelector:@selector(setLayoutMargins:)]) {
+        
+        [cell setLayoutMargins:UIEdgeInsetsZero];
+    }
+}
+
+- (void)gotoAddFamilyViewWithDict:(NSMutableDictionary *)dic
+{
+    NSLog(@"添加新页面");
+    AppDelegate * myAppdelegate = [Common getAppDelegate];
+
+    ModifyInformationViewController * modify = [[ModifyInformationViewController alloc]init];
+    modify.isDeviceAdd = YES;
+    [modify setModifyInformationBlock:^(NSMutableDictionary *dic) {
+        NSLog(@"%@",dic);
+        if (g_familyList.count < 7 && g_familyList.lastObject[@"id"]) {
+            [g_familyList addObject:[[[NSMutableDictionary alloc] init] autorelease]];
+        }
+        [self updateSizeTable];
+        [table reloadData];
+    }];
+
+    modify.log_pageID = 88;
+    modify.title = @"添加家庭成员";
+    [modify setM_infoDic:dic];
+    [myAppdelegate.navigationVC pushViewController:modify animated:YES];
+    [modify release];
+}
+
+//更新
+-(void)updateSizeTable
+{
+    [familyArray removeAllObjects];
+    [familyArray addObjectsFromArray:g_familyList];
+    
+//    if ([[[familyArray lastObject] allKeys]count] == 0)
+//    {
+//        [familyArray removeLastObject];
+//    }
+    table.frameHeight = CELL_HEIGHT*(familyArray.count) >=kDeviceHeight? kDeviceHeight :CELL_HEIGHT*(familyArray.count);
+}
+
+-(void)setFamilyListViewBlock:(FamilyListViewBlock)handler withSelectFamilyInfo:(NSMutableDictionary *)infoDict
+{
+    selectDictInfo = infoDict;
+    [self showAnimation];
+    _inBlock = [handler copy];
+    
+    triangleImgeView.highlighted = NO;
+    if ([g_nowUserInfo.userid isEqualToString: selectDictInfo[kIdKeyString]])//第一行改变颜色
+    {
+        triangleImgeView.highlighted = YES;
+    }
+}
+
+- (CGFloat)tableView:(UITableView*)tableView
+heightForRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    return CELL_HEIGHT;
+}
+
+- (NSInteger)tableView:(UITableView*)tableView
+ numberOfRowsInSection:(NSInteger)section
+{
+    return [familyArray count];
+}
+
+- (UITableViewCell*)tableView:(UITableView*)tableView
+        cellForRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    static NSString* indentifier = @"Cell";
+    FamilyListViewCell* cell = (FamilyListViewCell*) [tableView dequeueReusableCellWithIdentifier:indentifier];
+    if (cell == nil) {
+        cell = [[[FamilyListViewCell alloc] initWithStyle:UITableViewCellStyleValue1
+                                                  reuseIdentifier:indentifier] autorelease];
+        cell.selectionStyle = UITableViewCellSelectionStyleGray;
+    }
+    if (IS_OS_8_OR_LATER)//分割线到头
+    {
+         cell.preservesSuperviewLayoutMargins = NO;
+    }
+    if (indexPath.row < [familyArray count]) {
+        
+        NSMutableDictionary *dict = familyArray[indexPath.row];
+        [cell setfamilyCellDict:dict];
+        
+        if ([dict[kIdKeyString] isEqualToString:selectDictInfo[kIdKeyString]])//选中对应的人员
+        {
+            cell.m_backView.backgroundColor = [CommonImage colorWithHexString:@"ebebeb"];
+        }
+        else
+        {
+            cell.m_backView.backgroundColor = [CommonImage colorWithHexString:@"ffffff"];
+        }
+    }
+    return cell;
+}
+
+- (void)tableView:(UITableView*)tableView
+didSelectRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    [table deselectRowAtIndexPath:indexPath animated:YES];
+    NSMutableDictionary *dict = familyArray[indexPath.row];
+    if (!dict[@"user_no"])
+    {
+        [self gotoAddFamilyViewWithDict:dict];
+        return;
+    }
+  
+    [[self class] saveSelectFamilyInfoByUserid:dict];
+    _inBlock(dict);
+    [self removeView];
+    NSLog(@"+++++++++%@",dict);
+}
+
+- (void)removeView
+{
+    [UIView animateWithDuration:0.35 animations:^{
+        m_view.backgroundColor = [UIColor clearColor];
+        table.frameY  = -table.height;
+        triangleImgeView.frameY = -triangleImgeView.height;
+    } completion:^(BOOL finished) {
+        [m_view removeFromSuperview];
+        [self removeFromSuperview];
+    }];
+}
+
+-(void)showAnimation
+{
+    table.frameY  = -table.height;
+    [UIView animateWithDuration:0.35 animations:^{
+        m_view.backgroundColor = [UIColor colorWithWhite:0 alpha:0.6];
+        table.frameY  = tableOrigelY;
+    } completion:^(BOOL finished) {
+        
+    }];
+}
+
++(NSDictionary*)getSelectFamilyInfoByUserid
+{
+    NSString *keyString = [NSString stringWithFormat:@"%@_selectFamilyInfo",g_nowUserInfo.userid];
+    NSDictionary *selectFamily = (NSDictionary *)[[NSUserDefaults standardUserDefaults] objectForKey:keyString];
+    if (!selectFamily.allKeys.count)
+    {
+        selectFamily = @{kIdKeyString:g_nowUserInfo.userid, @"filePath":g_nowUserInfo.filePath, @"nickName":g_nowUserInfo.nickName, @"hight":[NSString stringWithFormat:@"%f",g_nowUserInfo.height], @"weight":[NSString stringWithFormat:@"%f",g_nowUserInfo.weight]};
+        [self saveSelectFamilyInfoByUserid:selectFamily];
+    }
+    [[GetFamilyList alloc] initWithBlcok:nil withView:nil] ;
+    
+    return selectFamily;
+}
+
++(void)saveSelectFamilyInfoByUserid:(NSDictionary *)selectedUserInfo
+{
+    NSString *keyString = [NSString stringWithFormat:@"%@_selectFamilyInfo",g_nowUserInfo.userid];
+    [[NSUserDefaults standardUserDefaults] setObject:selectedUserInfo forKey:keyString];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
++(void)deleteSelectFamilyInfoByUserid:(NSDictionary *)delectedUserInfo
+{
+    NSString *delecteIdString = delectedUserInfo[kIdKeyString];
+    NSDictionary *dict = [[self class] getSelectFamilyInfoByUserid];
+    if ([dict[kIdKeyString] isEqualToString:delecteIdString])
+    {
+         NSString *keyString = [NSString stringWithFormat:@"%@_selectFamilyInfo",g_nowUserInfo.userid];
+        [[NSUserDefaults standardUserDefaults] removeObjectForKey:keyString];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+    }
+}
+
++(void)updateSelectFamilyInfoByUserid:(NSDictionary *)updatedUserInfo
+{
+    NSString *updateIdString = updatedUserInfo[kIdKeyString];
+    if (updateIdString) {
+        NSDictionary *dict = [[self class] getSelectFamilyInfoByUserid];
+        if ([dict[kIdKeyString] isEqualToString:updateIdString])
+        {
+            if (![dict isEqualToDictionary:updatedUserInfo])
+            {
+                [self saveSelectFamilyInfoByUserid:updatedUserInfo];//不同进行更新
+            }
+        }
+    }
+}
+
+@end

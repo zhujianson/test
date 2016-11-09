@@ -1,0 +1,5 @@
+platform :ios ,’6.0’
+target:healthManagement do
+pod 'Qiniu', '~> 7.0'
+pod 'SDWebImage', '~> 3.2'
+end

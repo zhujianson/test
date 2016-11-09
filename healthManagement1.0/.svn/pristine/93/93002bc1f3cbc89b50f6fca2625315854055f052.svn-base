@@ -1,0 +1,678 @@
+//
+//  CommunityDetailCell.m
+//  jiuhaohealth4.0
+//
+//  Created by jiuhao-yangshuo on 15-4-17.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "CommunityDetailCell.h"
+#import "RichTextView.h"
+#import "MLEmojiLabel.h"
+#import "CommunityDetailViewController.h"
+
+#define BeginCommitTag 111111 //评论的起始
+#define kContentWeight (kDeviceWidth - leftMargin * 2) //内容的宽度
+#define kContentViewTag  1335
+#define kImageHeight  (kDeviceWidth-2*leftMargin)  //图片高度
+static const CGFloat m_contentHeightOff = 3.0f;//文字距离
+
+static const CGFloat m_nameLabelSpacetoTimeLabel = 6.f;
+static const CGFloat m_timeLabelHieght = 12.f;
+
+static const CGFloat m_expandBtnlHieght = 20.f;
+static const CGFloat m_expandBtnSpaceToedge = 4.f;
+
+@interface CommunityDetailCell ()<CopyableLabelDelegate>
+
+@end
+
+@implementation CommunityDetailCell
+{
+    UILabel *m_nameLabel;
+    UILabel *m_timeLabel;
+    
+    MLEmojiLabel *m_commentTitle;
+    CommunityDetailCellBlock _inBlobk;
+    NSMutableDictionary *m_dict;
+    
+    UIImageView *m_sexImge;//性别
+    UIButton *deleteButton;//删除
+    UIButton *addFrined;//添加
+    UIButton *replayBtton;//回复
+    UILabel *m_floorImge;//楼主
+    UIImageView *triangleImgeview;//三角
+    UILabel *floorLabel;//楼号
+}
+
+@synthesize m_headerView;
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self)
+    {
+        m_headerView = [[UIImageView alloc]init];
+        m_headerView.frame = CGRectMake(leftMargin, TopMargin, 40, 40);
+        m_headerView.clipsToBounds = YES;
+        m_headerView.userInteractionEnabled = YES;
+        m_headerView.layer.cornerRadius = m_headerView.width/2.0;
+        [self.contentView addSubview:m_headerView];
+        
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapHeaderPicture:)];
+        [m_headerView addGestureRecognizer:tap];
+        [tap release];
+        
+        m_nameLabel = [Common createLabel:CGRectMake(m_headerView.right+10, m_headerView.top, 190, m_nameLabelHieght) TextColor:@"333333" Font:[UIFont fontWithName:@"Arial-BoldMT" size:M_FRONT_SEVENTEEN] textAlignment:NSTextAlignmentLeft labTitle:@""];
+        m_nameLabel.text = @"123";
+        [self.contentView addSubview:m_nameLabel];
+        [m_nameLabel sizeToFit];
+        
+        UIImage *sexImge = [UIImage imageNamed:@"common.bundle/community/man.png"];
+        m_sexImge = [[UIImageView alloc]initWithFrame:CGRectMake(m_nameLabel.right+7, m_nameLabel.top, sexImge.size.width, sexImge.size.height)];
+        m_sexImge.image = sexImge;
+//        m_sexImge.highlightedImage = [UIImage imageNamed:@"common.bundle/community/women.png"];
+        [self.contentView addSubview:m_sexImge];
+        
+        m_timeLabel = [Common createLabel:CGRectMake(m_nameLabel.left, m_nameLabel.bottom+m_nameLabelSpacetoTimeLabel, kDeviceWidth-m_nameLabel.left, m_timeLabelHieght) TextColor:COLOR_999999 Font:[UIFont systemFontOfSize:M_FRONT_FOURTEEN] textAlignment:NSTextAlignmentLeft labTitle:@""];
+        m_timeLabel.text = @"2015-01-10";
+        [self.contentView addSubview:m_timeLabel];
+        
+        NSString *foorString = @"楼主";
+//        CGSize sizeOfFloor = [Common sizeForAllString:foorString andFont:11.0 andWight:kContentWeight];
+        m_floorImge = [Common createLabel:CGRectMake(m_sexImge.right+7, m_nameLabel.top, 30, m_nameLabelHieght) TextColor:@"ffffff" Font:[UIFont systemFontOfSize:11.] textAlignment:NSTextAlignmentCenter labTitle:foorString];
+        m_floorImge.backgroundColor = [CommonImage colorWithHexString:@"6195ff"];
+        m_floorImge.layer.cornerRadius =1.0;
+        m_floorImge.layer.masksToBounds = YES;
+        [self.contentView addSubview:m_floorImge];
+        m_floorImge.hidden = YES;
+        
+        m_commentTitle = [[MLEmojiLabel alloc] initWithFrame:CGRectMake(leftMargin, m_headerView.bottom+15, kDeviceWidth-2*leftMargin, 30)];
+        m_commentTitle.numberOfLines = 0;
+        m_commentTitle.font = [UIFont systemFontOfSize:M_FRONT_NINTEEN];
+        m_commentTitle.lineBreakMode = NSLineBreakByCharWrapping;
+        m_commentTitle.isNeedAtAndPoundSign = YES;
+        m_commentTitle.textColor = [CommonImage colorWithHexString:COLOR_333333];
+        m_commentTitle.disableThreeCommon = YES;
+//        m_commentTitle.emojiDelegate = self;
+        m_commentTitle.customEmojiRegex = @"\\[[a-zA-Z0-9\\u4e00-\\u9fa5]+\\]";
+        m_commentTitle.customEmojiPlistName = @"expression.plist";
+        [self.contentView addSubview:m_commentTitle];
+        m_commentTitle.copyableLabelDelegate = self;
+        m_commentTitle.copyingEnabled = YES;
+        
+        floorLabel =   [Common createLabel: CGRectMake(kDeviceWidth-40-leftMargin,m_nameLabel.top, 40,m_nameLabel.height) TextColor:COLOR_999999 Font:[UIFont systemFontOfSize:12.] textAlignment:NSTextAlignmentRight labTitle:@"0楼"];;
+//        goodBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+//        goodBtn.frame = CGRectMake(kDeviceWidth-70-leftMargin,m_nameLabel.top, 70,m_nameLabel.height);
+//        goodBtn.tag =1006;
+//        goodBtn.contentHorizontalAlignment =  UIControlContentHorizontalAlignmentRight;
+//        goodBtn.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+//        goodBtn.titleLabel.font = [UIFont systemFontOfSize:12.0];
+//        goodBtn setContentEdgeInsets:UIEdgeInsetsMake(0,), <#CGFloat bottom#>, <#CGFloat right#>)
+//        [goodBtn setTitle:@"" forState:UIControlStateNormal];
+//        [goodBtn setTitleColor:[CommonImage colorWithHexString:COLOR_999999] forState:UIControlStateNormal];
+//        [goodBtn setTitleColor:[CommonImage colorWithHexString:COLOR_FF5351] forState:UIControlStateDisabled];
+//        [goodBtn addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
+//        UIImage *imgeNormal = [UIImage imageNamed:@"common.bundle/community/redHeart.png"];
+//        [goodBtn setImage:imgeNormal forState:UIControlStateNormal];
+//        UIImage *imgeNormalSelect = [UIImage imageNamed:@"common.bundle/community/redHeartSelect.png"];
+//        [goodBtn setImage:imgeNormalSelect forState:UIControlStateDisabled];
+//        [goodBtn setImage:[UIImage imageNamed:@"common.bundle/commont/conversation_icon_praise_pressed.png"] forState:UIControlStateSelected];
+        [self.contentView addSubview:floorLabel];
+        
+        deleteButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        deleteButton.frame = CGRectMake(floorLabel.left-75/2.0,m_nameLabel.top-4, 75/2.0,25);
+        deleteButton.tag = 1007;
+        [deleteButton setImage:[UIImage imageNamed:@"common.bundle/community/delete.png"] forState:UIControlStateNormal];
+        [deleteButton addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
+        [self.contentView addSubview:deleteButton];
+        
+        UILabel *lineLabel = [Common createLabel:CGRectMake(deleteButton.width-0.5, (deleteButton.height-10)/2.0, 0.5, 10) TextColor:nil Font:nil textAlignment:NSTextAlignmentCenter labTitle:nil];
+        lineLabel.backgroundColor = [CommonImage colorWithHexString:LINE_COLOR];
+        [deleteButton addSubview:lineLabel];
+        
+        replayBtton = [UIButton buttonWithType:UIButtonTypeCustom];
+        replayBtton.frame = CGRectMake(kDeviceWidth-60-leftMargin,m_commentTitle.bottom+spaceMargin, 60,25);
+        replayBtton.tag =1008;
+        [replayBtton setTitle:@"回复" forState:UIControlStateNormal];
+        [replayBtton setTitleColor:[CommonImage colorWithHexString:@"999999"] forState:UIControlStateNormal];
+        replayBtton.titleLabel.font = [UIFont systemFontOfSize:M_FRONT_THREETEEN];
+        replayBtton.layer.cornerRadius = 2.5;
+        replayBtton.layer.borderWidth = 0.5;
+        replayBtton.layer.masksToBounds = YES;
+        replayBtton.layer.borderColor = [CommonImage colorWithHexString:@"c8c8c8"].CGColor;
+        [replayBtton addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
+        UIImage* image =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:@"ffffff"]];
+        [replayBtton setBackgroundImage:image forState:UIControlStateNormal];
+        [self.contentView addSubview:replayBtton];
+
+//        addFrined = [UIButton buttonWithType:UIButtonTypeCustom];
+//        addFrined.frame = CGRectMake(replayBtton.left -80-15,replayBtton.top, 80,25);
+//        addFrined.tag =1009;
+//        [addFrined setTitle:@"加为好友" forState:UIControlStateNormal];
+//        [addFrined setTitleColor:[CommonImage colorWithHexString:@"999999"] forState:UIControlStateNormal];
+//        addFrined.titleLabel.font = [UIFont systemFontOfSize:12.0];
+//        addFrined.layer.cornerRadius = 2.5;
+//        addFrined.layer.borderWidth = 0.5;
+//        addFrined.layer.borderColor = [CommonImage colorWithHexString:@"c8c8c8"].CGColor;
+//        addFrined.layer.masksToBounds = YES;
+//        [addFrined setBackgroundImage:image forState:UIControlStateNormal];
+//        [addFrined addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
+//        [self.contentView addSubview:addFrined];
+        
+        UIImage *triangleImge = [UIImage imageNamed:@"common.bundle/community/triangle.png"];
+        triangleImgeview = [[UIImageView alloc]initWithFrame:CGRectMake(20,0, triangleImge.size.width, triangleImge.size.height)];
+        triangleImgeview.image = triangleImge ;
+        [self.contentView addSubview:triangleImgeview];
+        [triangleImgeview release];
+        [self.contentView  bringSubviewToFront:triangleImgeview];
+        triangleImgeview.hidden = YES;
+    }
+     return self;
+}
+
+-(void)dealloc
+{
+//    [m_dict release];
+    [m_headerView release];
+    [m_sexImge release];
+    [super dealloc];
+}
+
+#pragma mark -event response
+
+-(void)tapHeaderPicture:(id)sender
+{
+    NSMutableDictionary *discussDict = m_dict;
+    TopicEventType topicEventType = TopicTapHeader;
+    if (_inBlobk)
+    {
+        _inBlobk(topicEventType,discussDict);
+    }
+}
+
+-(void)btnClick:(UIButton *)btn
+{
+    NSLog(@"%@",btn);
+    NSMutableDictionary *discussDict = m_dict;
+    TopicEventType topicEventType = TopicPraise;
+    switch (btn.tag) {
+        case 1006:
+            NSLog(@"赞");
+            topicEventType = TopicPraise;
+//            [self changeState];
+            break;
+        case 1007:
+            NSLog(@"删除");
+            topicEventType = TopicDelete;
+            break;
+        case 1008:
+            NSLog(@"回复");//按钮点击
+            topicEventType = TopicReply;
+            if ([m_dict[@"isMainPost"] boolValue])//yes 主贴
+            {
+                topicEventType = TopicAddReply;
+            }
+            break;
+        case 1009:
+            NSLog(@"加好友");
+            topicEventType = TopicAddFriend;
+            break;
+        default:
+            break;
+    }
+    //某一个评论的回复
+    if (btn.tag >= BeginCommitTag && btn.tag < BeginImageTag)
+    {
+        NSArray *replyListArray = m_dict[@"replyList"];
+        if (replyListArray.count)
+        {
+            discussDict = replyListArray[btn.tag - BeginCommitTag];
+        }
+        topicEventType = TopicReplyPeople;
+    }
+    //图片
+    else if (btn.tag >= BeginImageTag)
+    {
+        int indexImage = (int)(btn.tag - BeginImageTag);
+//        [m_dict setObject:btn forKey:kImageViewKey];
+        [m_dict setObject:[NSString stringWithFormat:@"%d",indexImage] forKey:kImageViewIndex];
+        topicEventType = TopicImageList;
+    }
+    if (_inBlobk)
+    {
+         _inBlobk(topicEventType,discussDict);
+    }
+}
+
+-(void)setCommunityDetailBlock:(CommunityDetailCellBlock)_handler withDict:(NSMutableDictionary *)dict
+{
+    m_dict = dict;
+    float cellHeight = 0;
+    m_nameLabel.text = @"kangxun360";
+    _inBlobk = [_handler copy];
+//    NSString *praiseCount = [dict[@"praiseCount"] stringValue];
+    NSString *floorStr = dict[@"floor"];
+    NSString *str = dict[@"content"];
+    NSString *userName = dict[@"userName"];
+    NSString *useSex = dict[@"useSex"];//性别(1:男；2:女)
+    BOOL isFriend = [dict[@"isFriend"] boolValue];//是否是好友关系 0：是好友 1：不是好友
+    BOOL haveFlag = [dict[@"haveFlag"] boolValue];//是否有回复 0:没有 1:有回复
+    BOOL isFloor = [dict[@"isFloor"] boolValue];//是楼主0 是楼主 1 不是楼主
+    BOOL delFlag = [dict[@"delFlag"] boolValue];//是否删除 0:没有权限 1:有权限
+//    BOOL hugFlag = [dict[@"hugFlag"] boolValue];//是否点赞0:没有点赞 1:有点赞
+    CGSize sizeOfUserName = [Common sizeForAllString:userName andUIFont:[UIFont fontWithName:@"Arial-BoldMT" size:M_FRONT_SEVENTEEN] andWight:kContentWeight];
+    m_nameLabel.text =userName;
+    
+//   楼号
+    NSString *floorString = [NSString stringWithFormat:@"%d楼",[floorStr intValue]];
+    floorLabel.text = floorString;
+    CGSize  size = [floorLabel.text sizeWithFont:floorLabel.font];
+    floorLabel.width = ceilf(size.width) + leftMargin;
+//    [self adjustButtonWithTitle:praiseCount withTargetButton:goodBtn];
+//    goodBtn.enabled = !hugFlag;
+    deleteButton.hidden = !delFlag;
+    //    goodBtn.enabled = NO;
+//    [goodBtn setAdjustsImageWhenDisabled:NO];
+   
+    if ([m_dict[@"isMainPost"] boolValue])//yes 主贴
+    {
+        floorLabel.frameX = kDeviceWidth;
+    }
+    else
+    {
+        floorLabel.frameX = kDeviceWidth-floorLabel.width-leftMargin;
+    }
+    
+    deleteButton.right = floorLabel.left;
+    m_nameLabel.width =  MIN(sizeOfUserName.width,deleteButton.left-m_nameLabel.left-m_sexImge.width-m_floorImge.width-14);
+    
+    [[self class] upadteEmojiLabelFrameWith:dict withView:m_commentTitle withContent:str];
+    
+//    m_sexImge.highlighted = [useSex intValue] == 1?NO:YES;
+    [CommonUser setUpSexImageView:m_sexImge withSexString:useSex];
+    m_sexImge.left = m_nameLabel.right+7;
+    m_sexImge.centerY = m_nameLabel.centerY;
+    m_floorImge.hidden = isFloor;
+    m_floorImge.left = m_sexImge.right+7;
+    m_floorImge.centerY = m_nameLabel.centerY;
+    addFrined.hidden = !isFriend;
+    
+    NSString * publicTime = [CommonDate  getServerTime:([dict[@"publicTime"] longLongValue]) type:3];
+//    NSString * publicAdd = dict[@"publicAdd"];
+//    m_timeLabel.text = [NSString stringWithFormat:@"%@  %@",publicTime,publicAdd];
+    m_timeLabel.text = publicTime;
+    
+    cellHeight = m_commentTitle.bottom +10;
+    if ([dict[@"userName"] length] == 0)
+    {
+        m_nameLabel.text = @"匿名";
+    }
+    NSArray *pictureArray =  dict[@"pictureArray"];
+    BOOL havePicture = pictureArray.count;
+//图片组
+    if (havePicture)
+    {
+        UIView *pictureView = [self createImageArrayWithDict:dict withPointY:cellHeight];
+        [self.contentView addSubview:pictureView];
+        cellHeight += pictureView.height +20;
+        pictureView.hidden = NO;
+        [dict setObject:pictureView forKey:kImageViewKey];
+    }
+    else
+    {
+        UIView *contentView= [self.contentView viewWithTag:1001];
+        if (contentView)
+        {
+            contentView.hidden = YES;
+        }
+    }
+     NSArray *replyList = dict[@"replyList"];
+// 回复组
+    if (replyList.count)
+    {
+        UIView *contentView= [self createReplayContentViewWithDict:dict withPointY:cellHeight];
+        [self.contentView addSubview:contentView];
+        cellHeight += contentView.height +20;
+        contentView.hidden = NO;
+        
+        triangleImgeview.frameY = - triangleImgeview.height + 0.5 + contentView.top;
+        [self.contentView  bringSubviewToFront:triangleImgeview];
+        triangleImgeview.hidden = NO;
+        
+        if(haveFlag)
+        {
+            contentView.height += m_expandBtnlHieght+m_expandBtnSpaceToedge*2;//加一下高度
+            cellHeight += m_expandBtnlHieght+m_expandBtnSpaceToedge*2;
+            
+            UIView *topView = [[UIView alloc]initWithFrame:contentView.bounds];
+            [contentView addSubview:topView];
+            topView.backgroundColor = [UIColor clearColor];
+            [topView release];
+            
+            UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(expansionReplyList:)];
+            [topView addGestureRecognizer:tap];
+            [tap release];
+
+            //展开按钮
+            UIView *expandBtn = [self createExpandView];
+            expandBtn.right = topView.width- 7.0;
+            expandBtn.bottom = topView.height - m_expandBtnSpaceToedge;
+            [topView addSubview:expandBtn];
+        }
+    }
+    else
+    {
+        UIView *contentView= [self.contentView viewWithTag:kContentViewTag];
+        if (contentView)
+        {
+            contentView.hidden = YES;
+        }
+        triangleImgeview.hidden = YES;
+    }
+//    addFrined.frameY = cellHeight;
+    replayBtton.frameY = cellHeight;
+}
+
+
+-(void)expandBtn:(UIButton *)btn
+{
+    UIView *backView = btn.superview ;
+    [backView removeFromSuperview];
+    backView = nil;
+    
+    [self handlerExpand];
+}
+
+-(void)expansionReplyList:(UITapGestureRecognizer *)tap
+{
+    UIView *backView = tap.view ;
+    [backView removeGestureRecognizer:tap];
+    [backView removeFromSuperview];
+    backView = nil;
+    
+    [self handlerExpand];
+}
+
+-(void)handlerExpand
+{
+    NSMutableDictionary *discussDict = m_dict;
+    NSMutableArray *replyListArray = m_dict[@"replyList"];
+    [self searchDictRemoveTipWithArray:replyListArray];
+    
+    [m_dict setObject:@"0" forKey:@"haveFlag"];//标记为无回复
+    TopicEventType topicEventType = TopicExpansionReplyList;
+    if (_inBlobk)
+    {
+        _inBlobk(topicEventType,discussDict);
+    }
+}
+
+#pragma mark -get-set-View
+-(UIView *)createExpandView
+{
+    UIImage *imgeNormal = [UIImage createImageWithFillColor:[CommonImage colorWithHexString:@"c7c7c7"] andWithStrokeColor:nil withWeigt:14/2.0 andWithHeight:7/2.0 andWithStrokeWeight:1.0];
+    UIImage *rotationNormal = [UIImage imageWithCGImage:imgeNormal.CGImage scale:[UIScreen mainScreen].scale orientation:UIImageOrientationDown];
+    NSString *expandBtnTitle = @"展开";
+    
+    UIButton *expandBtn =  [UIButton buttonWithType:UIButtonTypeCustom];
+    expandBtn.frame = CGRectMake(0, 0, 50, m_expandBtnlHieght);
+    expandBtn.titleLabel.font = [UIFont systemFontOfSize:M_FRONT_TWELEVE];
+    [expandBtn setTitleColor:[CommonImage colorWithHexString:@"666666"] forState:UIControlStateNormal];
+    [expandBtn setTitle:expandBtnTitle forState:UIControlStateNormal];
+    [expandBtn setImage:rotationNormal forState:UIControlStateNormal];
+    CGSize  size = [expandBtnTitle sizeWithFont:expandBtn.titleLabel.font];
+    [expandBtn setImageEdgeInsets:UIEdgeInsetsMake(0, size.width+3., 0, -(size.width+3.))];
+    [expandBtn setTitleEdgeInsets:UIEdgeInsetsMake(0.4, -imgeNormal.size.width-1, 0, imgeNormal.size.width+1)];
+    [expandBtn addTarget:self action:@selector(expandBtn:) forControlEvents:UIControlEventTouchUpInside];
+    expandBtn.layer.cornerRadius = expandBtn.height/2.0;
+    expandBtn.layer.borderWidth = 0.5;
+    expandBtn.layer.masksToBounds = YES;
+    expandBtn.layer.borderColor = [CommonImage colorWithHexString:@"cccccc"].CGColor;
+    
+    return expandBtn;
+}
+//左图 右边文字
+-(void)adjustButtonWithTitle:(NSString *)title withTargetButton:(UIButton *)targetButton
+{
+    if (!title.length)
+    {
+        return;
+    }
+    float defualtWeight = 70;//默认值
+//    NSString *floorString = [NSString stringWithFormat:@"%@楼",title];
+    [targetButton setTitle:title forState:UIControlStateNormal];
+    UIImage *imgeNormal = targetButton.imageView.image;
+    CGSize  size = [targetButton.titleLabel.text sizeWithFont:targetButton.titleLabel.font];
+    [targetButton setImageEdgeInsets:UIEdgeInsetsMake(0, size.width+10, 0, -(size.width+10))];
+    [targetButton setTitleEdgeInsets:UIEdgeInsetsMake(0, -imgeNormal.size.width, 0, imgeNormal.size.width)];
+    
+    float factWeight = size.width + imgeNormal.size.width+20;
+    if (factWeight >= defualtWeight)
+    {
+        factWeight = factWeight >= defualtWeight?factWeight :defualtWeight;
+        targetButton.width = factWeight;
+        targetButton.right = kDeviceWidth-10;
+    }
+}
+
+-(UIView *)createImageArrayWithDict:(NSDictionary *)dict withPointY:(float)pointY
+{
+    NSArray *pictureArray =  dict[@"pictureArray"];
+    UIView *pictureView = nil;
+    pictureView = [self.contentView viewWithTag:1001];
+    if (!pictureView)
+    {
+        pictureView =  [[[UIView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, 0.1)] autorelease];
+        pictureView.tag = 1001;
+        [pictureView removeFromSuperview];
+    }
+    else
+    {
+         [pictureView removeAllSubviews];//重画
+    }
+   
+    
+    float buttonHeight= kImageHeight;
+//     float buttonHeight=  float buttonHeight=
+    for (int i = 0; i < pictureArray.count; i++)
+    {
+        NSString *imagePath = pictureArray[i];
+        __block   UIButton *pictureButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        pictureButton.frame = CGRectMake(leftMargin,(buttonHeight+spaceMargin)*i, kDeviceWidth-2*leftMargin,buttonHeight);
+        pictureButton.tag = BeginImageTag+i;
+        pictureButton.backgroundColor = [UIColor clearColor];
+        NSString *filePath = [NSString stringWithFormat:@"%@?imageView2/1/w/%d/h/%d",imagePath,((int)pictureButton.width)*2,((int)pictureButton.height)*2];
+//        [CommonImage setPicImageQiniu:filePath View:pictureButton Type:3 Delegate:nil];
+        [CommonImage setImageFromServer:filePath View:pictureButton Type:3];
+
+        //内容填充
+        [pictureButton setContentHorizontalAlignment:UIControlContentHorizontalAlignmentFill];
+        [pictureButton setContentVerticalAlignment:UIControlContentVerticalAlignmentFill];
+        [pictureButton addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
+        [pictureView addSubview:pictureButton];
+        pictureButton.imageView.contentMode = UIViewContentModeScaleAspectFill;
+    }
+    pictureView.height = (buttonHeight+spaceMargin) * (pictureArray.count-1)+ buttonHeight;
+    pictureView.frameY = pointY;
+    return pictureView;
+}
+
+//回复组
+-(UIView *)createReplayContentViewWithDict:(NSMutableDictionary *)dict withPointY:(float)pointY
+{
+    NSArray *replyList = dict[@"replyList"];
+    UIView *replayContentView = nil;
+    replayContentView = [self.contentView viewWithTag:kContentViewTag];
+    if (!replayContentView)
+    {
+        replayContentView = [[[UIView alloc]init] autorelease];
+        replayContentView.backgroundColor = [CommonImage colorWithHexString:@"f5f5f5"];
+        replayContentView.layer.borderWidth = 0.5;
+        replayContentView.tag = kContentViewTag;
+        replayContentView.layer.cornerRadius = 2.5f;
+        replayContentView.layer.borderColor = [CommonImage colorWithHexString:@"c8c8c8"].CGColor;
+    }
+    else
+    {
+        [replayContentView removeAllSubviews];//重画
+    }
+    float replayContentViewHeight = 0;
+    UIView *contentView = nil;
+    for ( int i = 0 ; i< replyList.count ; i++) {
+        NSMutableDictionary *dict = replyList[i];
+        contentView = [self createContentView:dict andWithWeight:kContentWeight withIndex:i andWithStartY:replayContentViewHeight];
+        replayContentViewHeight += contentView.height;
+        [replayContentView addSubview:contentView];
+    }
+    replayContentView.frame = CGRectMake(leftMargin, pointY, kDeviceWidth-2*leftMargin, replayContentViewHeight);
+    return replayContentView;
+}
+
+-(UIView *)createContentView:(NSMutableDictionary *)dict andWithWeight:(float)weight withIndex:(int)indexNum andWithStartY:(float)startPointY
+{
+    float replayContentLabelOffset = m_ReplaySpaceToedge;
+    UIButton *backView = [UIButton buttonWithType:UIButtonTypeCustom];
+    backView.backgroundColor = [UIColor clearColor];
+    backView.tag = BeginCommitTag + indexNum;//最大为11111
+    [backView addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
+    
+    RichTextView *replayContentLabel = [[RichTextView alloc]init];
+    replayContentLabel.m_richTextDict = [[dict mutableCopy] autorelease];
+    [backView addSubview:replayContentLabel];
+    [replayContentLabel release];
+    
+    replayContentLabel.frameY = m_contentHeightOff;
+//    replayContentLabel.width = weight- 2*m_contentHeightOff;
+    replayContentLabel.frameX = replayContentLabelOffset;
+
+    backView.frame = CGRectMake(0, startPointY, weight, replayContentLabel.height +2*m_contentHeightOff);
+    return backView;
+}
+
+///  得到高度
+///
+///  @return cell的高度
++(float)getCellHeightWithDict:(NSMutableDictionary *)dict withHandler:(id)handler
+{
+    //m_namel 高度+ timeLabel +空白
+    float cellHeight = 15+m_nameLabelHieght + m_nameLabelSpacetoTimeLabel + m_timeLabelHieght + 10;
+    NSString *str = dict[@"content"];
+//    CGSize size = [Common sizeForAllString:str andFont:15.0 andWight:kContentWeight];
+    float contentHeight = [(CommunityDetailViewController *)handler getContentHeightWithDict:dict withKeyConentString:str withContentWidth:kContentWeight withFront:M_FRONT_NINTEEN withAdjustHeight:4.0];
+    cellHeight += contentHeight+20 ;
+    //    图片
+     NSArray *pictureArray =  dict[@"pictureArray"];
+     BOOL havePicture = pictureArray.count;
+    if (havePicture)
+    {
+        cellHeight += (kImageHeight+spaceMargin) * (pictureArray.count-1)+ kImageHeight;
+        cellHeight += 20;
+    }
+    //    回复内容
+    NSArray *replyList = dict[@"replyList"];
+    BOOL haveFlag = replyList.count;//是否有回复 0:没有 1:有回复
+    BOOL haveFlagExpend = [dict[@"haveFlag"] boolValue];//是否有回复 0:没有 1:有回复
+    
+    if (haveFlag)
+    {
+        for ( int i = 0 ; i< replyList.count ; i++)
+        {
+            NSMutableDictionary *replyListItem = replyList[i];
+            NSString *replayContent = replyListItem[@"replayContent"];
+            NSString *replyUserName = replyListItem[@"replyUserName"];
+            //被回复人的信息拼接
+            NSString *toReply = @"";
+            if ([replyListItem[@"userName"] length])
+            {
+                toReply = [NSString stringWithFormat:@"回复%@",replyListItem[@"userName"]];
+            }
+            NSString * content = [NSString stringWithFormat:@"%@%@: %@",replyUserName,toReply,replayContent];
+            
+            contentHeight = [(CommunityDetailViewController *)handler getContentHeightWithDict:replyListItem withKeyConentString:content withContentWidth:kContentWeight-2*m_ReplaySpaceToedge withFront:M_FRONT_SEVENTEEN withAdjustHeight:0];
+//           size = [Common sizeForAllString:content andFont:15.0 andWight:kContentWeight-20];
+            cellHeight += contentHeight + 2*m_contentHeightOff ;
+        }
+        if (haveFlagExpend)
+        {
+            cellHeight += m_expandBtnlHieght+m_expandBtnSpaceToedge*2;
+        }
+        cellHeight += 20;
+    }
+    //    按钮
+    cellHeight += 25+20 ;
+    return cellHeight;
+}
+
+//图片放大动画
++ (void)actionWithViewLayer:(CALayer *)layer
+{
+    CAKeyframeAnimation *animation = [CAKeyframeAnimation animationWithKeyPath:@"transform.scale"];
+    animation.values = @[@(0.9), @(1.4), @(0.9), @(1)];
+    animation.keyTimes = @[@(0), @(0.3), @(0.6), @(1)];
+    animation.duration = 1.0f;
+    animation.timingFunctions = @[[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear], [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear], [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut]];
+    [layer addAnimation:animation forKey:@"handler"];
+}
+
+//标记回复可以展开  插入一条带标记的作为标示
+-(void )searchDictRemoveTipWithArray:(NSMutableArray *)replyListArray
+{
+    if (!replyListArray.count)
+    {
+        return ;
+    }
+    int indexSeach = (int)(replyListArray.count)-1;
+    for (int i = (int)(replyListArray.count)-1 ;i >=0 ; i--) {
+        NSMutableDictionary *replceDict = replyListArray[i];
+        if (![replceDict[kIsAddAfter] boolValue])
+        {
+            indexSeach = i;
+            break;
+        }
+    }
+// 过滤掉之前 添加的带标记的 重新拿数据整理
+    [replyListArray removeObjectsInRange:NSMakeRange(indexSeach+1, (int)(replyListArray.count)-1-indexSeach)];
+}
+
+//用缓存宽度
++(void)upadteEmojiLabelFrameWith:(NSDictionary *)dataDict withView:(MLEmojiLabel *)mEmojiLabel withContent:(NSString *)content
+{
+    float hightContent = 0;
+    hightContent = [dataDict[kTextHeight] floatValue];
+    
+    float frameWidth = 0;
+    frameWidth = [dataDict[kTextWidth] floatValue];
+    mEmojiLabel.frameHeight = hightContent;
+    if (frameWidth)
+    {
+         mEmojiLabel.frameWidth = frameWidth;
+    }
+    [mEmojiLabel setEmojiText:content];
+}
+
+#pragma mark - HTCopyableLabelDelegate
+- (NSString *)stringToCopyForCopyableLabel:(UILabel *)copyableLabel withChangeColor:(BOOL)changeColor
+{
+    NSString *stringToCopy = @"";
+    if (copyableLabel == m_commentTitle)
+    {
+        stringToCopy = [NSString stringWithFormat:@"%@",m_commentTitle.emojiText];
+    }
+    if (changeColor)
+    {
+         m_commentTitle.backgroundColor = [UIColor clearColor];
+    }
+    return stringToCopy;
+}
+
+- (CGRect)copyMenuTargetRectInCopyableLabelCoordinates:(UILabel *)copyableLabel
+{
+    CGRect rect;
+    //        // The UIMenuController will appear close to container, indicating all of its contents will be copied
+    //        rect = [self.labelContainer1 convertRect:self.labelContainer1.bounds toView:copyableLabel];
+    m_commentTitle.backgroundColor = [CommonImage colorWithHexString:kRTTextCopyColor];
+    rect = m_commentTitle.bounds;
+    return rect;
+}
+@end

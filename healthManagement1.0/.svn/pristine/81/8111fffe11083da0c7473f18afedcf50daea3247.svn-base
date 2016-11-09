@@ -1,0 +1,679 @@
+//
+//  PerfectInformation.m
+//  jiuhaohealth4.0
+//
+//  Created by xjs on 15/4/22.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "PerfectInformation.h"
+#import "PickerView.h"
+#import "InputDueDatePicker.h"
+#import "SelectedView.h"
+#import "ScanningViewController.h"
+#import "PickerView.h"
+#import "ActivationViewController.h"
+#import "DefauleViewController.h"
+#import "PerfectCell.h"
+#import "AppDelegate.h"
+#import "LocationManager.h"
+
+
+@implementation PerfectInformation
+{
+    UIScrollView * m_scroll;
+    NSInteger tagNum;
+    NSInteger tagNum2;
+    SelectedView * selectedView;
+    UITableView * m_myTable;
+    UITableView * m_FamilyTable;
+    NSMutableArray* dataArray;
+    NSMutableArray* dataArray2;
+    UISegmentedControl *segmentedControl;
+    UIScrollView*m_scrollView;
+    BOOL isPush_Vip;
+
+}
+@synthesize m_infoDic;
+@synthesize m_infoDic2;
+
+- (void)dealloc
+{
+    [m_scroll release];
+    [m_infoDic release];
+    [m_scrollView release];
+    [_pasWod release];
+    [_photoStr release];
+    [_m_token release];
+    [m_infoDic2 release];
+
+    for (NSDictionary *dic in dataArray) {
+        [dic release];
+    }
+    [dataArray release];
+    for (NSDictionary *dic in dataArray2) {
+        [dic release];
+    }
+    [dataArray2 release];
+    [segmentedControl release];
+    [m_myTable release];
+    [m_FamilyTable release];
+    
+    [super dealloc];
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    [self hiddenNavigationBarLine];
+
+    /* Listen for keyboard */
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    /* No longer listen for keyboard */
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+
+    self.title = @"完善资料";
+    UIBarButtonItem *left = [Common CreateNavBarButton:self setEvent:nil setImage:nil setTitle:nil];
+    self.navigationItem.leftBarButtonItem = left;
+
+    if (!g_nowUserInfo.userToken) {
+        NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+        [dic setObject:_photoStr forKey:@"username"];
+        [dic setObject:_pasWod forKey:@"password"];
+//        [dic setObject:@"13126516214" forKey:@"username"];
+//        [dic setObject:@"111111" forKey:@"password"];
+
+        [[CommonHttpRequest defaultInstance] sendNewPostRequest:LOGIN_API_URL values:dic requestKey:LOGIN_API_URL delegate:self controller:self actiViewFlag:0 title:NSLocalizedString(@"加载中...", nil)];
+    }
+    [self createPerfect];
+}
+
+- (void)createPerfect
+{
+    UIView * whiteView = [[[UIView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, 60)]autorelease];
+    whiteView.backgroundColor = [CommonImage colorWithHexString:Color_fafafa];
+    [self.view addSubview:whiteView];
+    
+    m_infoDic = [[NSMutableDictionary alloc]initWithObjectsAndKeys:@"",@"nickName",@"男",@"sex",@"",@"birthday",@"",@"Diabetes",@"",@"time",@"无",@"complications",@"",@"history", nil];
+    
+    m_infoDic2 = [[NSMutableDictionary alloc]initWithObjectsAndKeys:@"",@"nickName",@"父女",@"sex",@"",@"birthday",@"",@"Diabetes",@"",@"time",@"无",@"complications",@"",@"history",@"",@"photo",nil];
+
+    dataArray = [[NSMutableArray alloc] initWithObjects:
+                  [@{ @"title" : @"姓名",@"value" : @"" } mutableCopy],
+                  [@{ @"title" : @"性别",@"value" : [Common isNULLString3:[m_infoDic objectForKey:@"sex"]] } mutableCopy],
+                  [@{ @"title" : @"生日",@"value" : [Common isNULLString3:[m_infoDic objectForKey:@"birthday"]] } mutableCopy],
+                  [@{ @"title" : @"糖尿病类型",@"value" : [Common isNULLString3:[m_infoDic objectForKey:@"Diabetes"]] } mutableCopy],
+                  [@{ @"title" : @"确诊时间",@"value" : [Common isNULLString3:[m_infoDic objectForKey:@"time"]] } mutableCopy],
+                  [@{ @"title" : @"并发症",@"value" : [Common isNULLString3:[m_infoDic objectForKey:@"complications"]] } mutableCopy],
+                  [@{ @"title" : @"既往病史",@"value" : [Common isNULLString3:[m_infoDic objectForKey:@"history"]] } mutableCopy],
+                 nil];
+    dataArray2 = [[NSMutableArray alloc] initWithObjects:
+                   [@{ @"title" : @"姓名",@"value" : @"" } mutableCopy],
+                   [@{ @"title" : @"关系",@"value" : [Common isNULLString3:[m_infoDic2 objectForKey:@"sex"]] } mutableCopy],
+                   [@{ @"title" : @"生日",@"value" : [Common isNULLString3:[m_infoDic2 objectForKey:@"birthday"]] } mutableCopy],
+                   [@{ @"title" : @"糖尿病类型",@"value" : [Common isNULLString3:[m_infoDic2 objectForKey:@"Diabetes"]] } mutableCopy],
+                   [@{ @"title" : @"确诊时间",@"value" : [Common isNULLString3:[m_infoDic2 objectForKey:@"time"]] } mutableCopy],
+                   [@{ @"title" : @"并发症",@"value" : [Common isNULLString3:[m_infoDic2 objectForKey:@"complications"]] } mutableCopy],
+                   [@{ @"title" : @"既往病史",@"value" : [Common isNULLString3:[m_infoDic2 objectForKey:@"history"]] } mutableCopy],
+                   [@{ @"title" : @"手机号",@"value" : [Common isNULLString3:[m_infoDic2 objectForKey:@"history"]] } mutableCopy],
+                  nil];
+    NSArray *segmentedArray = [NSArray arrayWithObjects:@"我是糖友",@"我是家属",nil];
+    //初始化UISegmentedControl
+    segmentedControl = [[[UISegmentedControl alloc]initWithItems:segmentedArray]autorelease];
+    segmentedControl.frame = CGRectMake(15, 25/2, kDeviceWidth-30, 35);
+    segmentedControl.selectedSegmentIndex = 0;//设置默认选择项索引
+    segmentedControl.tintColor = [CommonImage colorWithHexString:VERSION_TEXT_COLOR];
+    segmentedControl.segmentedControlStyle = UISegmentedControlStylePlain;//设置样式
+    [segmentedControl addTarget:self action:@selector(segmented:) forControlEvents:UIControlEventValueChanged];
+    [whiteView addSubview:segmentedControl];
+    
+    m_scrollView = [[UIScrollView alloc]initWithFrame:CGRectMake(0, whiteView.bottom, kDeviceWidth, kDeviceHeight)];
+    m_scrollView.delegate = self;
+    m_scrollView.backgroundColor = [UIColor clearColor];
+    m_scrollView.showsVerticalScrollIndicator = NO;
+    [self.view addSubview:m_scrollView];
+
+    m_scroll = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, 45*8)];
+    m_scroll.backgroundColor = [UIColor clearColor];
+    m_scroll.pagingEnabled = YES;
+    m_scroll.delegate = self;
+    m_scroll.showsHorizontalScrollIndicator = NO;
+    [m_scrollView addSubview:m_scroll];
+    m_scroll.contentSize = CGSizeMake(kDeviceWidth*2, 0);
+    m_scroll.scrollEnabled = NO;
+
+    m_myTable = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, m_scroll.height-45) style:UITableViewStylePlain];
+    m_myTable.layer.borderWidth = 0.5;
+    m_myTable.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+    m_myTable.showsVerticalScrollIndicator = NO;
+    m_myTable.delegate = self;
+    m_myTable.dataSource = self;
+    m_myTable.scrollEnabled = NO;
+    
+    m_myTable.backgroundColor = [UIColor clearColor];
+    [m_scroll addSubview:m_myTable];
+    m_myTable.rowHeight = 45;
+    m_myTable.separatorColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_QIAN];
+    [Common setExtraCellLineHidden:m_myTable];
+    
+    m_FamilyTable = [[UITableView alloc]initWithFrame:CGRectMake(kDeviceWidth, 0, kDeviceWidth, m_scroll.height) style:UITableViewStylePlain];
+    m_FamilyTable.layer.borderWidth = 0.5;
+    m_FamilyTable.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+    m_FamilyTable.showsVerticalScrollIndicator = NO;
+    m_FamilyTable.delegate = self;
+    m_FamilyTable.dataSource = self;
+    m_FamilyTable.scrollEnabled = NO;
+    m_FamilyTable.backgroundColor = [UIColor clearColor];
+    [m_scroll addSubview:m_FamilyTable];
+    m_FamilyTable.rowHeight = 45;
+    m_FamilyTable.separatorColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_QIAN];
+    [Common setExtraCellLineHidden:m_FamilyTable];
+    NSLog(@"%f",m_FamilyTable.bottom);
+
+    [self withdrawFromAccount:m_scrollView];
+}
+
+- (void)withdrawFromAccount:(UIScrollView*)object
+{
+    UIView* cleanView =
+    [[[UIView alloc] initWithFrame:CGRectMake(0, m_scroll.bottom-45, kDeviceWidth, 110)] autorelease];
+    cleanView.tag = 212;
+    cleanView.backgroundColor = [UIColor clearColor];
+    
+    UIImage* backImage =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:@"ff5232"]];
+    UIImage* whiteImage =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:@"91d000"]];
+    
+    UIButton * determine = nil;
+    for (int i =0; i<2; i++) {
+        determine = [UIButton buttonWithType:UIButtonTypeCustom];
+        determine.frame = CGRectMake(15+((kDeviceWidth-45)/2+15)*i, 30, (kDeviceWidth-45)/2, 45);
+        if (i) {
+            [determine addTarget:self action:@selector(withdraw:) forControlEvents:UIControlEventTouchUpInside];
+            [determine setTitle:@"完成注册" forState:UIControlStateNormal];
+            determine.tag = 77;
+            [determine setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+            [determine setBackgroundImage:backImage forState:UIControlStateNormal];
+        }else{
+            determine.tag = 78;
+            [determine addTarget:self action:@selector(withdraw:) forControlEvents:UIControlEventTouchUpInside];
+            [determine setTitle:@"扫一扫" forState:UIControlStateNormal];
+            [determine setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+            [determine setBackgroundImage:whiteImage forState:UIControlStateNormal];
+            determine.layer.borderWidth = 0.5;
+            determine.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+            
+        }
+        determine.layer.cornerRadius = 4;
+        determine.clipsToBounds = YES;
+        [cleanView addSubview:determine];
+    }
+    
+    UILabel * lab = [Common createLabel:CGRectMake(15, determine.bottom+20, 200, 20) TextColor:@"999999" Font:[UIFont systemFontOfSize:13] textAlignment:NSTextAlignmentLeft labTitle:@"扫一扫绑定康迅360智能设备"];
+    [cleanView addSubview:lab];
+    [object addSubview:cleanView];
+    object.contentSize = CGSizeMake(0, cleanView.bottom+80);
+}
+
+- (void)withdraw:(UIButton*)btn
+{
+    
+    [self textResignFirst];
+    if (btn.tag == 77) {
+        if (isPush_Vip) {
+            [self goToMainViewController];
+            return;
+        }
+        isPush_Vip = NO;
+    }else{
+        isPush_Vip = YES;
+    }
+    NSDictionary * m_dic = [NSDictionary dictionary];
+    BOOL isFam = NO;
+    if (!segmentedControl.selectedSegmentIndex) {
+        m_dic = m_infoDic;
+    }else{
+        isFam = YES;
+        m_dic = m_infoDic2;
+    }
+
+    if (![m_dic[@"nickName"] length]) {
+        [Common TipDialog2:@"姓名不能为空"];
+        return;
+    } else if (![m_dic[@"sex"] length]) {
+        [Common TipDialog2:@"请选择性别"];
+        return;
+    } else if (![m_dic[@"birthday"] length]) {
+        [Common TipDialog2:@"请选择生日"];
+        return;
+    } else if (![m_dic[@"Diabetes"] length]) {
+        [Common TipDialog2:@"请选择糖尿病类型"];
+        return;
+    }
+
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:m_dic[@"nickName"] forKey:@"nick_name"];
+    [dic setObject:m_dic[@"birthday"] forKey:@"birthday"];
+    NSDictionary*dataDic = [CommonUser getBloodSugarDic2];
+
+    [dic setObject:dataDic[m_dic[@"Diabetes"]] forKey:@"diabetic_type"];
+    [dic setObject:m_dic[@"history"] forKey:@"history"];
+    [dic setObject:[self setComplication:m_dic[@"complications"]] forKey:@"is_complication"];
+    [dic setObject:m_dic[@"time"] forKey:@"confirm_date"];
+
+    NSString * url = DIABETIC_API_URL;
+    if (isFam) {
+        url = DIABETIC_Fam_API_URL;
+        [dic setObject:[CommonUser getRelationship:m_dic[@"sex"]] forKey:@"fr"];
+        [dic setObject:m_dic[@"photo"] forKey:@"mobile"];
+    }else{
+        [dic setObject:[self setSexWithStr:m_dic[@"sex"]] forKey:@"sex"];
+    }
+    
+    [dic setObject:[LocationManager sharedManager].localStateString forKey:@"province"];
+    [dic setObject:[LocationManager sharedManager].localSubLocationString forKey:@"city"];
+
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:url values:dic requestKey:url delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"完善中...", nil)];
+
+}
+
+- (NSString*)setSexWithStr:(NSString*)sex
+{
+    NSString * type = nil;
+    if ([sex isEqualToString:@"男"]) {
+        type = @"1";
+    }else{
+        type = @"2";
+    }
+    return type;
+}
+
+- (NSString*)setComplication:(NSString*)complication
+{
+    if ([complication isEqualToString:@"有"]) {
+        return @"1";
+    }else{
+        return @"0";
+    }
+}
+
+
+- (void)scanning
+{
+    [self textResignFirst];
+    //是否有摄像头
+    if (![self isCameraAvailable]) {
+        [Common TipDialog2:@"该设备不支持此功能！"];
+        return;
+    }
+    ScanningViewController * rt = [[ScanningViewController alloc]init];
+    rt.isFirst = NO;
+    rt.sao_type = typeSaoIdentity;
+    [self.navigationController pushViewController:rt animated:YES];
+    [rt release];
+}
+
+- (BOOL)isCameraAvailable{
+    return [UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera];
+}
+
+- (void)segmented:(UISegmentedControl*)segmented
+{
+    NSLog(@"%ld",(long)segmented.selectedSegmentIndex);
+//    [UIView animateWithDuration:0.30 animations:^{
+    [m_scroll setContentOffset:CGPointMake(segmented.selectedSegmentIndex*kDeviceWidth, 0)];
+    [self scrollViewWillBeginDragging:nil];
+    
+    UIView * view = (UIView *)[self.view viewWithTag:212];
+    [UIView animateWithDuration:0.3 animations:^{
+        if (!segmented.selectedSegmentIndex) {
+            view.frame = [Common rectWithOrigin:view.frame x:0 y:view.top-45];
+            m_scrollView.contentSize = CGSizeMake(0, m_scrollView.contentSize.height-40);
+
+        }else{
+            view.frame = [Common rectWithOrigin:view.frame x:0 y:view.top+45];
+            m_scrollView.contentSize = CGSizeMake(0, m_scrollView.contentSize.height+40);
+
+        }
+    }];
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView*)tableView
+{
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView*)tableView numberOfRowsInSection:(NSInteger)section
+{
+    if (m_myTable == tableView) {
+        return [dataArray count];
+    }
+    return [dataArray2 count];
+}
+
+- (UITableViewCell*)tableView:(UITableView*)tableView cellForRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    static NSString* cellF = @"cell";
+    PerfectCell* cell = [tableView dequeueReusableCellWithIdentifier:cellF];
+    if (!cell) {
+        cell = [[[PerfectCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:cellF] autorelease];
+        cell.backgroundColor = [UIColor whiteColor];
+        //自定义右箭头
+        cell.accessoryView = [CommonImage creatRightArrowX:cell.frame.size.width-22 Y:(cell.frame.size.height-12)/2 cell:cell];
+        //cell点击背景颜色
+        cell.selectedBackgroundView = [Common creatCellBackView];
+        
+        [cell setP_block:^(NSDictionary *dic) {
+            if (!segmentedControl.selectedSegmentIndex) {
+                [m_infoDic setObject:dic[@"nickName"] forKey:@"nickName"];
+                [m_infoDic setObject:dic[@"photo"] forKey:@"photo"];
+
+            }else{
+                [m_infoDic2 setObject:dic[@"nickName"] forKey:@"nickName"];
+                [m_infoDic2 setObject:dic[@"photo"] forKey:@"photo"];
+            }
+        }];
+    }
+    NSDictionary* dic;
+    if (tableView==m_myTable) {
+        dic = dataArray[indexPath.row];
+    }else{
+        dic = dataArray2[indexPath.row];
+    }
+    [cell setInfoWithDic:dic row:indexPath.row];
+    return cell;
+}
+
+- (void)tableView:(UITableView*)tableView didSelectRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    if (!indexPath.row || indexPath.row == 7) {
+        return;
+    }
+    [self textResignFirst];
+    
+    NSMutableDictionary * dic = [NSMutableDictionary dictionary];
+    NSMutableArray * arr = [NSMutableArray array];
+    if (!segmentedControl.selectedSegmentIndex) {
+        dic = m_infoDic;
+        arr = dataArray;
+    }else{
+        dic = m_infoDic2;
+        arr = dataArray2;
+
+    }
+    
+//    NSMutableDictionary * m_arrDic = arr[indexPath.section][indexPath.row];
+    if (indexPath.row == 2) {
+        [self setTimePickerWithString:dic[@"birthday"] type:0 dictory:dic array:arr table:tableView];
+        return;
+    }else if(indexPath.row == 4)
+    {
+        [self setTimePickerWithString:dic[@"time"] type:1 dictory:dic array:arr table:tableView];
+        return;
+    }
+    NSMutableArray* fiisrtArray;
+    NSString* defualt, *titl;
+    PickerView* myPicker = [[PickerView alloc] init];
+    switch (indexPath.row) {
+        case 1:
+            if (!segmentedControl.selectedSegmentIndex) {
+                titl = @"请选择性别";
+                fiisrtArray = [NSMutableArray arrayWithObjects:@"男", @"女",  nil];
+            }else{
+                titl = @"请选择亲属关系";
+                fiisrtArray = [CommonUser getFmalyRelationship];
+            }
+            defualt = dic[@"sex"];
+            [myPicker createPickViewWithArray:[NSArray arrayWithObject:fiisrtArray] andWithSelectString:defualt setTitle:titl isShow:NO];
+            [myPicker setPickerViewBlock:^(NSString* content) {
+                [dic setObject:content forKey:@"sex"];
+                [arr[indexPath.row] setObject:content forKey:@"value"];
+                [tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:indexPath.row inSection:indexPath.section]] withRowAnimation:UITableViewRowAnimationNone];
+            }];
+            break;
+        case 3:
+            titl = @"糖尿病类型";
+            fiisrtArray = [CommonUser getBloodSugar];
+            defualt = dic[@"Diabetes"];
+            [myPicker createPickViewWithArray:[NSArray arrayWithObject:fiisrtArray] andWithSelectString:defualt setTitle:titl isShow:NO];
+            [myPicker setPickerViewBlock:^(NSString* content) {
+                [dic setObject:content forKey:@"Diabetes"];
+                [arr[indexPath.row] setObject:content forKey:@"value"];
+                [tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:indexPath.row inSection:indexPath.section]] withRowAnimation:UITableViewRowAnimationNone];
+            }];
+            break;
+        case 5:
+            titl = @"是否有并发症";
+            fiisrtArray = [NSMutableArray arrayWithObjects:@"有", @"无",  nil];
+            defualt = dic[@"complications"];
+            [myPicker createPickViewWithArray:[NSArray arrayWithObject:fiisrtArray] andWithSelectString:defualt setTitle:titl isShow:NO];
+            [myPicker setPickerViewBlock:^(NSString* content) {
+                [dic setObject:content forKey:@"complications"];
+                [arr[indexPath.row] setObject:content forKey:@"value"];
+                [tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:indexPath.row inSection:indexPath.section]] withRowAnimation:UITableViewRowAnimationNone];
+            }];
+            break;
+        case 6:
+            titl = @"请选择既往病史";
+            fiisrtArray = [CommonUser getHistoryDisease];
+            defualt = dic[@"history"];
+            [myPicker createPickViewWithArray:[NSArray arrayWithObject:fiisrtArray] andWithSelectString:defualt setTitle:titl isShow:NO];
+            [myPicker setPickerViewBlock:^(NSString* content) {
+                [dic setObject:content forKey:@"history"];
+                [arr[indexPath.row] setObject:content forKey:@"value"];
+                [tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:indexPath.row inSection:indexPath.section]] withRowAnimation:UITableViewRowAnimationNone];
+            }];
+            break;
+        default:
+            break;
+    }
+}
+
+- (void)setTimePickerWithString:(NSString *)timeString type:(int)type dictory:(NSMutableDictionary*)dic array:(NSMutableArray*)arr table:(UITableView*)table
+{
+    if (!timeString.length)
+    {
+        timeString = @"1980-06-15";
+    }
+    //时间日期选择器
+    InputDueDatePicker* inputDueDateView = [[InputDueDatePicker alloc] initWithTitle:@"请选择出生年月日"];
+    
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+    NSDate* dateTime = [dateFormatter dateFromString:timeString];
+    inputDueDateView.inputDueDatePicker.date = dateTime;
+    [dateFormatter release];
+    
+    [self.view addSubview:inputDueDateView];
+    [inputDueDateView setInputDueDatePickerBlock:^(NSDate* date) {
+        NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+        [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+        NSString * datestr = [dateFormatter stringFromDate:date];
+        [dateFormatter release];
+        
+        if (!type) {
+        [dic setObject:datestr forKey:@"birthday"];
+        [arr[2] setObject:datestr forKey:@"value"];
+        [table reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:2 inSection:0]] withRowAnimation:UITableViewRowAnimationNone];
+        }else{
+        [dic setObject:datestr forKey:@"time"];
+        [arr[4] setObject:datestr forKey:@"value"];
+        [table reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:4 inSection:0]] withRowAnimation:UITableViewRowAnimationNone];
+        }
+        
+    }];
+    [inputDueDateView release];
+}
+
+- (void)textFieldDidEndEditing:(UITextField *)textField
+{
+    if (!segmentedControl.selectedSegmentIndex) {
+        [m_infoDic setObject:textField.text forKey:@"nickName"];
+    }else{
+        [m_infoDic2 setObject:textField.text forKey:@"nickName"];
+    }
+}
+
+- (UITextField*)createTextField:(NSString*)title
+{
+    UITextField* text = [[[UITextField alloc] init]autorelease];
+    text.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+    text.contentMode = UIViewContentModeCenter;
+    text.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    text.placeholder = title;
+    text.returnKeyType = UIReturnKeyDone;
+    
+    //    text.clearButtonMode = YES;
+    text.delegate = self;
+    [text setTextColor:[CommonImage colorWithHexString:@"#666666"]];
+    [text setFont:[UIFont systemFontOfSize:14]];
+    return text;
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+{
+    if (scrollView == m_scroll) {
+        segmentedControl.selectedSegmentIndex = (int)m_scroll.contentOffset.x/kDeviceWidth;
+    }
+}
+
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
+{
+    [self textResignFirst];
+}
+
+- (void)textResignFirst
+{
+    UITableView * tab;
+    if (!segmentedControl.selectedSegmentIndex) {
+        tab = m_myTable;
+    }else{
+        tab = m_FamilyTable;
+    }
+    PerfectCell *cell = (PerfectCell*)[tab cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+    UITextField * field = (UITextField*)[cell viewWithTag:110];
+    [field resignFirstResponder];
+    if (segmentedControl.selectedSegmentIndex) {
+        cell = (PerfectCell*)[tab cellForRowAtIndexPath:[NSIndexPath indexPathForRow:7 inSection:0]];
+        field = (UITextField*)[cell viewWithTag:111];
+        [field resignFirstResponder];
+    }
+
+}
+
+//进入首页
+- (void)goToMainViewController
+{
+    DefauleViewController* nav = [[DefauleViewController alloc] init];
+    UIImage* nowViewImage = [CommonImage imageWithView:self.view];
+    APP_DELEGATE.rootViewController = nav;
+    [nav release];
+    
+    UIImageView* nowView = [[UIImageView alloc] initWithImage:nowViewImage];
+    nowView.frame = CGRectMake(0, 0, kDeviceWidth, kDeviceHeight + 64);
+    [APP_DELEGATE addSubview:nowView];
+    [nowView release];
+    [APP_DELEGATE bringSubviewToFront:nowView];
+    
+    [UIView animateWithDuration:0.35 animations:^{
+        nowView.transform = CGAffineTransformMakeTranslation(0, kDeviceHeight+64);
+    } completion:^(BOOL finished) {
+        [nowView removeFromSuperview];
+    }];
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dict = [responseString KXjSONValueObject];
+    NSDictionary * dic = dict[@"head"];
+    
+    if ([[dic objectForKey:@"state"] intValue] != 0) {
+        [Common TipDialog:[dic objectForKey:@"msg"]];
+        isPush_Vip = NO;
+        return;
+    }
+    else {
+        
+        if([loader.username isEqualToString:LOGIN_API_URL]){
+            _m_token = dict[@"body"][@"token"];
+            g_nowUserInfo = [Common initWithUserInfoDict:[dict objectForKey:@"body"]];
+            
+        }
+        else if([loader.username isEqualToString:DIABETIC_API_URL] || [loader.username isEqualToString:DIABETIC_Fam_API_URL]){
+                //获取个人信息
+                [self getMyInfo];
+        }else if([loader.username isEqualToString:GETMYINFO_API_URL]){
+            [g_nowUserInfo setMyBasicInformation:[dict objectForKey:@"body"][@"user_info"]];
+            if (isPush_Vip) {
+                //跳转扫描vip页面
+            [self scanning];
+            }else{
+            [self goToMainViewController];
+            }
+
+        }
+//        else{
+//            PerfectInformation * regis = [[PerfectInformation alloc]init];
+//            regis.whichStep = _whichStep+1;
+//            regis.m_token = _m_token;
+//            [self.navigationController pushViewController:regis animated:YES];
+//            [regis release];
+//        }
+    }
+}
+
+- (void)getMyInfo
+{
+    //获取个人信息
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GETMYINFO_API_URL values:dic requestKey:GETMYINFO_API_URL delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"获取个人信息...", nil)];
+}
+
+
+#pragma mark - 键盘移坐标
+//当键盘出现时候上移坐标
+- (void	)keyboardWillShow:(NSNotification *)aNotification {
+    PerfectCell *cell = (PerfectCell*)[m_FamilyTable cellForRowAtIndexPath:[NSIndexPath indexPathForRow:7 inSection:0]];
+    if (cell) {
+        UITextField * field = (UITextField*)[cell viewWithTag:111];
+        if ([field isFirstResponder]) {
+            if (kDeviceHeight-260 < 9*45) {
+                [UIView animateWithDuration:0.35 animations:^{
+                    self.view.frame = [Common rectWithOrigin:self.view.frame x:0 y:kDeviceHeight-260-9*45];
+                }];
+            }
+        }
+    }
+}
+
+//当键盘消失时候下移坐标
+- (void)keyboardWillHide:(NSNotification *)aNotification {
+    if (kDeviceHeight-260 < 9*45) {
+        [UIView animateWithDuration:0.35 animations:^{
+            if (IOS_7) {
+                self.view.frame = [Common rectWithOrigin:self.view.frame x:0 y:64];
+            }else{
+                self.view.frame = APP_DELEGATE.frame;
+            }
+        }];
+    }
+}
+
+@end

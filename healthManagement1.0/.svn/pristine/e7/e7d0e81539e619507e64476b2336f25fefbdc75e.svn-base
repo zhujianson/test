@@ -1,0 +1,91 @@
+//
+//  CommunityCellTableViewCell.m
+//  jiuhaohealth4.0
+//
+//  Created by 徐国洪 on 15-4-17.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "CommunityTableViewCell.h"
+
+@implementation CommunityTableViewCell
+@synthesize m_imageView;
+
+- (void)dealloc
+{
+    [m_labTitle release];
+    [m_imageView release];
+    [m_labPostsCount release];
+    [m_labBriefIntro release];
+    
+    [super dealloc];
+}
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        m_imageView = [[UIImageView alloc] initWithFrame:CGRectMake(15, 10, 50, 50)];
+        m_imageView.contentMode = UIViewContentModeScaleAspectFill;
+        m_imageView.clipsToBounds = YES;
+        m_imageView.layer.cornerRadius = 25;
+        [self addSubview:m_imageView];
+        
+        m_labTitle = [Common createLabel];
+        m_labTitle.font = [UIFont systemFontOfSize: M_FRONT_SEVENTEEN];
+        m_labTitle.textColor = [CommonImage colorWithHexString:@"000000"];
+        m_labTitle.frame = CGRectMake(m_imageView.right + 10, 12, kDeviceWidth - 100 - m_imageView.right - 20, 20);
+        [self addSubview:m_labTitle];
+        
+        m_labPostsCount = [Common createLabel];
+        m_labPostsCount.font = [UIFont systemFontOfSize:M_FRONT_TWELEVE];
+        m_labPostsCount.textAlignment = NSTextAlignmentRight;
+        m_labPostsCount.textColor = [CommonImage colorWithHexString:@"999999"];
+        m_labPostsCount.frame = CGRectMake(m_labTitle.right + 8, 15, 92, 17);
+        [self addSubview:m_labPostsCount];
+        
+        m_labBriefIntro = [Common createLabel];
+        m_labBriefIntro.font = [UIFont systemFontOfSize:M_FRONT_FOURTEEN];
+        m_labBriefIntro.textColor = [CommonImage colorWithHexString:@"999999"];
+        m_labBriefIntro.frame = CGRectMake(m_labTitle.left, m_labTitle.bottom+6, kDeviceWidth - m_labTitle.left - 10, 17);
+        [self addSubview:m_labBriefIntro];
+    }
+    
+    return self;
+}
+
+- (void)setM_infoDic:(NSMutableDictionary *)dic
+{
+    m_labTitle.text = [dic objectForKey:@"groupName"];
+    NSString *count = [dic objectForKey:@"postsCount"];
+    NSString *strPostsCount = [NSString stringWithFormat:@"帖子数 %@", count];
+    
+    m_labPostsCount.attributedText = [self replaceRedColorWithNSString:strPostsCount andUseKeyWord:[NSString stringWithFormat:@"%@", count] andWithFontSize:12 TextColor:COLOR_FF5351];
+    m_labBriefIntro.text = [dic objectForKey:@"briefIntro"];
+}
+
+//描红
+- (NSMutableAttributedString *)replaceRedColorWithNSString:(NSString *)str andUseKeyWord:(NSString *)keyWord andWithFontSize:(float )s TextColor:(NSString*)coler
+{
+    NSMutableAttributedString *attrituteString = [[[NSMutableAttributedString alloc] initWithString:str] autorelease];
+    NSRange range = [str rangeOfString:keyWord];
+    [attrituteString setAttributes:@{NSForegroundColorAttributeName : [CommonImage colorWithHexString:coler], NSFontAttributeName : [UIFont systemFontOfSize:s]} range:range];
+    return attrituteString;
+}
+
+- (void)setIconImage:(UIImage *)image
+{
+    m_imageView.image = image;
+}
+
+- (void)awakeFromNib {
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

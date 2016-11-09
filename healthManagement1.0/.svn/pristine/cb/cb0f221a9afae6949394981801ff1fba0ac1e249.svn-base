@@ -1,0 +1,62 @@
+//
+//  ConvertToPostModel.h
+//  jiuhaohealth4.0
+//
+//  Created by wangmin on 15-4-20.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface ConvertToPostModel : NSObject
+
+
+@property (nonatomic,retain) UIFont *postTitleFont;//标题字体
+@property (nonatomic,retain) UIFont *posterNameFont;//发送者字体
+@property (nonatomic,retain) UIFont *timeFont;//发送时间字体
+@property (nonatomic,retain) UIFont *commentFont;//评论字体
+@property (nonatomic,assign) CGSize postTitleSize;//标题宽高
+@property (nonatomic,assign) CGSize posterSize;//发帖人宽高
+@property (nonatomic,assign) CGSize commentSize;//发帖人宽高
+
+
+@property (nonatomic,assign) BOOL justGetAttributeTitleFlag;//只是得到标题传Yes
+
+@property (nonatomic,retain) NSMutableAttributedString *postTitleString;//富文本字符串
+
+@property (nonatomic,assign) CGFloat postTitleHeight;//标题的高度
+
+
+//@property (nonatomic,retain) NSAttributedString *posterSexAndTimeAttString;//发帖人 性别 时间
+//
+//@property (nonatomic,retain) NSAttributedString *commentAttString;
+
+@property (nonatomic,retain) NSString *posterNameString;//发帖人姓名
+@property (nonatomic,assign) CGFloat posterNameWidth;//发帖人姓名宽度
+
+@property (nonatomic,retain) NSString *sexImageString;//性别
+
+@property (nonatomic,retain) NSString *senderTimeString;//发送时间
+
+@property (nonatomic,retain) NSString *commentCountString;//评论数字符串
+@property (nonatomic,assign) CGFloat commentCountWidth;//评论宽度
+
+@property (nonatomic,retain) NSString *praiseCountString;//赞数字符串
+@property (nonatomic,assign) CGFloat praiseCountWidth;//赞宽度
+
+@property (nonatomic,assign) CGFloat allHeight;
+
+@property (nonatomic,retain) NSString *postId;//帖子id
+
+@property (nonatomic,retain) NSString *isSystem;//1为普通评论  2为web
+
+@property (nonatomic,retain) NSString *shareTitle;
+
+@property (nonatomic,retain) NSString *m_lable;
+@property (nonatomic,copy) NSString *isRead;//读未读
+
+@property (nonatomic,assign) int transparent;
+
+- (void)parseWithDic:(NSDictionary *)dic;
+
+@end

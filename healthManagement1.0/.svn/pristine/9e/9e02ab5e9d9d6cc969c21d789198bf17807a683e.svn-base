@@ -1,0 +1,616 @@
+//
+//  RegimenView.m
+//  jiuhaohealth4.0
+//
+//  Created by xjs on 15/5/5.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "RegimenView.h"
+#import "PickerView.h"
+#import "WebViewController.h"
+
+@implementation RegimenView
+{
+    UIScrollView * m_scroll;
+    NSArray * m_unit;
+    NSArray * m_basic;
+    NSMutableDictionary * m_dic;
+    UIButton * cleanBtn;
+    UITextField * m_textF;
+    NSArray * textArr;
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    /* Listen for keyboard */
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    /* No longer listen for keyboard */
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillShowNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillHideNotification object:nil];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.title = @"管理目标";
+    self.log_pageID = 305;
+    m_dic = [[NSMutableDictionary alloc]init];
+    
+    m_scroll = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight)];
+    m_scroll.backgroundColor = [UIColor clearColor];
+    m_scroll.pagingEnabled = YES;
+    m_scroll.showsHorizontalScrollIndicator = NO;
+    [self.view addSubview:m_scroll];
+
+//    UILabel * textLab = [Common createLabel:CGRectMake(0, 0, kDeviceWidth, 40) TextColor:@"999999" Font:[UIFont systemFontOfSize:14] textAlignment:NSTextAlignmentCenter labTitle:@"点击下面列表可修改记录"];
+//    [m_scroll addSubview:textLab];
+    
+    [self getRegimen];
+//    [self createRegimen];//暂时不用
+    cleanBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    cleanBtn.frame = CGRectMake(kDeviceWidth-50, kDeviceHeight, 50, 50);
+    [cleanBtn setImage:[UIImage imageNamed:@"common.bundle/common/keyClean.png"] forState:UIControlStateNormal];
+    [cleanBtn addTarget:self action:@selector(cleanBtn) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:cleanBtn];
+
+    
+}
+
+- (void	)keyboardWillShow:(NSNotification *)aNotification
+{
+    CGFloat h = kDeviceHeight-265;
+    [UIView animateWithDuration:0.3f animations:^{
+        cleanBtn.frame = [Common rectWithOrigin:cleanBtn.frame x:0 y:h];
+    }];
+}
+
+- (void)cleanBtn
+{
+    [m_textF resignFirstResponder];
+    
+}
+
+- (void)keyboardWillHide:(NSNotification *)aNotification
+{
+    [UIView animateWithDuration:0.3f animations:^{
+        cleanBtn.frame = [Common rectWithOrigin:cleanBtn.frame x:0 y:kDeviceHeight];
+    }];
+    
+}
+
+
+//获取信息
+- (void)getRegimen
+{
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GET_HEALTH_GOAL values:dic requestKey:GET_HEALTH_GOAL delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"加载中...", nil)];
+}
+
+
+- (void)dealloc
+{
+    [m_scroll release];
+    [textArr release];
+    [m_unit release];
+    [m_basic release];
+
+    [super dealloc];
+}
+
+//管理目标控制
+- (void)createControl
+{
+//    UIBarButtonItem *right = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"common.bundle/nav/m_help.png"] style:UIBarButtonItemStylePlain target:self action:@selector(history)];
+//    self.navigationItem.rightBarButtonItem = right;
+//    [right release];
+    UIBarButtonItem *right = [[UIBarButtonItem alloc] initWithTitle:@"说明 " style:UIBarButtonItemStylePlain target:self action:@selector(history)];
+    self.navigationItem.rightBarButtonItem = right;
+    [right release];
+
+    
+    UILabel * textLab;
+    UIView * backView = [[[UIView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, 45*8+30*3)]autorelease];
+    backView.backgroundColor = [UIColor whiteColor];
+    backView.layer.borderWidth = 0.5;
+    backView.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+    [m_scroll addSubview:backView];
+    textArr = [@[@"空腹血糖",@"餐后2小时血糖",@"血糖下限",@"糖化血红蛋白",@"血糖监测（7）个点",@"每日摄入热量",@"每日运动计步",@"血压控制"] retain];
+    m_unit = [@[@" mmol/L",@" mmol/L",@" mmol/L",@" %",@"",@" 大卡",@" 步",@" mmHg"] retain];
+    
+    m_basic = [@[@"7.0",@"10.0",@"4.4",@"7.0",@"每十五日",@"1600",@"10000",@"130/80"] retain];
+    NSArray * titleA = @[@"   血糖目标",@"   饮食运动目标",@"   血压管理"];
+    UIView *lineView = nil;
+    UIImageView*rightView;
+    NSMutableAttributedString * str;
+    UITextField * textF;
+    int h = 30,num=0;
+    UILabel * lab;
+    for (int i=0; i<textArr.count; i++) {
+        textLab = [Common createLabel:CGRectMake(15, 45*i+h, 200, 45) TextColor:COLOR_333333 Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentLeft labTitle:textArr[i]];
+        [backView addSubview:textLab];
+        
+        NSString * textStr = m_dic[[self setDicWithArr:i]];
+        
+        if (i==textArr.count-1) {
+        str = [self replaceRedColorWithNSString:[NSString stringWithFormat:@"%@%@",textStr,m_unit[i]] andUseKeyWord:@"mmHg" andWithFontSize:12];
+        }else{
+        str = [self replaceRedColorWithNSString:[NSString stringWithFormat:@"%@%@",textStr,m_unit[i]] andUseKeyWord:@"mmol/L" andWithFontSize:12];
+        }
+        if (i<textArr.count-1) {
+            lineView  = [[UIView alloc] initWithFrame:CGRectMake(15, textLab.bottom-0.25,kDeviceWidth-15, 0.5)];
+            lineView.backgroundColor =  [CommonImage colorWithHexString:LINE_COLOR];
+            [backView addSubview:lineView];
+            [lineView release];
+        }
+            rightView = [[[UIImageView alloc]initWithFrame:CGRectMake(kDeviceWidth-22,textLab.origin.y+33/2, 13/2, 21/2)]autorelease];
+            rightView.image = [UIImage imageNamed:@"common.bundle/common/right-arrow_pre.png"];
+            [backView addSubview:rightView];
+            
+            textLab = [Common createLabel:CGRectMake(0, 45*i+h, kDeviceWidth-35, 45) TextColor:@"999999" Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentRight labTitle:nil];
+            textLab.tag = 200+i;
+            [backView addSubview:textLab];
+            textLab.userInteractionEnabled = YES;
+            UITapGestureRecognizer * tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(choosePicker:)];
+            [textLab addGestureRecognizer:tap];
+            [tap release];
+        if (i<3) {
+            textLab.text = m_unit[i];
+            textLab.font = [UIFont systemFontOfSize:12];
+            
+            textF = [Common createTextField:@"" setDelegate:self setFont:16];
+            textF.keyboardType = UIKeyboardTypeDecimalPad;
+            textF.tag = textLab.tag+100;
+            textF.textColor = [CommonImage colorWithHexString:COLOR_999999];
+            textF.textAlignment = NSTextAlignmentRight;
+            textF.text = textStr;
+            textF.frame = CGRectMake(200, 0, kDeviceWidth-200-80, textLab.height);
+            [textLab addSubview:textF];
+            
+        }else{
+            if (i == 4) {
+                textLab.text = [self setBloodWithNum:textStr];
+            }else{
+            textLab.attributedText = str;
+            }
+        }
+        
+        if (i == 0 || i == 4 || i == 6) {
+            lab = [Common createLabel:CGRectMake(0, i?textLab.bottom:0, kDeviceWidth, 30) TextColor:COLOR_999999 Font:[UIFont systemFontOfSize:14] textAlignment:NSTextAlignmentLeft labTitle:titleA[num]];
+            lab.backgroundColor = self.view.backgroundColor;
+            [backView addSubview:lab];
+            if (i) {
+                h += 30;
+            }
+            num++;
+        }
+
+    }
+    
+    [self createSaveAndDelete:backView.bottom];
+
+}
+
+- (void)history
+{
+    
+    WebViewController *noticeDetailVC = [[WebViewController alloc] init];
+    self.log_pageID = 127;
+    noticeDetailVC.m_url = HEALP_SERVER_REFERENCE;
+    [self.navigationController pushViewController:noticeDetailVC animated:YES];
+    noticeDetailVC.title = @"管理目标说明";
+    [noticeDetailVC release];
+}
+
+- (void)createSaveBtn:(CGFloat)y
+{
+    UIImage* backImage =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:COLOR_FF5351]];
+    UIButton * determine = [UIButton buttonWithType:UIButtonTypeCustom];
+    determine.frame = CGRectMake(20, y+20, kDeviceWidth-40, 44);
+    [determine addTarget:self action:@selector(savebtn) forControlEvents:UIControlEventTouchUpInside];
+    [determine setTitle:@"保存" forState:UIControlStateNormal];
+    [determine setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [determine setBackgroundImage:backImage forState:UIControlStateNormal];
+    determine.layer.cornerRadius = 4;
+    determine.clipsToBounds = YES;
+    [m_scroll addSubview:determine];
+    m_scroll.contentSize = CGSizeMake(0, determine.bottom+20);
+
+}
+
+- (void)createSaveAndDelete:(CGFloat)y
+{
+    UIImage* backImage =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:@"ff5232"]];
+    UIImage* whiteImage =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:@"ffffff"]];
+    
+    UIButton * determine = nil;
+    for (int i =0; i<2; i++) {
+        determine = [UIButton buttonWithType:UIButtonTypeCustom];
+        determine.frame = CGRectMake(15+((kDeviceWidth-45)/2+15)*i, y+20, (kDeviceWidth-45)/2, 45);
+        if (i) {
+            [determine addTarget:self action:@selector(savebtn) forControlEvents:UIControlEventTouchUpInside];
+            [determine setTitle:@"保存" forState:UIControlStateNormal];
+            [determine setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+            [determine setBackgroundImage:backImage forState:UIControlStateNormal];
+        }else{
+            [determine addTarget:self action:@selector(delete) forControlEvents:UIControlEventTouchUpInside];
+            [determine setTitle:[self.title isEqualToString:@"管理目标"]?@"重置":@"删除" forState:UIControlStateNormal];
+            [determine setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+            [determine setBackgroundImage:whiteImage forState:UIControlStateNormal];
+            determine.layer.borderWidth = 0.5;
+            determine.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+            
+        }
+        determine.layer.cornerRadius = 4;
+        determine.clipsToBounds = YES;
+        [m_scroll addSubview:determine];
+    }
+    m_scroll.contentSize = CGSizeMake(0, determine.bottom+20);
+    
+}
+
+- (void)savebtn{
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:UPDATE_HEALTH_GOAL values:m_dic requestKey:UPDATE_HEALTH_GOAL delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"加载中...", nil)];
+
+}
+
+- (void)delete
+{
+    UILabel * lab;
+    NSMutableAttributedString * str;
+    NSString * labStr = nil;
+    UITextField * textF;
+    for (int i = 0; i<m_basic.count; i++) {
+        
+        lab = (UILabel*)[self.view viewWithTag:200+i];
+        labStr = m_basic[i];
+        
+        if (i==4) {
+            [m_dic setObject:[self setNumWithBlood:labStr] forKey:[self setDicWithArr:i]];
+        }else{
+            [m_dic setObject:labStr forKey:[self setDicWithArr:i]];
+        }
+        
+        textF = (UITextField*)[self.view viewWithTag:lab.tag+100];
+        if (i<3) {
+            textF.text = labStr;
+            
+        }else if(i<m_basic.count-1 && i>2){
+            lab.text = [NSString stringWithFormat:@"%@%@",labStr,m_unit[i]];
+        }else{
+            str = [self replaceRedColorWithNSString:[NSString stringWithFormat:@"%@%@",labStr,m_unit[i]] andUseKeyWord:m_unit[i] andWithFontSize:12];
+            lab.attributedText = str;
+        }
+    }
+}
+
+- (void)choosePicker:(UITapGestureRecognizer*)tap
+{
+    if (tap.view.tag < 203) {
+        UITextField * textF = (UITextField*)[self.view viewWithTag:tap.view.tag+100];
+        [textF becomeFirstResponder];
+        return;
+    }else{
+        [m_textF resignFirstResponder];
+    }
+    UILabel*lab = (UILabel*)[self.view viewWithTag:tap.view.tag];
+    
+    __block NSMutableAttributedString * str;
+    NSLog(@"%ld",(long)tap.view.tag);
+//    NSMutableArray* fiisrtArray = [self createArrayWithBeginInt:1 andWithOverInt:20 haveZero:YES];
+
+    NSMutableArray*m_moshiArray = [NSMutableArray array];
+    NSMutableArray*m_numArray = [NSMutableArray array];
+    NSMutableArray*m_numArray2 = [NSMutableArray array];
+    NSMutableArray*m_numArray3 = [NSMutableArray array];
+
+    NSString * titleStr = nil;
+    NSString * titleStr2 = textArr[tap.view.tag-200];
+
+    BOOL isLab = NO;
+    switch (tap.view.tag) {
+        case 203:
+            isLab = YES;
+            titleStr = m_dic[@"hba1c"];
+            for (int i = 5; i < 11; i++) {
+                [m_numArray addObject:[NSString stringWithFormat:@"%d", i]];
+            }
+            [m_moshiArray addObject:m_numArray];
+//            [m_moshiArray addObject:@[@"."]];
+            int num = ([titleStr intValue] == 10)?1:10;
+            for (int i = 0; i < num; i++) {
+                [m_numArray3 addObject:[NSString stringWithFormat:@"%d", i]];
+            }
+            [m_moshiArray addObject:m_numArray3];
+//            titleStr = [titleStr stringByReplacingOccurrencesOfString:@"." withString:@"-"];
+            m_numArray2 = m_moshiArray;
+            break;
+        case 204:
+            titleStr = [self setBloodWithNum:m_dic[@"blood_sugar_interval"]];
+            [m_moshiArray addObjectsFromArray:@[@"每日",@"每七日",@"每十日",@"每十五日",@"每三十日"]];
+            [m_numArray2 addObject:m_moshiArray];
+            break;
+        case 205:
+            titleStr = m_dic[@"calories_per_day"];
+            for (int i = 500; i < 2000; i+=100) {
+                [m_moshiArray addObject:[NSString stringWithFormat:@"%d", i]];
+            }
+            [m_numArray2 addObject:m_moshiArray];
+            break;
+        case 206:
+            titleStr = m_dic[@"steps_per_day"];
+            for (int i = 10000; i < 40000; i+=5000) {
+                [m_moshiArray addObject:[NSString stringWithFormat:@"%d", i]];
+            }
+            [m_numArray2 addObject:m_moshiArray];
+            break;
+        case 207:
+            titleStr = m_dic[@"blood_pressure"];
+            for (int i = 90; i < 150; i+=10) {
+                [m_numArray addObject:[NSString stringWithFormat:@"%d", i]];
+            }
+//            [m_numArray2 addObject:m_numArray];
+
+            [m_moshiArray addObject:m_numArray];
+//            [m_moshiArray addObject:@[@"-"]];
+            for (int i = 60; i < 100; i+=10) {
+                [m_numArray3 addObject:[NSString stringWithFormat:@"%d", i]];
+            }
+            [m_moshiArray addObject:m_numArray3];
+            titleStr = [titleStr stringByReplacingOccurrencesOfString:@"/" withString:@"."];
+            m_numArray2 = m_moshiArray;
+            isLab = YES;
+
+            break;
+   
+        default:
+            break;
+    }
+
+    PickerView* myPicker = [[PickerView alloc] init];
+    [myPicker createPickViewWithArray:m_numArray2 andWithSelectString:titleStr setTitle:titleStr2 isShow:isLab];
+    
+    [myPicker setPickerViewBlock:^(NSString* content) {
+        switch (tap.view.tag) {
+            case 203:
+//                content = [content stringByReplacingOccurrencesOfString:@".-." withString:@"."];
+                if ([content floatValue]>10) {
+                    content = @"10.0";
+                    [Common TipDialog2:@"糖化血糖蛋白最大不能超过10"];
+                }
+                [m_dic setObject:content forKey:@"hba1c"];
+                lab.text = [NSString stringWithFormat:@"%@%@",content,m_unit[tap.view.tag-200]];
+                break;
+            case 204:
+                [m_dic setObject:[self setNumWithBlood:content] forKey:@"blood_sugar_interval"];
+                lab.text = [NSString stringWithFormat:@"%@",content];
+                break;
+            case 205:
+                [m_dic setObject:content forKey:@"calories_per_day"];
+                lab.text = [NSString stringWithFormat:@"%@ 大卡",content];
+                break;
+            case 206:
+                [m_dic setObject:content forKey:@"steps_per_day"];
+                lab.text = [NSString stringWithFormat:@"%@ 步",content];
+                break;
+            case 207:
+            {
+                NSArray* array = [content componentsSeparatedByString:@"."];
+                if ([array[0] intValue] < [array[1] intValue] || [array[0] intValue] == [array[1] intValue]) {
+                    [Common TipDialog2:@"高压必须大于低压"];
+                }else{
+                    content = [content stringByReplacingOccurrencesOfString:@"." withString:@"/"];
+                    [m_dic setObject:content forKey:@"blood_pressure"];
+                    str = [self replaceRedColorWithNSString:[NSString stringWithFormat:@"%@%@",content,m_unit[tap.view.tag-200]] andUseKeyWord:@"mmHg" andWithFontSize:12];
+                    lab.attributedText = str;
+                }
+            }
+                break;
+
+            default:
+                break;
+        }
+    
+    }];
+}
+
+//字体不同大小
+- (NSMutableAttributedString *)replaceRedColorWithNSString:(NSString *)str andUseKeyWord:(NSString *)keyWord andWithFontSize:(float )size
+{
+    if(keyWord.length == 0){
+        
+        return nil;
+    }
+    NSMutableAttributedString *attrituteString = [[[NSMutableAttributedString alloc] initWithString:str] autorelease];
+    NSRange range = [str rangeOfString:keyWord];
+    [attrituteString setAttributes:@{NSForegroundColorAttributeName : [CommonImage colorWithHexString:COLOR_999999], NSFontAttributeName : [UIFont systemFontOfSize:size]} range:range];
+    return attrituteString;
+}
+
+- (NSMutableArray*)createArrayWithBeginInt:(int)number andWithOverInt:(int)overNumber haveZero:(BOOL)preZero;
+{
+    NSMutableArray* array = [[[NSMutableArray alloc] init] autorelease];
+    for (int i = number; i <= overNumber; i++) {
+        NSString* str = nil;
+//        if (i < 10 && preZero) {
+//            str = [NSString stringWithFormat:@"%d", i];
+//        } else {
+            str = [NSString stringWithFormat:@"%d", i];
+//        }
+        [array addObject:str];
+    }
+    return array;
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dict = [responseString KXjSONValueObject];
+    NSDictionary * dic = dict[@"head"];
+    
+    if ([[dic objectForKey:@"state"] intValue] != 0) {
+        [Common TipDialog:[dic objectForKey:@"msg"]];
+    }
+    else {
+        
+        if([loader.username isEqualToString:GET_HEALTH_GOAL]){
+            [m_dic addEntriesFromDictionary:dict[@"body"]];
+            [self createControl];
+
+        }else if([loader.username isEqualToString:UPDATE_HEALTH_GOAL]){
+            
+            [self.navigationController popViewControllerAnimated:YES];
+        }
+    }
+}
+- (BOOL)textField:(UITextField*)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString*)string
+{
+    NSMutableString *changeString = [NSMutableString stringWithString:textField.text];
+    [changeString replaceCharactersInRange:range withString:string];
+    if ([changeString floatValue]>16 || [changeString length]>4) {
+        return NO;
+    }
+    NSRange range1 = [changeString rangeOfString:@"." options:NSBackwardsSearch];
+    if (range1.location != NSNotFound && (range1.location<(changeString.length-2))) {
+        return NO;
+    }
+
+    return [Common textField:textField replacementString:string];
+}
+
+- (void)textFieldDidEndEditing:(UITextField *)textField
+{
+    if ([textField.text length]) {
+        if ([[textField.text substringFromIndex:[textField.text length]-1] isEqualToString:@"."]) {
+            textField.text = [textField.text stringByReplacingOccurrencesOfString:@"." withString:@""];
+        }
+    }else{
+        return;
+    }
+    if ([textField.text floatValue]<2.9) {
+        textField.text = @"2.9";
+    }
+    switch (textField.tag) {
+        case 300:
+            [m_dic setObject:textField.text forKey:@"blood_glucose_fasting"];
+            break;
+        case 301:
+            [m_dic setObject:textField.text forKey:@"blood_sugar_postmeal_2hour"];
+            break;
+        case 302:
+            [m_dic setObject:textField.text forKey:@"blood_sugar_lowest"];
+            break;
+
+        default:
+            break;
+    }
+}
+
+- (void)textFieldDidBeginEditing:(UITextField *)textField
+{
+    m_textF = textField;
+}
+
+- (NSString*)setBloodWithNum:(NSString*)num
+{
+    NSString * blood = nil;
+    switch ([num intValue]) {
+        case 1:
+            blood = @"每日";
+            break;
+        case 7:
+            blood = @"每七日";
+            break;
+        case 10:
+            blood = @"每十日";
+            break;
+        case 15:
+            blood = @"每十五日";
+            break;
+        case 30:
+            blood = @"每三十日";
+            break;
+        default:
+            break;
+    }
+    return blood;
+}
+
+- (NSString*)setNumWithBlood:(NSString*)num
+{
+    NSString * blood = nil;
+    
+    if ([num isEqualToString:@"每日"]) {
+        blood = @"1";
+    }else if ([num isEqualToString:@"每七日"]){
+        blood = @"7";
+
+    }else if ([num isEqualToString:@"每十日"]){
+        blood = @"10";
+
+    }else if ([num isEqualToString:@"每十五日"]){
+        blood = @"15";
+
+    }else if ([num isEqualToString:@"每三十日"]){
+        blood = @"30";
+
+    }
+    return blood;
+}
+
+
+- (NSString*)setDicWithArr:(int)s
+{
+    NSString* str = nil;
+    switch (s) {
+        case 0:
+            str = @"blood_glucose_fasting";
+            break;
+        case 1:
+            str = @"blood_sugar_postmeal_2hour";
+            
+            break;
+        case 2:
+            str = @"blood_sugar_lowest";
+            
+            break;
+        case 3:
+            str = @"hba1c";
+            
+            break;
+        case 4:
+            str = @"blood_sugar_interval";
+            
+            break;
+        case 5:
+            str = @"calories_per_day";
+            
+            break;
+        case 6:
+            str = @"steps_per_day";
+            
+            break;
+        case 7:
+            str = @"blood_pressure";
+            
+            break;
+            
+        default:
+            break;
+    }
+    return str;
+}
+@end

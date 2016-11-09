@@ -1,0 +1,269 @@
+//
+//  NotificationViews.m
+//  jiuhaohealth3.0
+//
+//  Created by wangmin on 15-1-20.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "NotificationViews.h"
+#import "NoticeDetailViewController.h"
+#import "NewsDeatilViewController.h"
+#import "TopicDetailsViewController.h"
+#import "AppDelegate.h"
+#import "DoctorListViewController.h"
+#import "BoxListViewController.h"
+#import "MyMessageViewController.h"
+//#import "MyChallengerViewController.h"
+
+@interface NotificationViews ()
+{
+    AppDelegate *myAppdelegate;
+}
+
+@end
+@implementation NotificationViews
+
+@synthesize dataDic;
+
+- (instancetype)init
+{
+    self = [super init];
+    if(self){
+        myAppdelegate = [Common getAppDelegate];
+    }
+    return self;
+}
+
+-(void)dealloc
+{
+    self.dataDic = nil;
+    [super dealloc];
+}
+
++(NotificationViews *)shareInstance
+{
+    static NotificationViews *shareManagerInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        shareManagerInstance = [[self alloc]init];
+    });
+    return shareManagerInstance;
+}
+
+-(void)setNotifiDic:(NSDictionary *)notifiInfo
+{
+    NSLog(@"+++++%@",notifiInfo);
+    if (notifiInfo &&notifiInfo.allKeys.count>0)
+    {
+       dataDic = [notifiInfo retain];
+    }
+}
+
+//调到公告栏
+- (void)toNoticView
+{
+    NSDictionary *dicItem = @{@"transparentYn":self.dataDic[@"transparentFlag"],@"detailID":self.dataDic[@"id"],@"title":self.dataDic[@"title"],@"content":self.dataDic[@"subTitle"],@"islink":self.dataDic[@"isLink"]};
+    
+    if ([dicItem[@"islink"] boolValue]) {
+        NoticeDetailViewController *noticeDetailVC = [[NoticeDetailViewController alloc] init];
+        noticeDetailVC.m_isHideNavBar = [dicItem[@"transparentYn"] isEqualToString:@"Y"];
+        NSString *requestURL = [NSString stringWithFormat:@"%@operation/activity/%@.html?id=%@",NOTICE_DETAIL_URL, [dicItem objectForKey:@"detailID"], g_nowUserInfo.userid];
+        NSMutableDictionary *dicc = [NSMutableDictionary dictionary];
+        [dicc setObject:requestURL forKey:@"url"];
+        [dicc setObject:@"1" forKey:@"isShare"];
+        [noticeDetailVC setM_dicInfo:dicc];
+        noticeDetailVC.titleName = dicItem[@"title"];
+        noticeDetailVC.subTitle = dicItem[@"content"];
+        noticeDetailVC.newsId = dicItem[@"detailID"];
+        [myAppdelegate.navigationVC pushViewController:noticeDetailVC animated:YES];
+        [noticeDetailVC release];
+    }
+}
+
+//主题详情
+- (void)toTopicView
+{
+//    AppDelegate *myAppdelegate = [Common getAppDelegate];
+//    DefauleViewController *myDefautVC = (DefauleViewController *)myAppdelegate.window.rootViewController;
+    
+    NSDictionary *dic = @{@"transparentYn":self.dataDic[@"transparentFlag"],@"themeId":self.dataDic[@"id"],@"title":self.dataDic[@"title"],@"content":self.dataDic[@"subTitle"]};
+    
+    TopicDetailsViewController * top = [[TopicDetailsViewController alloc] init];
+    top.m_isHideNavBar = [dic[@"transparentYn"] isEqualToString:@"Y"];
+    top.m_dic = dic;
+    top.shareTitle = dic[@"title"];
+    //    top.shareImage = [dic objectForKey:@"titleFilepath"];
+    top.shareContentString = dic[@"content"];
+    top.shareURL = [self getShareURLType:@"theme" andId:dic[@"themeId"]];
+    [myAppdelegate.navigationVC pushViewController:top animated:YES];
+    [top release];
+}
+
+//新闻
+- (void)toNewsView
+{
+//    AppDelegate *myAppdelegate = [Common getAppDelegate];
+//    DefauleViewController *myDefautVC = (DefauleViewController *)myAppdelegate.window.rootViewController;
+    
+    NSDictionary *dic = @{@"newsId":self.dataDic[@"id"],@"title":self.dataDic[@"title"],@"content":self.dataDic[@"subTitle"],@"createTime":self.dataDic[@"createTime"]};
+    
+    NewsDeatilViewController *newsVC = [[NewsDeatilViewController alloc] init];
+    newsVC.titleName = newsVC.title;
+    newsVC.dateString = [CommonDate  getServerTime:(long)([dic[@"createTime"] longLongValue]/1000) type:4];
+    [newsVC setNewsId:[dic objectForKey:@"newsId"]];
+    newsVC.shareTitle = dic[@"title"];
+    //    newsVC.shareImage = [dic objectForKey:@"titleFilepath"];
+    newsVC.shareContentString = dic[@"content"];
+    newsVC.shareURL = [self getShareURLType:@"news" andId:dic[@"newsId"]];
+    
+    [myAppdelegate.navigationVC pushViewController:newsVC animated:YES];
+    [newsVC release];
+}
+
+- (void)toDiaryView
+{
+    //    AppDelegate *myAppdelegate = [Common getAppDelegate];
+    //    DefauleViewController *myDefautVC = (DefauleViewController *)myAppdelegate.window.rootViewController;
+//    if (![myAppdelegate.navigationVC.topViewController isKindOfClass:[DiaryHomeViewController class]])
+//    {
+//        DiaryHomeViewController *diart = [[DiaryHomeViewController alloc] init];
+//        [myAppdelegate.navigationVC pushViewController:diart animated:YES];
+//        [diart release];
+//    }
+}
+
+- (void)toBoxList
+{
+    //    AppDelegate *myAppdelegate = [Common getAppDelegate];
+    //    DefauleViewController *myDefautVC = (DefauleViewController *)myAppdelegate.window.rootViewController;
+    if (![myAppdelegate.navigationVC.topViewController isKindOfClass:[BoxListViewController class]])
+    {
+        BoxListViewController *boxMessage = [[BoxListViewController alloc] init];
+        [myAppdelegate.navigationVC pushViewController:boxMessage animated:YES];
+        [boxMessage release];
+    }
+}
+
+- (void)toShowConsultView
+{
+    NSArray *array = myAppdelegate.navigationVC.viewControllers;
+    
+    UIViewController *vcc = nil;
+    BOOL is = NO;
+    for (id vc in array) {
+        if ([vc isKindOfClass:[DoctorListViewController class]]) {
+            is = YES;
+            vcc = vc;
+        }
+    }
+    if (!is) {
+        DoctorListViewController *diart = [[DoctorListViewController alloc] init];
+        [myAppdelegate.navigationVC pushViewController:diart animated:YES];
+        [diart release];
+    }
+}
+
+- (void)toTiaozhanList
+{
+//    if (![myAppdelegate.navigationVC.topViewController isKindOfClass:[MyChallengerViewController class]])
+//    {
+//        MyChallengerViewController *boxMessage = [[MyChallengerViewController alloc] init];
+//        [boxMessage moveToLastPage];
+//        [myAppdelegate.navigationVC pushViewController:boxMessage animated:YES];
+//        [boxMessage release];
+//    }
+}
+
+- (NSString*)getShareURLType:(NSString*)type andId:(NSString*)idString
+{
+    NSString* shareURL = [NSString stringWithFormat:@"%@%@.html", Share_Server_URL,idString];
+    
+    return shareURL;
+}
+
+- (void)sendPush
+{
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [dic setObject:g_nowUserInfo.userid forKey:@"uid"];
+    [dic setObject:@"channel_007" forKey:@"cid"];
+    [dic setObject:@"integral_rules_020" forKey:@"irId"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:getPointsByChannel values:dic requestKey:getPointsByChannel delegate:self controller:self actiViewFlag:0 title:0];
+}
+
+- (void)gotoMessage
+{
+    MyMessageViewController *hpvc = [[MyMessageViewController alloc] init];
+    [myAppdelegate.navigationVC pushViewController:hpvc animated:YES];
+    [hpvc release];
+}
+
++(void)handleRemoteNotificationWithUserInfo:(NSDictionary *)userInfo
+{
+    if (!g_nowUserInfo.userid.length)
+    {
+        userInfo = nil;
+        return;
+    }
+    userInfo =  [self shareInstance].dataDic;
+    if (!userInfo)
+    {
+        return;
+    }
+    
+    NSLog(@"++++++%@",userInfo);
+    
+    NSDictionary *aps = [userInfo valueForKey:@"aps"];
+    NSString *content = [aps valueForKey:@"alert"]; //推送显示的内容
+//    NSInteger badge = [[aps valueForKey:@"badge"] integerValue]; //badge数量
+//    NSString *sound = [aps valueForKey:@"sound"]; //播放的声音
+    
+    // 取得自定义字段内容
+//    NSString *customizeField1 = [userInfo valueForKey:@"customizeField1"]; //自定义参数，key是自己定义的
+    //推送处理
+    NSString *type = userInfo[@"type"];
+//    NSString *transparentFlag = [userInfo[@"transparentFlag"] length]?userInfo[@"transparentFlag"]:@"";//标题是否是透明的 Y N 公告 话题用
+//    NSString *isLink = [userInfo[@"isLink"] length]?userInfo[@"isLink"]:@"";//是否具有超链接 --- 无超连接 不需要跳转 公告专用
+//    NSString *createTime = [userInfo[@"createTime"] length]?userInfo[@"createTime"]:@"";//创建时间 --- 目前新闻用
+//    NSString *ID = [userInfo[@"id"] length]?userInfo[@"id"] :@"";
+    NSString *title = [userInfo[@"title"] length]?userInfo[@"title"]:@"";
+//    NSString *subTitle = [userInfo [@"subTitle"] length]?userInfo [@"subTitle"]:@"";
+    
+    title = content;
+    NotificationViews *notView = [[[self alloc] init] autorelease];
+    switch (type.intValue) {
+        case 0://圈子回复
+        {
+            [notView performSelector:@selector(gotoMessage) withObject:nil afterDelay:0.4];
+        }
+            break;
+        case 1://系统信箱
+        {
+            [notView performSelector:@selector(toBoxList) withObject:nil afterDelay:0.4];
+        }
+            break;
+        case 2://医生聊天
+        {
+            [notView performSelector:@selector(toShowConsultView) withObject:nil afterDelay:0.4];
+        }
+            break;
+        case 3://挑战
+        {
+            [notView performSelector:@selector(toTiaozhanList) withObject:nil afterDelay:0.4];
+        }
+            break;
+        case 7://友友聊天
+        {
+            [notView performSelector:@selector(toShowConsultView) withObject:nil afterDelay:0.4];
+        }
+            break;
+
+        default:
+            break;
+    }
+    [notView sendPush];
+    //清空,防止 通知栏下拉进行触发
+    [self shareInstance].dataDic = nil;
+}
+
+@end

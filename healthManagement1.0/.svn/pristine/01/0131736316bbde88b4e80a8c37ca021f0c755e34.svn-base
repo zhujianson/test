@@ -1,0 +1,16 @@
+//
+//  MyCollectionViewController.h
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-8-4.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "Common.h"
+#import "IconOperationQueue.h"
+@interface MyCollectionViewController : CommonViewController<UITableViewDataSource,UITableViewDelegate,IconOperationQueueDelegate>
+{
+//    IconOperationQueue *m_OperationQueue;
+
+}
+@end

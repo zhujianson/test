@@ -1,0 +1,731 @@
+//
+//  PersonalCenterViewController.m
+//  jiuhaoHealth2.1
+//
+//  Created by jiuhao-yangshuo on 14-7-25.
+//  Copyright (c) 2014年 jiuhao. All rights reserved.
+//
+
+#import "PersonalCenterViewController.h"
+#import "PersonalCenterCell.h"
+#import "LoginViewController.h"
+//#import "FamilyListViewController.h"
+#import "SettingViewController.h"
+#import "AccountInformationViewController.h"
+#import "MyMessageViewController.h"
+#import "BoxListViewController.h"
+#import "GuidePageView.h"
+#import "FeedbackViewController.h"
+#import "WalletViewController.h"
+//#import "HealthAlertViewController.h"
+//#import "ToolsViewController.h"
+#import "WebViewController.h"
+//#import "AlertManager.h"
+#import "TradingViewController.h"
+#import "WalletWebView.h"
+#import "AppDelegate.h"
+#import "UIImageView+LBBlurredImage.h"
+#import "EditPwdViewController.h"
+#import "ImagePicker.h"
+#import "GetToken.h"
+#import "HealthRecordViewController.h"
+#import "RedPacketViewController.h"
+#import "DeviceViewController.h"
+
+
+#define HEADER_HEIGHT 170
+@interface PersonalCenterViewController ()<UITableViewDelegate,UITableViewDataSource>
+{
+    UITableView *m_tabeleView;
+    NSMutableArray *m_dataArray;
+    NSDictionary * m_dic;
+    UIImageView *m_navRedImage;
+}
+@end
+
+@implementation PersonalCenterViewController
+- (void)dealloc
+{
+    [m_dataArray release];
+    [m_tabeleView release];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"getWallet" object:nil];
+    [super dealloc];
+}
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        self.log_pageID = 78;
+        self.m_isHideNavBar = 64;
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(getWallet) name:@"getWallet" object:nil];
+    }
+    return self;
+}
+
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    self.log_pageID = 301;
+    
+    //    if (m_tabeleView) {
+    //        [m_tabeleView reloadData];
+    //        UIImageView *butUserPhone = (UIImageView*)[m_tabeleView viewWithTag:890];
+    //        NSString *imagePath = [g_nowUserInfo.filePath stringByAppendingString:@"?imageView2/1/w/80/h/80"];
+    //        UIImage *defaul = [UIImage imageNamed:@"common.bundle/common/center_my-family_head_icon.png"];
+    //        [butUserPhone sd_setImageWithURL:[NSURL URLWithString:imagePath] placeholderImage:defaul];
+    //
+    //        UIImageView * imageView = (UIImageView*)[self.view viewWithTag:999];
+    //        [imageView sd_setImageWithURL:[NSURL URLWithString:imagePath] placeholderImage:defaul completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType, NSURL *imageURL) {
+    //            [imageView setImageToBlur:image
+    //                           blurRadius:kLBBlurredImageDefaultBlurRadius
+    //                      completionBlock:^(){
+    //                          NSLog(@"The blurred image has been set");
+    //                      }];
+    //        }];
+    //
+    //        UILabel * lab = (UILabel*)[m_tabeleView.tableHeaderView viewWithTag:40];;
+    //        //姓名
+    //        lab.text = g_nowUserInfo.nickName;
+    //    }
+    //    [m_tabeleView reloadData];
+    //    [self setChangeText];
+    
+    //    if (!m_WalletArr.count) {
+    //        [self getWallet];
+    //    }
+    //    self.navigationController.navigationBarHidden = YES;
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:YES];
+    //    self.navigationController.navigationBarHidden = NO;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    NSMutableArray *array = [NSMutableArray array];
+    [array addObject:[NSMutableDictionary dictionaryWithDictionary:@{@"image":@"common.bundle/personnal/wodedingdan.png", @"title":@"我的订单", @"value":@"2份"}]];
+    [array addObject:[NSMutableDictionary dictionaryWithDictionary:@{@"image":@"common.bundle/personnal/wodehongbao.png", @"title":@"我的红包", @"value":@"2份"}]];
+    [array addObject:[NSMutableDictionary dictionaryWithDictionary:@{@"image":@"common.bundle/personnal/tijianbaogao.png", @"title":@"体检报告", @"value":@"2份"}]];
+    [array addObject:[NSMutableDictionary dictionaryWithDictionary:@{@"image":@"common.bundle/personnal/shebei.png", @"title":@"我的设备", @"value":@""}]];
+    [array addObject:[NSMutableDictionary dictionaryWithDictionary:@{@"image":@"common.bundle/personnal/passWord.png", @"title":@"修改密码"}]];
+    [array addObject:[NSMutableDictionary dictionaryWithDictionary:@{@"image":@"common.bundle/personnal/yijianfankui.png", @"title":@"意见反馈"}]];
+    [array addObject:[NSMutableDictionary dictionaryWithDictionary:@{@"image":@"common.bundle/personnal/shezhi.png", @"title":@"设置"}]];
+    
+    m_dataArray = [[NSMutableArray alloc ]initWithObjects:
+                   array,
+                   nil];
+    [self creatMytableViewContnet];
+}
+
+- (void)butEventShowEmail
+{
+    BoxListViewController *email = [[BoxListViewController alloc] init];
+    //    [email createBack];
+    [self.navigationController pushViewController:email animated:YES];
+    [email release];
+}
+
+/**
+ *  获取我的钱包数据
+ */
+- (void)getWallet
+{
+    if (m_tabeleView) {
+        UIImageView *butUserPhone = (UIImageView*)[m_tabeleView viewWithTag:890];
+        NSString *imagePath = [g_nowUserInfo.filePath stringByAppendingString:@"?imageView2/1/w/80/h/80"];
+        UIImage *defaul = [UIImage imageNamed:@"common.bundle/common/center_my-family_head_icon.png"];
+        [butUserPhone sd_setImageWithURL:[NSURL URLWithString:imagePath] placeholderImage:defaul];
+        
+        UIImageView * imageView = (UIImageView*)[self.view viewWithTag:999];
+        [imageView sd_setImageWithURL:[NSURL URLWithString:imagePath] placeholderImage:defaul completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType, NSURL *imageURL) {
+            if (image)
+            {
+                [imageView setImageToBlur:image
+                               blurRadius:kLBBlurredImageDefaultBlurRadius
+                          completionBlock:^(){
+                              NSLog(@"The blurred image has been set");
+                          }];
+                
+            }
+        }];
+        
+        UILabel * lab = (UILabel*)[m_tabeleView.tableHeaderView viewWithTag:40];;
+        //姓名
+        lab.text = g_nowUserInfo.nickName;
+    }
+    [m_tabeleView reloadData];
+    NSMutableDictionary* dic1 = [NSMutableDictionary dictionary];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GET_ACCOUNTINFO_URL values:dic1 requestKey:GET_ACCOUNTINFO_URL delegate:self controller:self actiViewFlag:0 title:nil];
+    //
+}
+
+- (void)creatMytableViewContnet
+{
+    self.view.backgroundColor = [UIColor whiteColor];
+    
+    UIImageView * imageView = [[UIImageView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, HEADER_HEIGHT)];
+    imageView.contentMode = UIViewContentModeScaleAspectFill;
+    imageView.tag = 999;
+
+    NSString *imagePath = [g_nowUserInfo.filePath stringByAppendingString:@"?imageView2/1/w/80/h/80"];
+    UIImage *defaul = [UIImage imageNamed:@"common.bundle/common/center_my-family_head_icon.png"];
+    [imageView sd_setImageWithURL:[NSURL URLWithString:imagePath] placeholderImage:defaul completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType, NSURL *imageURL) {
+        if (image)
+        {
+            [imageView setImageToBlur:image
+                           blurRadius:kLBBlurredImageDefaultBlurRadius
+                      completionBlock:^(){
+                          NSLog(@"The blurred image has been set");
+                      }];
+        }
+    }];
+    [self.view addSubview:imageView];
+    [imageView release];
+    
+    m_tabeleView = [[UITableView alloc]initWithFrame:CGRectMake(0,0, kDeviceWidth,kDeviceHeight+64) style:UITableViewStyleGrouped];
+    m_tabeleView.delegate = self;
+    m_tabeleView.dataSource = self;
+    m_tabeleView.showsVerticalScrollIndicator = NO;
+    m_tabeleView.backgroundColor = [UIColor clearColor];
+    m_tabeleView.separatorStyle = UITableViewCellSeparatorStyleSingleLine;
+    m_tabeleView.separatorColor = [UIColor clearColor];
+    if (IOS_7) {
+        m_tabeleView.separatorInset = UIEdgeInsetsMake(0, 48, 0, -48);
+    }
+    UIView *topView = [self createTabelHeaderView];
+    m_tabeleView.tableHeaderView = topView;
+    
+    [self.view addSubview:m_tabeleView];
+    
+    [self getWallet];
+    
+    /**
+     *  创建navc
+     */
+    //    [self createNavView];
+    //    [topView release];
+    [self setUpContentView];
+}
+
+- (void)createNavView
+{
+    UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 64)];
+    UIImageView * m_image = [[UIImageView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, 64)];
+    m_image.tag = 888;
+    m_image.alpha = 0;
+    m_image.backgroundColor = [CommonImage colorWithHexString:COLOR_FF5351];
+    [self.view addSubview:m_image];
+    [m_image release];
+    
+    view.backgroundColor = [UIColor clearColor];
+    //    UIButton *butMail = [[UIButton alloc] init];
+    //    butMail.tag = 130;
+    //    NSString * title = @"设置";
+    //    [butMail setTitleColor:[CommonImage colorWithHexString:@"ffffff"] forState:UIControlStateNormal];
+    //    [butMail setTitleColor:[CommonImage colorWithHexString:@"ffffff" alpha:0.4] forState:UIControlStateHighlighted];
+    //    [butMail setTitle:title forState:UIControlStateNormal];
+    //    butMail.titleLabel.font = [UIFont systemFontOfSize:17];
+    //    NSDictionary* attributes = [NSDictionary dictionaryWithObjectsAndKeys:butMail.titleLabel.font, NSFontAttributeName, nil];
+    //    CGFloat widht;
+    //    if (IOS_7) {
+    //        widht = [title sizeWithAttributes:attributes].width;
+    //    } else {
+    //        widht = [Common sizeForString:title andFont:17].width;
+    //    }
+    //    butMail.frame = CGRectMake(kDeviceWidth-44, 20, widht, 44);
+    //    [butMail addTarget:self action:@selector(setting) forControlEvents:UIControlEventTouchUpInside];
+    //
+    //    m_navRedImage = [[UIImageView alloc]initWithFrame:CGRectMake(butMail.width, 11, 8, 8)];
+    //    m_navRedImage.backgroundColor = [CommonImage colorWithHexString:@"VERSION_ERROR_TEXT_COLOR"];
+    //    m_navRedImage.clipsToBounds = YES;
+    //    m_navRedImage.layer.cornerRadius = 4;
+    //    m_navRedImage.hidden = YES;
+    //    m_navRedImage.backgroundColor = [UIColor redColor];
+    //    [butMail addSubview:m_navRedImage];
+    //    [m_navRedImage release];
+    //    [view addSubview:butMail];
+    [self.view addSubview:view];
+    
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(takePicture)];
+    [view addGestureRecognizer:tap];
+    [tap release];
+    [view release];
+    
+    UIButton * backBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    backBtn.frame = CGRectMake(0, 20, 70, 44);
+    [backBtn addTarget:self action:@selector(backView) forControlEvents:UIControlEventTouchUpInside];
+    [backBtn setImage:[UIImage imageNamed:@"common.bundle/personnal/backBtn.png"] forState:UIControlStateNormal];
+    [view addSubview:backBtn];
+}
+
+- (void)backView
+{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (UIView *)createTabelHeaderView
+{
+    UIImageView *view = [[[UIImageView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, HEADER_HEIGHT)]autorelease];
+    view.backgroundColor = [UIColor clearColor];
+    view.userInteractionEnabled = YES;
+    UIImage * iamge = [[UIImage imageNamed:@"common.bundle/personnal/personal_header.png"] stretchableImageWithLeftCapWidth:1 topCapHeight:1];
+    UIImageView *view1 = [[[UIImageView alloc] initWithFrame:CGRectMake(0, -300, view.width, HEADER_HEIGHT+300)]autorelease];
+    view1.image = iamge;
+    [view addSubview:view1];
+    
+    //    UIView *lin;
+//    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(takePicture)];
+//    [view addGestureRecognizer:tap];
+//    [tap release];
+    
+    //头像
+    //    UIImageView *butUserPhone = [[UIImageView alloc] initWithFrame:CGRectMake(15, 44+(110-(kDeviceWidth/4-30))/2, kDeviceWidth/4-30, kDeviceWidth/4-30)];
+    UIImageView *butUserPhone = [[UIImageView alloc] initWithFrame:CGRectMake(20, 64+30-(200-HEADER_HEIGHT), 70, 70)];
+    butUserPhone.userInteractionEnabled = YES;
+    butUserPhone.tag = 890;
+    butUserPhone.layer.cornerRadius = butUserPhone.width/2;
+    butUserPhone.clipsToBounds = YES;
+    NSString *imagePath = [g_nowUserInfo.filePath stringByAppendingString:@"?imageView2/1/w/80/h/80"];
+    UIImage *defaul = [UIImage imageNamed:@"common.bundle/common/center_my-family_head_icon.png"];
+    [butUserPhone sd_setImageWithURL:[NSURL URLWithString:imagePath] placeholderImage:defaul];
+    
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(takePicture)];
+    [butUserPhone addGestureRecognizer:tap];
+    [tap release];
+
+    
+    [view addSubview:butUserPhone];
+    
+    UIImageView *UserPhoneVIP = [[UIImageView alloc] initWithFrame:CGRectMake(butUserPhone.width+butUserPhone.origin.x-23, butUserPhone.bottom-23, 23, 23)];
+    UserPhoneVIP.tag = 891;
+    UserPhoneVIP.layer.cornerRadius = 23/2;
+    UserPhoneVIP.clipsToBounds = YES;
+    NSString * imageV = [NSString stringWithFormat:@"common.bundle/personnal/VIPlevel%d.png",g_nowUserInfo.check_code];
+    UserPhoneVIP.image = [UIImage imageNamed:imageV];
+    [view addSubview:UserPhoneVIP];
+    [UserPhoneVIP release];
+    [butUserPhone release];
+    
+    //姓名
+    UILabel *labName = [[UILabel alloc] initWithFrame:CGRectMake(butUserPhone.right+20, butUserPhone.top, kDeviceWidth-butUserPhone.right-25, butUserPhone.height/2)];
+    labName.backgroundColor = [UIColor clearColor];
+    labName.text = g_nowUserInfo.nickName;
+    labName.tag = 40;
+    labName.autoresizingMask = UIViewAutoresizingFlexibleRightMargin;
+    labName.font = [UIFont fontWithName:@"TrebuchetMS-Bold" size:18];
+    labName.textColor = [CommonImage colorWithHexString:@"ffffff"];
+    [view addSubview:labName];
+    [labName release];
+    
+    //    UILabel * numLab = [Common createLabel:CGRectMake(labName.left, labName.bottom, labName.width, 20) TextColor:@"ffffff" Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentLeft labTitle:g_nowUserInfo.userid];
+    //    [view addSubview:numLab];
+    
+    UIButton * btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    btn.frame = CGRectMake(labName.left, labName.bottom, 155/2, 22);
+    [btn setTitle:@"健康档案" forState:UIControlStateNormal];
+    [btn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    btn.titleLabel.font = [UIFont systemFontOfSize:14];
+    btn.layer.cornerRadius = btn.height/2;
+    btn.clipsToBounds = YES;
+    btn.layer.borderColor = [UIColor whiteColor].CGColor;
+    btn.layer.borderWidth = 0.5;
+    [btn addTarget:self action:@selector(healthArchives) forControlEvents:UIControlEventTouchUpInside];
+    [view addSubview:btn];
+    
+    //    UIView * whiteView = [[UIView alloc]initWithFrame:CGRectMake(0, view1.bottom, kDeviceWidth, 70)];
+    //    whiteView.backgroundColor = [UIColor whiteColor];
+    //    [view addSubview:whiteView];
+    //    [whiteView release];
+    //
+    //    UILabel * m_lab;
+    //    for (int i = 0; i<2; i++) {
+    //        //现金，积分
+    //        btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    //        btn.frame = CGRectMake(kDeviceWidth/2*i, 0,kDeviceWidth/2, whiteView.height);
+    //        [whiteView addSubview:btn];
+    //        btn.tag = 5000+i;
+    //        [btn addTarget:self action:@selector(setMoney:) forControlEvents:UIControlEventTouchUpInside];
+    //        [btn setBackgroundImage:[CommonImage createImageWithColor:[UIColor clearColor]] forState:UIControlStateNormal];
+    //        m_lab = [Common createLabel:CGRectMake(0, 0,btn.width, btn.height) TextColor:@"666666" Font:[UIFont fontWithName:@"Helvetica Neue" size:14] textAlignment:NSTextAlignmentCenter labTitle:nil];
+    //        if (!i) {
+    ////            m_lab.textAlignment = NSTextAlignmentLeft;
+    //        }else{
+    //            lin = [[UIView alloc] initWithFrame:CGRectMake(btn.left-0.25, (whiteView.height-45)/2, 0.5,45)];
+    //            lin.backgroundColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_QIAN alpha:0.3];
+    //            [whiteView addSubview:lin];
+    //            [lin release];
+    //        }
+    //        m_lab.numberOfLines = 0;
+    //        m_lab.backgroundColor = [UIColor clearColor];
+    //        m_lab.tag = 4000+i;
+    //        [btn addSubview:m_lab];
+    //
+    //    }
+    
+    return view;
+}
+
+- (void)healthArchives
+{
+    CommonViewController *VC = self.view.superview.viewController;
+    CommonNavViewController *navVC = nil;
+    if ([VC isKindOfClass:[UINavigationController class]])
+    {
+        navVC = VC;
+    }
+    else
+    {
+        navVC = VC.navigationController;
+    }
+    
+    [self showHideSidebar];
+    
+    HealthRecordViewController *healthRecordVC  = [[HealthRecordViewController alloc] init];
+    [navVC pushViewController:healthRecordVC animated:YES];
+    [healthRecordVC release];
+}
+
+- (void)setMoney:(UIButton*)v
+{
+    
+    switch (v.tag-5000) {
+        case 0:
+        {
+            WebViewController *help = [[WebViewController alloc] init];
+            help.m_url = [NSString stringWithFormat:@"%@?token=%@",m_dic[@"orderUrl"],g_nowUserInfo.userToken];
+            help.title = @"订单";
+            [self.navigationController pushViewController:help animated:YES];
+            [help release];
+        }
+            break;
+        case 1:
+        {
+            WebViewController *help = [[WebViewController alloc] init];
+            help.m_url = [NSString stringWithFormat:@"%@?token=%@",m_dic[@"orderUrl"],g_nowUserInfo.userToken];
+            help.title = @"订单";
+            [self.navigationController pushViewController:help animated:YES];
+            [help release];
+            
+        }
+            break;
+        case 2:
+        {
+            //            RedPacketViewController * trading = [[RedPacketViewController alloc]init];
+            //            [self.navigationController pushViewController:trading animated:YES];
+            //            [trading release];
+        }
+            break;
+        default:
+            break;
+    }
+}
+
+/**
+ *  跳转帐号信息界面
+ */
+- (void)takePicture
+{
+    UIImageView *butUserPhone = (UIImageView*)[m_tabeleView viewWithTag:890];
+//    NSString *imagePath = [g_nowUserInfo.filePath stringByAppendingString:@"?imageView2/1/w/80/h/80"];
+//    UIImage *defaul = [UIImage imageNamed:@"common.bundle/common/center_my-family_head_icon.png"];
+//    [butUserPhone sd_setImageWithURL:[NSURL URLWithString:imagePath] placeholderImage:defaul];
+
+    ImagePicker *picker = [[ImagePicker alloc] initWithId:self];
+    [picker setPickerViewBlock:^(UIImage *image) {
+        butUserPhone.image = image;
+        UIImageView * imageView = (UIImageView*)[self.view viewWithTag:999];
+        [imageView setImageToBlur:image
+                       blurRadius:kLBBlurredImageDefaultBlurRadius
+                  completionBlock:^(){
+                      NSLog(@"The blurred image has been set");
+                  }];
+        
+//        [self showLoadingActiview];
+        NSData *data = UIImageJPEGRepresentation(image, Define_picScale);
+        [GetToken submitData:data withBlock:^(BOOL isOK,NSString*st) {
+//            [self stopLoadingActiView];
+            if (!isOK) {
+                [Common TipDialog2:@"图片上传失败，请检查网络是否正常!"];
+            }else
+            {
+                NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+                [dic setObject:st forKey:@"filePath"];
+                [[CommonHttpRequest defaultInstance] sendNewPostRequest:UPDATAField_API_URL values:dic requestKey:UPDATAField_API_URL delegate:self controller:self actiViewFlag:0 title:NSLocalizedString(@"修改中...", nil)];
+                [picker release];
+            }
+        } withName:nil];
+        
+    }];
+
+    
+//    CommonViewController *VC = self.view.superview.viewController;
+//    CommonNavViewController *navVC = nil;
+//    if ([VC isKindOfClass:[UINavigationController class]])
+//    {
+//        navVC = VC;
+//    }
+//    else
+//    {
+//        navVC = VC.navigationController;
+//    }
+//    
+//    AccountInformationViewController * acccount =[[AccountInformationViewController alloc]init];
+//    acccount.log_pageID = 79;
+//    [self showHideSidebar];
+//    [navVC pushViewController:acccount animated:YES];
+//    [acccount release];
+    
+    //    [self.navigationController pushViewController:acccount animated:YES];
+    //    [acccount release];
+}
+
+#pragma mark tableviewcellDelegate
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return [m_dataArray[section] count];
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return m_dataArray.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section
+{
+    return 0.01;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if (indexPath.row == 2) {
+        return 70;
+    }
+    return 50;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section
+{
+    float height = 0.01;
+    if (section == m_dataArray.count-1) {
+        height = 60;
+    }
+    return height;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *cellName = @"cell";
+    PersonalCenterCell *cell = [tableView dequeueReusableCellWithIdentifier:cellName];
+    if (cell == nil)
+    {
+        cell = [[[PersonalCenterCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellName] autorelease];
+    }
+    
+    NSDictionary * dic = [m_dataArray[indexPath.section] objectAtIndex:indexPath.row];
+    [(PersonalCenterCell*)cell setDicInfo:dic];
+    //cell点击背景颜色
+    cell.selectedBackgroundView = [Common creatCellBackView];
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    CommonViewController *VC = self.view.superview.viewController;
+    CommonNavViewController *navVC = nil;
+    if ([VC isKindOfClass:[UINavigationController class]])
+    {
+        navVC = VC;
+    }
+    else
+    {
+        navVC = VC.navigationController;
+    }
+    CommonViewController *showVC = nil;
+    switch (indexPath.row) {
+        case 0:
+        {//我的订单
+            showVC = [[WebViewController alloc] init];
+            ((WebViewController *)showVC).m_url = [NSString stringWithFormat:@"%@?token=%@",m_dic[@"orderUrl"],g_nowUserInfo.userToken];
+            showVC.title = @"订单";
+        }
+            break;
+        case 1:
+        {//我的红包
+            showVC = [[RedPacketViewController alloc]init];
+            break;
+        }
+        case 2://体检报告
+            showVC = [[WebViewController alloc] init];
+            ((WebViewController *)showVC).m_url = [NSString stringWithFormat:@"%@?token=%@",m_dic[@"reportUrl"],g_nowUserInfo.userToken];
+            showVC.title = @"体检报告";
+            break;
+        case 3://我的设备
+            showVC = [[DeviceViewController alloc] init];
+            showVC.title = @"设备";
+            break;
+        case 4:
+        {//密码修改
+            showVC = [[EditPwdViewController alloc] init];
+            showVC.log_pageID = 82;
+        }
+            break;
+        case 5:
+        {//意见反馈
+            showVC = [[FeedbackViewController alloc] init];
+            showVC.log_pageID = 104;
+        }
+            break;
+        case 6:
+        {//设置
+            showVC = [[SettingViewController alloc] init];
+            showVC.log_pageID = 103;
+        }
+            break;
+            
+        default:
+            break;
+    }
+    if (showVC)
+    {
+        [self showHideSidebar];
+        [navVC pushViewController:showVC animated:YES];
+        [showVC release];
+    }
+}
+//
+- (UIView*)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section
+{
+    UIView *view = [[[UIView alloc]init]autorelease];
+    view.backgroundColor = self.view.backgroundColor;
+    return view;
+}
+//
+- (void)setting
+{
+    SettingViewController * seting = [[SettingViewController alloc]init];
+    seting.log_pageID = 103;
+    [self.navigationController pushViewController:seting animated:YES];
+    [seting release];
+}
+
+- (void)setChangeText:(NSDictionary*)dic
+{
+    //    UILabel * lab = (UILabel*)[m_tabeleView viewWithTag:4000];
+    //    NSString * str=[NSString stringWithFormat:@"%d\n订单",[dic[@"orderCounts"] intValue]];
+    //    lab.attributedText =[self replaceRedColorWithNSString:str andUseKeyWord:[NSString stringWithFormat:@"%d",[dic[@"orderCounts"] intValue]] andWithFontSize:25 TextColor:@"333333"];
+    //    UILabel * lab2 = (UILabel*)[m_tabeleView viewWithTag:4001];
+    //    str=[NSString stringWithFormat:@"%d\n红包",[dic[@"orderCounts"] intValue]];
+    //    lab2.attributedText =[self replaceRedColorWithNSString:str andUseKeyWord:[NSString stringWithFormat:@"%d",[dic[@"orderCounts"] intValue]] andWithFontSize:25 TextColor:@"333333"];
+    
+    //    UILabel * lab3 = (UILabel*)[m_tabeleView viewWithTag:4002];
+    //    str=[NSString stringWithFormat:@"%@\n余额",@"30.00"];
+    //    lab3.attributedText =[self replaceRedColorWithNSString:str andUseKeyWord:[NSString stringWithFormat:@"%@",@"30.00"] andWithFontSize:25 TextColor:@"333333"];
+}
+
+//描红
+- (NSMutableAttributedString *)replaceRedColorWithNSString:(NSString *)str andUseKeyWord:(NSString *)keyWord andWithFontSize:(float )s TextColor:(NSString*)coler
+{
+    NSMutableAttributedString *attrituteString = [[[NSMutableAttributedString alloc] initWithString:str] autorelease];
+    NSRange range = [str rangeOfString:keyWord];
+    [attrituteString setAttributes:@{NSForegroundColorAttributeName : [CommonImage colorWithHexString:coler], NSFontAttributeName : [UIFont systemFontOfSize:s]} range:range];
+    return attrituteString;
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView
+{
+    UIView * view = (UIView*)[self.view viewWithTag:888];
+    view.alpha = scrollView.contentOffset.y/(155-64);
+    NSLog(@"%f",scrollView.contentOffset.y);
+    if (scrollView.contentOffset.y<0) {
+        UIImageView * imageView = (UIImageView*)[self.view viewWithTag:999];
+        imageView.transform = CGAffineTransformScale(CGAffineTransformIdentity, 1-scrollView.contentOffset.y/80, 1-scrollView.contentOffset.y/80);
+    }
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest *)loader
+{
+    NSString *responseString = [loader responseString];
+    NSDictionary *dic = [responseString KXjSONValueObject];
+    
+    NSDictionary *head = [dic objectForKey:@"head"];
+    
+    if (![[head objectForKey:@"state"] intValue])
+    {
+        NSDictionary *body = [dic objectForKey:@"body"];
+        if ([loader.username isEqualToString:GET_ACCOUNTINFO_URL]) {
+            if (!m_dic) {
+                m_dic = [body retain];
+            }
+            //            [self setChangeText:body];
+            NSMutableDictionary * d;
+            NSMutableArray * arr = m_dataArray[0];
+            for (int i = 0; i<arr.count; i++) {
+                d = arr[i];
+                if ([d[@"title"] isEqualToString:@"我的订单"]) {
+                    [d setObject:[NSString stringWithFormat:@"%d",[body[@"orderCounts"] intValue]] forKey:@"value"];
+                }else if ([d[@"title"] isEqualToString:@"我的红包"]){
+                    [d setObject:[NSString stringWithFormat:@"%d",[body[@"redCounts"] intValue]] forKey:@"value"];
+                }else if ([d[@"title"] isEqualToString:@"体检报告"]){
+                    [d setObject:[NSString stringWithFormat:@"%d份",[body[@"reportCounts"] intValue]] forKey:@"value"];
+                }
+            }
+            [m_tabeleView reloadData];
+        }else if ([loader.username isEqualToString:UPDATAField_API_URL]) {
+            @try {
+                NSString *str = [[dic objectForKey:@"body"][@"data"] stringByAppendingString:@"?imageView2/1/w/80/h/80"];
+                
+                NSString *strPath = [SDImageCache cachedFileNameForKey:str];
+                //                    NSString *str1 = [str stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
+                //缩略图
+                UIImageView *butUserPhone = (UIImageView*)[m_tabeleView viewWithTag:890];
+                UIImage *imageIcon = [CommonImage zoomImage:butUserPhone.image toScale:CGSizeMake(80, 80)];
+                NSData *data = UIImagePNGRepresentation(imageIcon);
+                [data writeToFile:[[Common getImagePath] stringByAppendingFormat:@"/%@", strPath] atomically:YES];
+                g_nowUserInfo.filePath = [dic objectForKey:@"body"][@"data"];
+                [[NSUserDefaults standardUserDefaults] setObject:g_nowUserInfo.filePath forKey:[NSString stringWithFormat:@"%@_loadingImage",g_nowUserInfo.mobilePhone]];//头像缓存
+                [[NSUserDefaults standardUserDefaults] synchronize];
+            }
+            @catch (NSException *exception) {
+            }
+            @finally {
+            }
+        MBProgressHUD* progress_ = [[MBProgressHUD alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, self.view.frame.size.height)];
+        progress_.labelText = @"修改成功";
+        progress_.mode = MBProgressHUDModeText;
+        progress_.userInteractionEnabled = NO;
+        [[[UIApplication sharedApplication].windows lastObject] addSubview:progress_];
+        [progress_ show:YES];
+        [progress_ showAnimated:YES whileExecutingBlock:^{
+            sleep(1);
+        } completionBlock:^{
+            [progress_ release];
+            [progress_ removeFromSuperview];
+        }];
+//        [self stopLoadingActiView];
+
+        }
+    }
+    else {
+        [Common TipDialog:[head objectForKey:@"msg"]];
+    }
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    NSLog(@"fail");
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+@end

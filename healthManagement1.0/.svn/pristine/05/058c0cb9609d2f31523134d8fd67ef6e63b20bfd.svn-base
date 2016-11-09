@@ -1,0 +1,74 @@
+//
+//  FamilyListViewCell.m
+//  jiuhaohealth3.0
+//
+//  Created by jiuhao-yangshuo on 15-1-13.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "FamilyListViewCell.h"
+
+
+@implementation FamilyListViewCell
+{
+    UILabel *nameLable;
+    UIImageView * headerImage;
+}
+@synthesize m_backView;
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        // Initialization code
+        
+        m_backView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, 150, 50)];
+        [self.contentView addSubview:m_backView];
+        
+        headerImage = [[UIImageView alloc]initWithFrame:CGRectMake(10, 10, 30, 30)];
+        headerImage.layer.cornerRadius = headerImage.width/2.0;
+        headerImage.clipsToBounds = YES;
+        headerImage.image = [UIImage imageNamed:@"common.bundle/common/center_my-family_head_icon.png"];
+        [m_backView addSubview:headerImage];
+        
+        nameLable = [Common createLabel:CGRectMake(headerImage.right+10, 0,100-headerImage.right+10, 50) TextColor:@"666666" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:@"123"];
+        [m_backView addSubview:nameLable];
+        
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    [headerImage release];
+    nameLable = nil;
+    headerImage = nil;
+    [super dealloc];
+}
+
+-(void)setfamilyCellDict:(NSDictionary *)dictInfo
+{
+    if (!dictInfo.count)
+    {
+        UIImage *image = [self clipImageFromImage:[UIImage imageNamed:@"common.bundle/diary/V4.0/addData.png"] Rect:headerImage.bounds];
+        headerImage.image = image;
+        nameLable.text = @"添加";
+        return;
+    }
+//    if ([dictInfo[@"filePath"] length]) {
+//        [CommonImage setPicImageQiniu:dictInfo[@"filePath"] View:headerImage Type:0 Delegate:nil];
+//    }
+    [CommonImage setImageFromServer:dictInfo[@"filePath"] View:headerImage Type:0];
+
+    nameLable.text = dictInfo[@"nickName"];
+}
+
+- (UIImage*)clipImageFromImage:(UIImage *)orgImage Rect:(CGRect)targetRect
+{
+    UIGraphicsBeginImageContextWithOptions(targetRect.size, NO, [UIScreen mainScreen].scale);
+    [orgImage drawInRect:CGRectMake((targetRect.size.width-orgImage.size.width)/2.0, (targetRect.size.height-orgImage.size.height)/2.0, orgImage.size.width, orgImage.size.height)];
+    UIImage *resultingImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return resultingImage;
+}
+@end

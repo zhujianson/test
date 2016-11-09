@@ -1,0 +1,185 @@
+//
+//  KXMoviePlayer.m
+//  jiuhaohealth4.2
+//
+//  Created by jiuhao-yangshuo on 15/11/30.
+//  Copyright © 2015年 xuGuohong. All rights reserved.
+//
+
+#import "KXMoviePlayer.h"
+
+@interface KXMoviePlayer ()<ALMoviePlayerControllerDelegate>
+@property (nonatomic,assign) CGRect defaultFrame;
+@property (nonatomic,retain) UIScrollView *m_scrollView;
+@end
+
+@implementation KXMoviePlayer
+{
+    UIView *m_parentView;
+}
+@synthesize m_moviePlayerView;
+@synthesize defaultFrame;
+@synthesize m_scrollView;
+@synthesize m_KXMoviePlayerType;
+
+-(id)init
+{
+    self = [super init];
+    if (self)
+    {
+        defaultFrame = CGRectMake(0, 0, kDeviceWidth, 180*(kDeviceWidth/320));
+    }
+    return self;
+}
+
+-(void)dealloc
+{
+    NSLog(@"+----------daellocl---KXMoviePlayer");
+    [super dealloc];
+}
+
+-(void)stopMoviePlayer
+{
+    [self movieFinishedCallback:nil];
+}
+
+-(void)loadMoviePlayerInWindowWithUrl:(NSString *)playerUrl
+{
+    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    [self loadMoviePlayerWithUrl:playerUrl inParentView:window];
+    [window bringSubviewToFront:m_moviePlayerView.view];
+    m_KXMoviePlayerType = KXMoviePlayerTypeWindow;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+         [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:NO];
+    });
+}
+
+-(void)loadMoviePlayerWithUrl:(NSString *)playerUrl inParentViewControler:(UIViewController *)viewController
+{
+    [self loadMoviePlayerWithUrl:playerUrl inParentView:viewController.view];
+     m_KXMoviePlayerType = KXMoviePlayerTypeViewController;
+}
+
+-(void)loadMoviePlayerWithUrl:(NSString *)playerUrl inParentView:(UIView *)view
+{
+    m_parentView = view;
+    if (!m_moviePlayerView) {
+        
+        CGRect frame = defaultFrame;
+        m_moviePlayerView = [[ALMoviePlayerController alloc] initWithFrame:frame];
+        m_moviePlayerView.view.alpha = 0.f;
+        m_moviePlayerView.delegate= self; //IMPORTANT!
+        ALMoviePlayerControls *movieControls = [[ALMoviePlayerControls alloc] initWithMoviePlayer:m_moviePlayerView style:ALMoviePlayerControlsStyleDefault];
+        //[movieControls setAdjustsFullscreenImage:NO];
+        //    [movieControls setBarColor:[UIColor colorWithRed:195/255.0 green:29/255.0 blue:29/255.0 alpha:0.5]];
+        [movieControls setBarColor:[UIColor colorWithRed:70/255.0 green:66/255.0 blue:66/255.0 alpha:0.5]];
+        [movieControls setTimeRemainingDecrements:YES];
+        [m_moviePlayerView setControls:movieControls];
+        [view addSubview:m_moviePlayerView.view];
+    }
+    
+    if (![[m_moviePlayerView.contentURL absoluteString] isEqualToString:playerUrl])
+    {
+        double delayInSeconds = 0.3;
+        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+        WS(weakSelf);
+        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+            [weakSelf configureViewForOrientation:[UIApplication sharedApplication].statusBarOrientation];
+            [UIView animateWithDuration:0.3 delay:0.0 options:0 animations:^{
+                weakSelf->m_moviePlayerView.view.alpha = 1.f;
+            } completion:^(BOOL finished) {
+            }];
+        });
+        //        [m_moviePlayerView stop];
+        [m_moviePlayerView setContentURL:[NSURL URLWithString:playerUrl]];
+        [m_moviePlayerView play];
+    }
+}
+
+-(void)setUpMoviePlayerHight:(float)hight
+{
+    CGRect newframe = m_moviePlayerView.view.bounds;
+    newframe.size.height = 600;
+    [m_moviePlayerView setFrame:newframe];
+}
+
+-(void)noEnbleScrollBackView:(UIView *)scrollView
+{
+    m_scrollView = scrollView;
+    if ([scrollView isKindOfClass:[UIWebView class]])
+    {
+        for (id subview in scrollView.subviews)
+        {  //webView是要被禁止滚动和回弹的UIWebView
+            if ([[subview class] isSubclassOfClass: [UIScrollView class]])
+                m_scrollView = subview;
+            break;
+        }
+    }
+    if (m_scrollView)
+    {
+         m_scrollView.scrollEnabled = NO;
+    }
+}
+
+- (void)movieTimedOut
+{
+    NSLog(@"MOVIE TIMED OUT");
+}
+
+- (void)moviePlayerWillMoveFromWindow
+{
+    if (![m_parentView.subviews containsObject:m_moviePlayerView.view])
+        [m_parentView addSubview:m_moviePlayerView.view];
+    //you MUST use [ALMoviePlayerController setFrame:] to adjust frame, NOT [ALMoviePlayerController.view setFrame:]
+    [m_moviePlayerView setFrame:self.defaultFrame];
+}
+
+- (void)configureViewForOrientation:(UIInterfaceOrientation)orientation
+{
+    CGFloat videoWidth = 0;
+    CGFloat videoHeight = 0;
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+        videoWidth = 700.f;
+        videoHeight = 535.f;
+    } else {
+        videoWidth = m_moviePlayerView.view.frame.size.width;
+        videoHeight = 220.f;
+    }
+    
+    if (!CGRectEqualToRect(_movieViewFrame ,CGRectNull)) {
+         self.defaultFrame = _movieViewFrame;
+    }
+    if (m_moviePlayerView.isFullscreen)
+        return;
+    [m_moviePlayerView setFrame:self.defaultFrame];
+}
+
+- (void)movieFinishedCallback:(NSNotification*)aNotification
+{
+    [m_moviePlayerView stop];
+    [m_moviePlayerView.view removeFromSuperview];
+    [m_moviePlayerView release];
+    m_moviePlayerView = nil;
+   
+    if (m_scrollView)
+    {
+         m_scrollView.scrollEnabled = YES;
+    }
+   [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:NO];
+}
+
+- (void)showStatusBar
+{
+    if (m_KXMoviePlayerType!=KXMoviePlayerTypeWindow)
+    {
+        [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:NO];
+    }
+}
+
+- (void)hideStatusBar
+{
+    [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:NO];
+}
+
+
+@end

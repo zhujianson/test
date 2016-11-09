@@ -1,0 +1,96 @@
+//
+//  HealthRecordModel.m
+//  healthManagement1.0
+//
+//  Created by wangmin on 16/1/6.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "HealthRecordModel.h"
+
+@implementation HealthRecordModel
+
+
+- (void)parseData:(NSDictionary *)dic
+{
+    
+    
+
+}
+
+//titleType = 0,//标题用
+//pairType = 1,//键值对
+//textType = 2,//只有文字
+//diseaseType = 3//疾病显示
+
+- (void)setType:(HealthRecordType)type
+{
+    _type = type;
+    
+    switch (type) {
+        case titleType:
+        {
+            self.rowHeight = 60;
+        
+        }
+            break;
+        case pairType:
+        {
+            self.rowHeight = 50;
+            
+        }
+            break;
+        case textType:
+        {
+            
+            CGSize size = [self.contentString sizeWithFont:[UIFont systemFontOfSize:15.0f] constrainedToSize:CGSizeMake((kDeviceWidth-30), 999)];
+            
+            self.rowHeight = 17.5+size.height+17.5;
+            
+        }
+            break;
+        case diseaseType:
+        {
+            
+            CGFloat nameHeight = 17.5+15;
+            
+            
+            CGFloat margin = 15;
+            CGFloat width = (kDeviceWidth - 15*5)/4.0f;
+            
+            CGFloat lastWidth = kDeviceWidth-15*2;//可以布局的空间
+            
+            CGFloat originX = margin;//初始化起点
+            CGFloat originY = nameHeight + 18 + 30;
+
+            
+            for(NSString *disease in self.diseaseArray){
+                
+                CGFloat realWidth = width;//实际宽度
+                if(disease.length > 4 || width < 15*disease.length+10){
+                    
+                    realWidth = 15*disease.length+10;
+                }
+                
+                if(lastWidth < realWidth){
+                    //不够了另起一行
+                    originX = margin;
+                    originY += 30+10;//高+空
+                    lastWidth = kDeviceWidth-15*2;
+                }
+            }
+            
+            self.rowHeight = originY + 17.5;
+            
+            
+        }
+            break;
+            
+        default:
+            break;
+    }
+
+
+}
+
+@end

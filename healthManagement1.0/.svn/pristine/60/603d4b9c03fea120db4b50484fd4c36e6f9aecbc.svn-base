@@ -1,0 +1,202 @@
+//
+//  SelectPostView.m
+//  jiuhaohealth4.0
+//
+//  Created by jiuhao-yangshuo on 15-4-20.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "SelectPostView.h"
+
+static const CGFloat CELL_HEIGHT = 40.f;//左边空白
+
+@interface SelectPostView ()<UITableViewDataSource,UITableViewDelegate>
+
+@end
+
+@implementation SelectPostView
+{
+    SelectPostViewBlock _inBlock;
+    __block  UITableView * table;
+    __block  NSArray *dataArray;
+    NSString *selectContent;//选择内容
+}
+
+@synthesize m_view;
+
+-(void)dealloc
+{
+    if (_inBlock)
+    {
+        [_inBlock release];
+        _inBlock = nil;
+    }
+    [dataArray release];
+    [table release];
+    [m_view release];
+    [super dealloc];
+}
+
+-(id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight)];
+    if (self)
+    {
+        dataArray = [@[@"全部帖子",@"只看楼主",@"最新回复"] copy];
+        
+        m_view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight)];
+        m_view.backgroundColor = [UIColor clearColor];
+        [self addSubview:m_view];
+        
+        table = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, dataArray.count *CELL_HEIGHT) style:UITableViewStylePlain];
+        table.backgroundColor = [UIColor whiteColor];
+        table.delegate = self;
+        table.dataSource = self;
+        table.bounces = NO;
+        table.showsVerticalScrollIndicator = NO;
+        [self addSubview:table];
+        table.separatorColor = [CommonImage colorWithHexString:@"ebebeb"];
+        
+        if ([table respondsToSelector:@selector(setSeparatorInset:)]) {
+            [table setSeparatorInset:UIEdgeInsetsZero];//ios7
+        }
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(removeView)];
+        [m_view addGestureRecognizer:tap];
+        [tap release];
+    }
+    return self;
+}
+
+- (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if ([cell respondsToSelector:@selector(setSeparatorInset:)]) {
+        [cell setSeparatorInset:UIEdgeInsetsZero];
+    }
+    if ([cell respondsToSelector:@selector(setLayoutMargins:)]) {
+        
+        [cell setLayoutMargins:UIEdgeInsetsZero];
+    }
+}
+
+
+-(void)setSelectPostViewBlock:(SelectPostViewBlock)handler andWithSelectConent:(NSString *)content
+{
+    selectContent = content;
+    [self showAnimation];
+    _inBlock = [handler copy];
+}
+
+- (CGFloat)tableView:(UITableView*)tableView
+heightForRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    return CELL_HEIGHT;
+}
+
+- (NSInteger)tableView:(UITableView*)tableView
+ numberOfRowsInSection:(NSInteger)section
+{
+    return [dataArray count];
+}
+
+- (UITableViewCell*)tableView:(UITableView*)tableView
+        cellForRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    static NSString* indentifier = @"Cell";
+    UILabel *contentLabel = nil;
+    UITableViewCell* cell = [tableView dequeueReusableCellWithIdentifier:indentifier];
+    if (cell == nil) {
+        cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1
+                                          reuseIdentifier:indentifier] autorelease];
+        cell.selectionStyle = UITableViewCellSelectionStyleGray;
+        
+        contentLabel = [Common createLabel:CGRectMake(0, 0, kDeviceWidth, CELL_HEIGHT) TextColor:@"666666" Font:[UIFont systemFontOfSize:16.0] textAlignment:NSTextAlignmentCenter labTitle:nil];
+        [cell.contentView addSubview:contentLabel];
+    }
+    if (IS_OS_8_OR_LATER)//分割线到头
+    {
+        cell.preservesSuperviewLayoutMargins = NO;
+    }
+    if (indexPath.row < [dataArray count]) {
+        contentLabel.text =  dataArray[indexPath.row];
+        if ([selectContent isEqualToString: contentLabel.text])
+        {
+             contentLabel.textColor = [CommonImage colorWithHexString:COLOR_FF5351];
+        }
+        else
+        {
+             contentLabel.textColor = [CommonImage colorWithHexString:@"666666"];
+        }
+    }
+    return cell;
+}
+
+- (void)tableView:(UITableView*)tableView
+didSelectRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    [table deselectRowAtIndexPath:indexPath animated:YES];
+    selectContent = dataArray[indexPath.row];
+    if (!selectContent.length)
+    {
+        return;
+    }
+    _inBlock(selectContent);
+    [self removeView];
+    NSLog(@"+++++++++%@",selectContent);
+}
+
+- (void)removeView
+{
+    [UIView animateWithDuration:0.35 animations:^{
+        m_view.backgroundColor = [UIColor clearColor];
+        table.frameY  = -table.height;
+    } completion:^(BOOL finished) {
+        [m_view removeFromSuperview];
+        [self removeFromSuperview];
+    }];
+}
+
+-(void)showAnimation
+{
+    table.frameY  = -table.height;
+    [UIView animateWithDuration:0.35 animations:^{
+        m_view.backgroundColor = [UIColor colorWithWhite:0 alpha:0.6];
+        table.frameY  = 0;
+    } completion:^(BOOL finished) {
+        
+    }];
+}
+
++(UIImage*)createImageWithFillColor:(UIColor*)fillColor andWithStrokeColor:(UIColor*)strokeColor withWeigt:(float)weight andWithHeight:(float)height andWithStrokeWeight:(float)strokeWeight
+{
+    CGRect rect = CGRectMake(0.0f, 0.0f, weight, height);
+    UIGraphicsBeginImageContextWithOptions(rect.size, NO, [UIScreen mainScreen].scale);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    if (fillColor)
+    {
+        CGContextSetFillColorWithColor(context, [fillColor CGColor]);
+    }
+    if (strokeColor)
+    {
+        CGContextSetStrokeColorWithColor(context, [strokeColor CGColor]);
+    }
+    
+    CGContextSetLineWidth(context, strokeWeight);
+    CGContextMoveToPoint(context, 0,0);
+    CGContextAddLineToPoint(context, rect.size.width,0);
+    CGContextAddLineToPoint(context, rect.size.width/2.0,height);
+    CGContextClosePath(context);
+    if (fillColor)
+    {
+        CGContextFillPath(context);
+    }
+    if (strokeColor)
+    {
+        CGContextStrokePath(context);
+        //        CGContextDrawPath(context, kCGPathFillStroke);
+    }
+    UIImage* theImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return theImage;
+}
+
+@end

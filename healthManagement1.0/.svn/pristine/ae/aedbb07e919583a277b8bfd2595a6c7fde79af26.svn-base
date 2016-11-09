@@ -1,0 +1,24 @@
+//
+//  CommunityPickerView.h
+//  jiuhaohealth4.0
+//
+//  Created by jiuhao-yangshuo on 15-5-20.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface CommunityPickerView : UIView
+
+// 限制最大数
+@property (nonatomic , assign) NSInteger maxCount;
+
+// 限制最大数
+@property (nonatomic , assign) NSInteger rowCount;
+
+@property (nonatomic , retain) NSMutableArray *dataArray;//数据
+
+
+-(void)reloadCommunityPickerViewData;
+
+@end

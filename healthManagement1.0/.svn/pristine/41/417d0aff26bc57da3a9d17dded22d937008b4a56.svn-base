@@ -1,0 +1,77 @@
+//
+//  EnterWeightView.m
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 16/6/3.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "EnterWeightView.h"
+
+@interface EnterWeightView()
+{
+    KXBasicBlock _inBlock;
+    UIView* m_view;
+}
+@end
+
+
+@implementation EnterWeightView
+
+-(id)initWithKXPayManageViewBlock:(KXBasicBlock)block
+{
+    CGRect frame = [UIScreen mainScreen].bounds;
+    self = [super initWithFrame:frame];
+    if (self)
+    {
+        _inBlock = [block copy];
+        m_view = [[UIView alloc] initWithFrame:frame];
+        m_view.backgroundColor = [UIColor clearColor];
+        [self addSubview:m_view];
+    }
+    return self;
+}
+
+-(void)createContentView
+{
+
+}
+
+-(void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    [self dismiss:YES];
+}
+
+-(void)dismiss:(BOOL)animate
+{
+    [UIView animateWithDuration:0.3 animations:^{
+//        m_tableView.transform = CGAffineTransformMakeScale(0.1f, 0.1f);
+        self.alpha = 0.f;
+    } completion:^(BOOL finished) {
+        m_view.backgroundColor = [UIColor clearColor];
+        [self removeFromSuperview];
+    }];
+}
+
+-(void)show
+{
+    self.alpha = 0.f;
+    self.transform = CGAffineTransformMakeScale(0.1f, 0.1f);
+    [UIView animateWithDuration:0.2f delay:0.f options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        self.transform = CGAffineTransformMakeScale(1.05f, 1.05f);
+        self.alpha = 1.f;
+    } completion:^(BOOL finished) {
+        [UIView animateWithDuration:0.08f delay:0.f options:UIViewAnimationOptionCurveEaseInOut animations:^{
+            self.transform = CGAffineTransformIdentity;
+            m_view.backgroundColor = [UIColor colorWithWhite:0 alpha:0.6];
+        } completion:nil];
+    }];
+}
+
++(void)showEnterWeightViewWithBlock:(KXBasicBlock)block
+{
+    EnterWeightView *payView = [[EnterWeightView alloc] initWithKXPayManageViewBlock:block];
+    [APP_DELEGATE addSubview:payView];
+    [payView show];
+}
+@end

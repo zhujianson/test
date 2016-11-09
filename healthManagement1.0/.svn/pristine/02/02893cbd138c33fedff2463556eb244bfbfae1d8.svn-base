@@ -1,0 +1,15 @@
+//
+//  UserDetailViewController.h
+//  jiuhaohealth3.0
+//
+//  Created by wangmin on 15-3-11.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface UserDetailViewController :  CommonViewController
+
+@property (nonatomic, retain) NSMutableDictionary *m_dicInfo;
+
+@end

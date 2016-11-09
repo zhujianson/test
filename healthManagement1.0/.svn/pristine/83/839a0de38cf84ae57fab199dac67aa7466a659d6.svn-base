@@ -1,0 +1,37 @@
+//
+//  HomeTableViewCell.h
+//  healthManagement1.0
+//
+//  Created by xjs on 16/7/1.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface HomeTableViewCell : UITableViewCell
+
+- (void)setInformationWithDic:(NSDictionary*)dic;
+
+@end
+
+
+
+
+
+
+
+@interface SoundTableViewCell : HomeTableViewCell//声音cell
+
+@property (nonatomic, strong) UIImageView *imagePlayView;
+- (void)setSoundInfoWithDic:(NSDictionary*)dic;
+@end
+
+
+
+
+
+
+
+@interface VideoTableViewCell : HomeTableViewCell//视频cell
+- (void)setVideoInfoWithDic:(NSDictionary*)dic;
+@end

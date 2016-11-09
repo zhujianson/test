@@ -1,0 +1,25 @@
+//
+//  EditHomeOrderView.h
+//  jiuhaohealth2.1
+//
+//  Created by 徐国洪 on 14-11-27.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+typedef void (^EditHomeOrderBlock)(BOOL f);
+
+@interface EditHomeOrderView : CommonViewController <UITableViewDelegate, UITableViewDataSource>
+{
+	UITableView *m_tableView;
+	EditHomeOrderBlock m_inBlobk;
+}
+
+@property (nonatomic, retain) NSMutableArray *m_array;
+
+- (void)submitHomeOrder;
+
+- (void)setEditHomeBlock:(EditHomeOrderBlock)_handler;
+
+@end

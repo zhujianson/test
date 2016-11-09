@@ -1,0 +1,67 @@
+/* 
+  Localizable.strings
+  Assistant1.0
+
+  Created by jiuhao-yangshuo on 14-7-20.
+  Copyright (c) 2014年 xuGuohong. All rights reserved.
+*/
+"kilocalorie" = "能量(千卡)";
+"kilojoules" = "能量(千焦)";
+"protein" = "蛋白质(克)";
+"fat" = "脂肪(克)";
+"carbohydrate"="碳水化合物(克)";
+"insoluble_fibre"="不溶性纤维(克)";
+"cholesterol"="胆固醇(微克)";
+"crozzle"="灰份(克)";
+"vitamin_a"="维生素A(毫克)";
+"carotene"="胡萝卜素(微克)";
+"retinol"="视黄醇(毫克)";
+"thiamine"="硫胺素(毫克)";
+"riboflavin"="核黄素(毫克)";
+"niacin"="尼克酸(毫克)";
+"vitamin_c"="维生素C(毫克)";
+"vitamin_d"="维生素D(毫克)";
+"vitamin_e"="维生素E(毫克)";
+"Ca"="钙(毫克)";
+"P"="磷(毫克)";
+"K"="钾(毫克)";
+"Na"="钠(毫克)";
+"Mg"="镁(毫克)";
+"Fe"="铁(毫克)";
+"Zn"="锌(毫克)";
+"Se"="硒(毫克)";
+"Cu"="铜(毫克)";
+"Mn"="锰(毫克)";
+"folate"="叶酸(毫克)";
+"GI"="升糖指数";
+
+
+"introduction"="症状简介";
+"etiology"="病因简述";
+"determine"="判断";
+"monitor"="移动监测发现异常的急救";
+"treatment"="家庭急救";
+"contact"="联系就医";
+"notice1"="就医须知";
+"notice2"="糖尿病病友须知";
+"notice3"="糖尿病病友须知";
+"manifestations"="临床表现";
+"principle"="治疗原则";
+"operation"="动作要点";
+
+"low"="偏低";
+"normal"="正常";
+"high"="偏高";
+"recentInjection"="最近注射";
+"mostParts"="最多部位";
+
+"foodAve"="饮食热量平均";
+"sportAve"="运动热量平均";
+"foodSportAve"="总热量平均";
+
+
+
+//糖查查
+"宜食"="宜食";
+"不宜食"="不宜食";
+"少食"="少食";

@@ -1,0 +1,23 @@
+//
+//  PostTableViewCell.h
+//  jiuhaohealth4.0
+//
+//  Created by 王敏 on 15-4-16.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "ConvertToPostModel.h"
+
+@interface PostTableViewCell : UITableViewCell
+
+@property (nonatomic ,retain) NSDictionary *postDic;
+
+@property (nonatomic,retain) NSDictionary *newPostDic;
+
+@property (nonatomic,retain) ConvertToPostModel *model;
+
+//隐藏红点
+-(void)hiddenRedImage;
+
+@end

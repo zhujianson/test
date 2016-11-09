@@ -1,0 +1,13 @@
+//
+//  FastLoginViewController.h
+//  healthManagement1.0
+//
+//  Created by xuguohong on 16/7/20.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface FastLoginViewController : CommonViewController
+
+@end

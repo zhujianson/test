@@ -1,0 +1,38 @@
+//
+//  RichTextView.h
+//  jiuhaohealth4.0
+//
+//  Created by jiuhao-yangshuo on 15-5-27.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "UIResponder+EventRouter.h"
+#import "MLEmojiLabel.h"
+
+static NSString *const  kTextWidth = @"kTextWidth";//内容高度缓存
+
+static NSString *const  kTextHeight = @"kTextHeight";//内容高度缓存
+
+static NSString *const kRichTextViewTap = @"kRichTextViewTap";//被回复人
+
+static NSString *const kRTFullStar = @"★";//指针不可变 回复人
+
+static NSString *const kRTEmptyStar = @"☆";//被回复人
+
+@interface RichTextView : UIView
+
+@property(nonatomic,retain) NSMutableDictionary * m_richTextDict;
+
+///  计算富文本的高度
+///
+///  @param text          内容
+///  @param m_emojiLabel  查看有无缓存
+///  @param contentWeight 内容宽度
+///
+///  @return 处理对象
++ (MLEmojiLabel*)setEmgText:(NSString*)text withOldEmojiLabel:(MLEmojiLabel*)m_emojiLabel withContentWeight:(float)contentWeight withTitleFront:(CGFloat)fontSize;
+
++ (void)upadteEmojiLabelFrameWith:(NSMutableDictionary *)dataDict withView:(MLEmojiLabel *)mEmojiLabel withContent:(NSString *)content;
+@end
+

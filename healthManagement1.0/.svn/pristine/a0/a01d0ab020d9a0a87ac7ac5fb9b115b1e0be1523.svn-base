@@ -1,0 +1,216 @@
+//
+//  ThinPlanView.m
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 16/6/3.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "ThinPlanView.h"
+#import "ThinHeader.h"
+static float const kLeftW = 15;
+static float const kSelectImageTag = 1001;
+
+@interface ThinPlanView()
+@property (nonatomic,strong) UILabel *m_nameLabel;
+@property (nonatomic,strong) NSMutableArray *m_btnArray;
+@property (nonatomic,strong) UILabel *m_desLabel;
+@property (nonatomic,strong) UIImageView *m_triangleImage;
+@end
+
+@implementation ThinPlanView
+
+-(id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self)
+    {
+        _m_btnArray = [[NSMutableArray alloc] init];
+        self.backgroundColor = [UIColor whiteColor];
+        [self createContentView];
+        
+    }
+    return self;
+}
+
+-(void)dealloc
+{
+    _thinPlanViewBlock = nil;
+}
+
+-(void)createContentView
+{
+    self.m_nameLabel.text = @"享受计划";
+    NSArray *titleColorArrays = @[@"ffb525",@"2bd45b",@"00c5ff"];
+    NSArray *titleArrays = @[@"准备期",@"强化期",@"巩固期"];
+    UIImage *imgeNext = k_fetchImage(@"icon_next");
+    UIImage *selectImge = k_fetchImage(@"selectImage");
+    
+    float  leftWeight = 30;
+    float kBtnw = 75.0;
+    float kBtnSpacew = (kDeviceWidth-2*leftWeight-3*kBtnw)/2.0;
+//    float spaceWeight = imgeNext.size.width+leftWeight*2;
+    
+    UIButton *planBtn = nil;
+    for (int i = 0; i < titleColorArrays.count; i++) {
+        planBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        planBtn.frame = CGRectMake(leftWeight+i*(kBtnw+kBtnSpacew), self.m_nameLabel.bottom, kBtnw,kBtnw);
+        planBtn.tag = 100+i;
+        [planBtn setTitle:titleArrays[i] forState:UIControlStateNormal];
+        [planBtn setTitleColor:[CommonImage colorWithHexString:@"ffffff"] forState:UIControlStateNormal];
+        planBtn.titleLabel.font = [UIFont systemFontOfSize:14.0];
+        UIImage *backImage = [CommonImage createRoundImageWithColor:titleColorArrays[i] withRect:planBtn.bounds];
+        [planBtn setBackgroundImage:backImage forState:UIControlStateNormal];
+        [planBtn addTarget:self action:@selector(butEventTool:) forControlEvents:UIControlEventTouchUpInside];
+        [self addSubview:planBtn];
+        [_m_btnArray addObject:planBtn];
+        
+        UIImageView *selectImgeView = [[UIImageView alloc]initWithImage:selectImge];
+        selectImgeView.frame = CGRectMake(0, 0, selectImge.size.width, selectImge.size.height);
+        [planBtn addSubview:selectImgeView];
+        selectImgeView.tag = kSelectImageTag;
+        selectImgeView.right = planBtn.width;
+        selectImgeView.hidden = (i!=0);
+        
+        if (i != 2)
+        {
+            UIImageView *nextImge = [[UIImageView alloc]initWithImage:imgeNext];
+            nextImge.frame = CGRectMake(planBtn.width, 0, kBtnSpacew, planBtn.height);
+            nextImge.contentMode = UIViewContentModeCenter;
+            [planBtn addSubview:nextImge];
+        }
+    }
+    self.m_desLabel.top = planBtn.bottom + 10.0;
+    self.m_triangleImage.bottom = self.m_desLabel.top+1;
+    
+    self.height = self.m_desLabel.bottom+25;
+}
+
+-(void)setInfoDict:(NSDictionary *)infoDict
+{
+//    private String base_prompt_text;//基础提示文字
+//    
+//    private String current_stage;//当前阶段
+    _infoDict = infoDict;
+    NSString *desStr = infoDict[@"base_prompt_text"];//@"阶段为养成期,让您逐渐适应饮食和运动.";
+    [self refreshShowDesWithIndex:[infoDict[@"current_stage"] floatValue]];
+    
+    float topSpace = 15.0;
+    CGSize size = [Common sizeForAllString:desStr andFont:_m_desLabel.font.pointSize andWight:_m_desLabel.width];
+    _m_desLabel.height = ceil(size.height) + topSpace*2;
+    
+    self.height = self.m_desLabel.bottom+25;
+}
+
+
+-(void)refreshShowDesWithIndex:(NSInteger)index
+{
+    NSString *borderColor = @"ffb525";
+     NSString *backColor = @"fff7e9";
+    switch (index) {
+        case 0:
+            borderColor = @"ffb525";
+            backColor = @"fff7e9";
+            break;
+        case 1:
+           borderColor = @"2bd45b";
+            backColor = @"e9fbee";
+            break;
+        case 2:
+            borderColor = @"e5f9ff";
+            backColor = @"11c9ff";
+            break;
+        default:
+            break;
+    }
+    UIButton *slectBtn = _m_btnArray[index];
+    _m_desLabel.backgroundColor =[CommonImage colorWithHexString:backColor];
+    _m_desLabel.layer.borderColor = [CommonImage colorWithHexString:borderColor].CGColor;
+    _m_triangleImage.centerX = slectBtn.centerX;
+    [self bringSubviewToFront:_m_triangleImage];
+    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        UIImage *image = [[self class] createImageWithFillColor: _m_desLabel.backgroundColor andWithStrokeColor:[CommonImage colorWithHexString:borderColor] withWeigt:13 andWithHeight:6.0 andWithStrokeWeight:0.5];
+        dispatch_async(dispatch_get_main_queue(), ^{
+              _m_triangleImage.image = image;
+        });
+    });
+    
+    for (int i = 0; i<_m_btnArray.count; i++) {
+        UIButton *slectBtn = _m_btnArray[index];
+        UIImageView *selectImgeView = [slectBtn viewWithTag:kSelectImageTag];
+        selectImgeView.hidden = ( i <= index);
+    }
+}
+
+#pragma mark - Event response
+-(void)butEventTool:(UIButton *)btn
+{
+    NSLog(@"------%@",btn);
+    _thinPlanViewBlock(btn);
+}
+
+#pragma mark - Set-getUi
+
+-(UILabel *)m_desLabel
+{
+    if (_m_desLabel) {
+        return _m_desLabel;
+    }
+    _m_desLabel = [Common createLabel:CGRectMake(kLeftW, 0, kDeviceWidth-2*kLeftW, 40) TextColor:@"333333" Font:[UIFont systemFontOfSize:14.0] textAlignment:NSTextAlignmentCenter labTitle:@"阶段为养成期,让您逐渐适应饮食和运动."];
+    [self addSubview:_m_desLabel];
+    _m_desLabel.backgroundColor =[CommonImage colorWithHexString:@"fff7e9"];
+    _m_desLabel.layer.borderWidth = 0.5;
+    _m_desLabel.clipsToBounds = YES;
+    _m_desLabel.layer.cornerRadius = 4;
+    _m_desLabel.layer.borderColor = [CommonImage colorWithHexString:@"ffb525"].CGColor;
+    return _m_desLabel;
+}
+
++ (UIImage*)createImageWithFillColor:(UIColor*)fillColor andWithStrokeColor:(UIColor*)strokeColor withWeigt:(float)weight andWithHeight:(float)height andWithStrokeWeight:(float)strokeWeight
+{
+    CGRect rect = CGRectMake(0.0f, 0.0f, weight, height);
+    UIGraphicsBeginImageContextWithOptions(rect.size, NO, [UIScreen mainScreen].scale);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    if (fillColor)
+    {
+        CGContextSetFillColorWithColor(context, [fillColor CGColor]);
+    }
+    if (strokeColor)
+    {
+        CGContextSetStrokeColorWithColor(context, [strokeColor CGColor]);
+    }
+    
+    CGContextSetLineWidth(context, strokeWeight);
+    
+    CGContextMoveToPoint(context, 0, height);
+    CGContextAddLineToPoint(context, rect.size.width/2.0, 0);
+    CGContextAddLineToPoint(context, rect.size.width, height);
+    
+    CGContextDrawPath(context, kCGPathFillStroke);
+    UIImage* theImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return theImage;
+}
+
+-(UIView *)m_triangleImage
+{
+    if (_m_triangleImage) {
+        return _m_triangleImage;
+    }
+    _m_triangleImage = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 12, 6)];
+    [self addSubview:_m_triangleImage];
+    return _m_triangleImage;
+}
+
+
+-(UILabel *)m_nameLabel
+{
+    if (_m_nameLabel) {
+        return _m_nameLabel;
+    }
+    _m_nameLabel = [Common createLabel:CGRectMake(kLeftW, 0, 200, 40) TextColor:@"333333" Font:[UIFont systemFontOfSize:14.0] textAlignment:NSTextAlignmentLeft labTitle:@"享受计划"];
+    [self addSubview:_m_nameLabel];
+    return _m_nameLabel;
+}
+@end

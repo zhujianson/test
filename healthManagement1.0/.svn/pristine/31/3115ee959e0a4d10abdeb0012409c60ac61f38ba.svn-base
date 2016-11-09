@@ -1,0 +1,94 @@
+//
+//  ResultView.m
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 16/2/24.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "ResultView.h"
+
+
+@implementation ResultView
+{
+    UIView *showView;
+}
+
+-(id)initWithBodyMeasuret:(BodyMeasure *)value
+{
+    CGRect frame = [UIScreen mainScreen].bounds;
+    self = [super initWithFrame:frame];
+    if (self)
+    {
+        showView = [[UIView alloc] initWithFrame:CGRectMake(15, 0, kDeviceWidth-30, 100)];
+        showView.center = self.center;
+        [self addSubview:showView];
+        showView.alpha = 0.8;
+        showView.backgroundColor = [UIColor blackColor];
+        showView.layer.cornerRadius = 8.0;
+        showView.layer.masksToBounds = YES;
+        showView.clipsToBounds = YES;
+        
+        NSString *weightFat = [NSString stringWithFormat:@"%.1f", value.bodyMassKG / 10.0f];
+        NSString *lblFat = [NSString stringWithFormat:@"%.1f %%", value.bodyFatPercentage / 10.f];
+        NSString *lblKcal = [NSString stringWithFormat:@"%d", value.kcal];
+        NSArray *value = @[weightFat,lblFat,lblKcal];
+         NSArray *unitArray = @[@"体重(kg)",@"脂肪率",@"卡路里"];
+        
+        float labelw = showView.width/3.0;
+        for (int i = 0; i < unitArray.count; i++)
+        {
+           UILabel  *nameLable = [Common createLabel:CGRectMake(labelw*i, 25,labelw,30) TextColor:@"ffffff" Font:[UIFont systemFontOfSize:25.0] textAlignment:NSTextAlignmentCenter labTitle:value[i]];
+            [showView addSubview:nameLable];
+            
+            UILabel *unitLable = [Common createLabel:CGRectMake(nameLable.left, nameLable.bottom,nameLable.width, 20) TextColor:@"ffffff" Font:[UIFont systemFontOfSize:M_FRONT_FOURTEEN] textAlignment:NSTextAlignmentCenter labTitle:unitArray[i]];
+            [showView addSubview:unitLable];
+            if (i!= unitArray.count-1)
+            {
+                UILabel *lineLable = [Common createLabel:CGRectMake(labelw*(i+1)-0.5, 25,0.5,50) TextColor:nil Font:nil textAlignment:NSTextAlignmentCenter labTitle:@""];
+                [showView addSubview:lineLable];
+                lineLable.backgroundColor = [CommonImage colorWithHexString:@"979797"];
+            }
+        }
+    }
+    return self;
+}
+
+-(void)show
+{
+    self.alpha = 0.f;
+    self.transform = CGAffineTransformMakeScale(0.1f, 0.1f);
+    [UIView animateWithDuration:0.2f delay:0.f options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        self.transform = CGAffineTransformMakeScale(1.05f, 1.05f);
+        self.alpha = 1.f;
+    } completion:^(BOOL finished) {
+        [UIView animateWithDuration:0.08f delay:0.f options:UIViewAnimationOptionCurveEaseInOut animations:^{
+            self.transform = CGAffineTransformIdentity;
+        } completion:nil];
+    }];
+    
+    WSS(weakSelf);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [weakSelf dismiss:YES];
+    });
+}
+
+
+-(void)dismiss:(BOOL)animate
+{
+    [UIView animateWithDuration:0.3 animations:^{
+        showView.transform = CGAffineTransformMakeScale(0.1f, 0.1f);
+        self.alpha = 0.f;
+    } completion:^(BOOL finished) {
+//        m_view.backgroundColor = [UIColor clearColor];
+        [self removeFromSuperview];
+    }];
+}
+
++(void)showResultViewWithBodyMeasuret:(BodyMeasure *)value
+{
+    ResultView *payView = [[self alloc] initWithBodyMeasuret:value];
+    [APP_DELEGATE addSubview:payView];
+    [payView show];
+}
+@end

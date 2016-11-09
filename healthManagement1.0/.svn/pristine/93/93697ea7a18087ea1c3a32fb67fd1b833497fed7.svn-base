@@ -1,0 +1,41 @@
+//
+//  FamilyListView.h
+//  jiuhaohealth3.0
+//
+//  Created by jiuhao-yangshuo on 15-1-13.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+typedef void (^FamilyListViewBlock)(id selectedFamily);
+
+@interface FamilyListView : UIView
+
+
+-(void)setFamilyListViewBlock:(FamilyListViewBlock)handler withSelectFamilyInfo:(NSMutableDictionary *)infoDict;
+
+//设置位置根据点击的控件
+-(void)setTriangleImgeViewOrigelPointWithTapView:(UIView *)tapView;
+
+-(void)removeView;
+
+///  本地存贮的用户信息
+///
+///  @return info
++(NSDictionary*)getSelectFamilyInfoByUserid;
+
+///  保存的用户信息
+///
+///  @param selectedUserInfo 要存入的用户信息
++(void)saveSelectFamilyInfoByUserid:(NSDictionary *)selectedUserInfo;
+
+///  删除本地的信息
+///
+///  @param delectedUserInfo 删除的信息
++(void)deleteSelectFamilyInfoByUserid:(NSDictionary *)delectedUserInfo;
+
+//更新信息
++(void)updateSelectFamilyInfoByUserid:(NSDictionary *)updatedUserInfo;
+
+@end

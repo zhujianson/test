@@ -1,0 +1,471 @@
+//
+//  CircleDetailViewController.m
+//  jiuhaohealth4.0
+//
+//  Created by wangmin on 15-4-16.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "CircleDetailViewController.h"
+#import "SelectedView.h"
+#import "PostListViewController.h"
+#import "SearchPostViewController.h"
+#import "CommunitySearchVIew.h"
+#import "PostingViewController.h"
+
+#import "UIImageView+WebCache.h"
+
+@interface CircleDetailViewController ()
+<UIScrollViewDelegate>
+{
+    NSArray *postListArray;//帖子分类View
+    UIImageView *circleImageView;//头像
+    UILabel *circleInfoLable;
+    UILabel *circleDetailLable;
+    __block UIScrollView *scrollView;
+    __block SelectedView *selectedView;
+    __block UIScrollView *backScrollView;
+    
+    UIButton *joinBtn;
+    
+    __block CGFloat offsetY;//偏移
+    __block BOOL  isAutoScrollFlag;//偏移标志位
+    BOOL  canYouPostFlag;//是否可以发帖
+}
+
+@property (nonatomic,retain) NSString *refuseString;
+@end
+
+@implementation CircleDetailViewController
+
+- (void)dealloc
+{
+    self.refuseString = nil;
+    [postListArray release];
+    [_groupId release];
+    [backScrollView release];
+    [scrollView release];
+    [super dealloc];
+}
+
+
+- (BOOL)closeNowView
+{
+    //移除嵌套类中的
+    
+    for(PostListViewController *list in postListArray){
+        
+        [list closeNowView];
+    }
+
+    return [super closeNowView];
+}
+
+- (instancetype)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if(self){
+    
+     
+    }
+    return self;
+}
+
+- (void)customRightNavView:(BOOL)editFlag
+{
+      if(!editFlag){
+          return;
+      }
+    
+    UIBarButtonItem *sendItem = [[UIBarButtonItem alloc] initWithTitle:@"发帖 " style:UIBarButtonItemStylePlain target:self action:@selector(editPost)];
+    self.navigationItem.rightBarButtonItem = sendItem;
+    [sendItem release];
+    
+    
+}
+
+
+- (void)searchPost
+{
+//    SearchPostViewController *searchPostVC = [[SearchPostViewController alloc] init];
+//    [self.navigationController pushViewController:searchPostVC animated:YES];
+//    [searchPostVC release];
+
+    CommunitySearchVIew *search = [[CommunitySearchVIew alloc] init];
+    search.m_superClass = self;
+    search.groupId = self.groupId;
+    [self.navigationController pushViewController:search animated:YES];
+    [search release];
+}
+
+- (void)editPost
+{
+    if(!canYouPostFlag){
+    
+
+        UIAlertView* curr1=[[UIAlertView alloc] initWithTitle:@"提示" message:self.refuseString delegate:self cancelButtonTitle:@"确定" otherButtonTitles:nil, nil];
+        [curr1 show];
+        
+        return;
+    }
+    
+    //发帖
+    PostingViewController * posting = [[PostingViewController alloc]init];
+    NSMutableDictionary *dict = [@{@"groupId":self.groupId} mutableCopy];
+    posting.m_superDic = dict;
+    __block CircleDetailViewController *weakSelf = self;
+    [posting setPostingBlock:^(NSDictionary *dic) {
+        NSLog(@"%@",dic);
+        [weakSelf inserNewPostWithPostDic:dic];
+    }];
+    CommonNavViewController *nav = [[CommonNavViewController alloc] initWithRootViewController:posting];
+    [self.navigationController presentViewController:nav animated:YES completion:nil];
+    
+    [posting release];
+    [dict release];
+}
+
+- (void)inserNewPostWithPostDic:(NSDictionary *)dic
+{
+    [self updateTopStringTodayPostsCountIsAdd:YES];
+    PostListViewController *list  = (PostListViewController *)postListArray[0];
+    [list addNewPost:dic];
+    
+}
+
+
+- (NSMutableAttributedString *)replaceWithNSString:(NSString *)str andUseKeyWord:(NSString *)keyWord andWithFontSize:(float )size keywordColor:(NSString *)colorString
+{
+    NSMutableAttributedString *attrituteString = [[[NSMutableAttributedString alloc] initWithString:str] autorelease];
+    if(!keyWord){
+        return attrituteString;
+    }
+    NSRange range = [str rangeOfString:keyWord];
+    [attrituteString setAttributes:@{NSForegroundColorAttributeName : [CommonImage colorWithHexString:colorString],NSBackgroundColorAttributeName : [CommonImage colorWithHexString:@"ff0000"], NSFontAttributeName : [UIFont systemFontOfSize:size]} range:range];
+    return attrituteString;
+}
+
+- (NSMutableAttributedString *)replaceWithNSString:(NSString *)str andUseKeyWordArray:(NSArray *)keyWords andWithFontSize:(float )size keywordColor:(NSString *)colorString
+{
+    NSMutableAttributedString *attrituteString = [[[NSMutableAttributedString alloc] initWithString:str] autorelease];
+    if(!keyWords){
+        return attrituteString;
+    }
+    
+    for(NSString *keyword in keyWords){
+    
+        NSRange range = [str rangeOfString:keyword];
+        [attrituteString setAttributes:@{NSForegroundColorAttributeName : [CommonImage colorWithHexString:colorString], NSFontAttributeName : [UIFont systemFontOfSize:size]} range:range];
+    }
+
+    return attrituteString;
+}
+
+
+- (void)getHeadView
+{
+    UIView *headView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 135)];
+    headView.backgroundColor = [UIColor whiteColor];
+//    [self.view addSubview:headView];
+    [backScrollView addSubview:headView];
+    [headView release];
+    
+//    UIView *lineView = [[UIView alloc] initWithFrame:CGRectMake(0, headView.size.height-11, kDeviceWidth, 0.5)];
+//    lineView.backgroundColor = [CommonImage colorWithHexString:@"e5e5e5"];
+//    [headView addSubview:lineView];
+//    [lineView release];
+//    
+//    lineView = [[UIView alloc] initWithFrame:CGRectMake(0, headView.size.height-10.5, kDeviceWidth, 10)];
+//    lineView.backgroundColor = [CommonImage colorWithHexString:@"f5f5f5"];
+//    [headView addSubview:lineView];
+//    [lineView release];
+//    
+    UIView  *lineView = [[UIView alloc] initWithFrame:CGRectMake(0, headView.size.height-0.5, kDeviceWidth, 0.5)];
+    lineView.backgroundColor = [CommonImage colorWithHexString:@"dcdcdc"];
+    [headView addSubview:lineView];
+    [lineView release];
+
+    //头像
+    
+    
+    circleImageView = [[UIImageView alloc] initWithFrame:CGRectMake(15, 15, 60, 60)];
+    circleImageView.contentMode = UIViewContentModeScaleAspectFill;
+    circleImageView.clipsToBounds = YES;
+    circleImageView.layer.cornerRadius = 30;
+
+    [headView addSubview:circleImageView];
+    [circleImageView release];
+    circleImageView.userInteractionEnabled = YES;
+    [CommonImage setImageFromServer:self.m_superDic[@"groupLogo"] View:circleImageView Type:2];
+
+//    [circleImageView sd_setImageWithURL:[NSURL URLWithString:self.m_superDic[@"groupLogo"]] placeholderImage:define];
+
+    circleInfoLable = [[UILabel alloc] initWithFrame:CGRectMake(circleImageView.right+10, 20, kDeviceWidth-circleImageView.right-10-15, 16)];
+    circleInfoLable.font = [UIFont systemFontOfSize:15.0f];
+    circleInfoLable.backgroundColor = [UIColor clearColor];
+    circleInfoLable.textColor = [CommonImage colorWithHexString:COLOR_FF5351];
+    [headView addSubview:circleInfoLable];
+    [circleInfoLable release];
+    
+//    NSString *topString = [NSString stringWithFormat:@" 人数  %@    帖子  %@", self.m_superDic[@"memberCount"],self.m_superDic[@"todayPostsCount"]];
+//    circleInfoLable.attributedText = [self  replaceWithNSString:topString andUseKeyWordArray:@[@" 人数 ",@" 帖子 "] andWithFontSize:15 keywordColor:@"333333"];
+    [self updateTopStringTodayPostsCountIsAdd:NO];
+    
+    circleDetailLable = [[UILabel alloc] initWithFrame:CGRectMake(circleInfoLable.origin.x, circleInfoLable.bottom+12-7, kDeviceWidth-(circleInfoLable.origin.x+15+50+10), 33)];
+    circleDetailLable.font = [UIFont systemFontOfSize:13.0f];
+    circleDetailLable.backgroundColor = [UIColor clearColor];
+    circleDetailLable.numberOfLines = 0;
+    circleDetailLable.textColor = [CommonImage colorWithHexString:@"999999"];
+    [headView addSubview:circleDetailLable];
+    [circleDetailLable release];
+    
+    circleDetailLable.text = self.m_superDic[@"briefIntro"];//@"很高兴和巴伯先生再次见面。我们去年见面的时候，世界经济复苏发生了新变化，现在还不断有新变化发生。这次与你见面也表明";
+    
+    //按钮
+    joinBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    joinBtn.frame = CGRectMake(kDeviceWidth-50-15, 33, 50, 25);
+    joinBtn.layer.borderColor = [CommonImage colorWithHexString:@"c8c8c8"].CGColor;
+    joinBtn.layer.borderWidth = 0.5;
+    joinBtn.layer.cornerRadius = 2.0f;
+    joinBtn.layer.masksToBounds = YES;
+    if([self.m_superDic[@"isMyJoin"] isEqualToString:@"0"]){
+        [joinBtn setTitle:@"关注" forState:UIControlStateNormal];
+    }else{
+        [joinBtn setTitle:@"取消关注" forState:UIControlStateNormal];
+    }
+    
+    [joinBtn setTitleColor:[CommonImage colorWithHexString:@"#666666"] forState:UIControlStateNormal];
+    joinBtn.titleLabel.font = [UIFont boldSystemFontOfSize:11];
+    [joinBtn addTarget:self action:@selector(joinBtnClicked:) forControlEvents:UIControlEventTouchUpInside];
+    [headView addSubview:joinBtn];
+    
+    
+    selectedView = [[SelectedView alloc] initWithFrame:CGRectMake(0, headView.bottom-30-15, kDeviceWidth, 45)];
+    selectedView.backgroundColor = [UIColor clearColor];
+    selectedView.theStyle = SegmentStyle;
+    
+    __block UIScrollView *weakScrollView = scrollView;
+    [selectedView setSelectedBtnBlock:^(int index){
+    
+        [UIView animateWithDuration:0.30 animations:^{
+            [weakScrollView setContentOffset:CGPointMake(index*kDeviceWidth, 0)];
+        }];
+        
+    }];
+    [selectedView initwithArray:@[@"全部帖",@"精华帖"]];
+    [headView addSubview:selectedView];
+    [selectedView release];
+  
+}
+
+-(void)updateTopStringTodayPostsCountIsAdd:(BOOL)isAdd
+{
+    if (isAdd)
+    {
+        int todayPostsCount = [self.m_superDic[@"postsCount"] intValue] +1;
+        [self.m_superDic setObject:[NSString stringWithFormat:@"%d",todayPostsCount] forKey:@"postsCount"];
+    }
+   
+    NSString *topString = [NSString stringWithFormat:@"人数  %@    帖子  %@", self.m_superDic[@"memberCount"], [Common isNULLString7:self.m_superDic[@"postsCount"]]];
+    circleInfoLable.attributedText = [self  replaceWithNSString:topString andUseKeyWordArray:@[@"人数 ",@" 帖子 "] andWithFontSize:15 keywordColor:@"333333"];
+}
+
+- (void)getGroupInfoRequest
+{
+    
+    NSMutableDictionary *requestDic =  [[NSMutableDictionary alloc] initWithCapacity:0];
+    [requestDic setValue:self.groupId forKey:@"groupId"];
+    
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GetGroupInfo values:requestDic requestKey:GetGroupInfo delegate:self controller:self actiViewFlag:0 title:nil];
+    
+}
+
+- (void)joinBtnClicked:(UIButton *)btn
+{
+    
+    NSString *type = @"0";
+    if([btn.titleLabel.text isEqualToString:@"关注"]){
+//    发送关注
+        type = @"0";
+    }else{
+//    发送取消关注
+        type = @"1";
+    }
+    NSMutableDictionary *requestDic =  [[NSMutableDictionary alloc] initWithCapacity:0];
+    [requestDic setValue:self.groupId forKey:@"groupId"];
+    [requestDic setValue:type forKey:@"type"];
+    
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:JoinGroupRequest values:requestDic requestKey:JoinGroupRequest delegate:self controller:self actiViewFlag:0 title:nil];
+    joinBtn.userInteractionEnabled = NO;
+    
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+
+- (void)didFinishSuccess:(ASIHTTPRequest *)loader
+{
+    NSString *responseString = [loader responseString];
+    NSDictionary *dic = [responseString KXjSONValueObject];
+    if ([dic[@"head"][@"state"] isEqualToString:@"0000"])
+    {
+        if ([loader.username isEqualToString:JoinGroupRequest]) {
+            
+            if([joinBtn.titleLabel.text isEqualToString:@"关注"]){
+                [joinBtn setTitle:@"取消关注" forState:UIControlStateNormal];
+            }else{
+                [joinBtn setTitle:@"关注" forState:UIControlStateNormal];
+            }
+            joinBtn.userInteractionEnabled = YES;
+        }else  if ([loader.username isEqualToString:GetGroupInfo]) {
+            //头信息
+            NSDictionary *bodyDic = dic[@"body"];
+            self.m_superDic = bodyDic[@"data"];
+            self.title = self.m_superDic[@"groupName"];
+            
+            int groupType = [self.m_superDic[@"groupType"] intValue];
+            canYouPostFlag = [self.m_superDic[@"isGag"] intValue] == 0;
+            self.refuseString = self.m_superDic[@"gagMsg"];
+            if(groupType == 1){
+            //普通
+                [self customRightNavView:YES];
+            }else{
+            //主题
+                [self customRightNavView:NO];
+            }
+            
+            [self getHeadView];
+        }
+    }else{
+        [Common TipDialog:dic[@"head"][@"msg"]];
+    }
+}
+
+- (void)getPostArray
+{
+    //所有帖子
+    PostListViewController *allPostListVC = [[PostListViewController alloc] init];
+    allPostListVC.type = ALLPosts;
+    allPostListVC.title = self.title;
+    allPostListVC.m_tableHeight = SCREEN_HEIGHT-44;
+    allPostListVC.groupId = self.groupId;
+    __block UIScrollView *weakScrollView = backScrollView;
+    WS(weakSelf);
+    allPostListVC.didSelectedBlock = ^(void){
+        weakSelf->isAutoScrollFlag = YES;
+        weakSelf->offsetY = weakScrollView.contentOffset.y;
+    };
+    
+  
+    allPostListVC.tableViewScrollViewBlock = ^(CGFloat contentOffsetY){
+
+        if(contentOffsetY >= 0 && contentOffsetY <=135){
+            weakScrollView.contentOffset = CGPointMake(weakScrollView.contentOffset.x, contentOffsetY);
+        }else if(contentOffsetY < 0){
+            weakScrollView.contentOffset = CGPointZero;
+        }else{
+            weakScrollView.contentOffset = CGPointMake(0, 135);
+        }
+        
+    };
+    allPostListVC.view.frame = CGRectMake(0, 0, kDeviceWidth, SCREEN_HEIGHT-44);
+
+    //精华帖子
+    PostListViewController *essencePostListVC = [[PostListViewController alloc] init];
+    essencePostListVC.type = EssencePosts;
+    essencePostListVC.title = self.title;
+
+    essencePostListVC.m_tableHeight = SCREEN_HEIGHT-44;
+    essencePostListVC.groupId = self.groupId;
+    essencePostListVC.didSelectedBlock = ^(void){
+        weakSelf->isAutoScrollFlag = YES;
+        weakSelf->offsetY = weakScrollView.contentOffset.y;
+    };
+    
+    essencePostListVC.tableViewScrollViewBlock = ^(CGFloat contentOffsetY){
+        if(contentOffsetY >= 0 && contentOffsetY <=135){
+            weakScrollView.contentOffset = CGPointMake(weakScrollView.contentOffset.x, contentOffsetY);
+        }else if(contentOffsetY < 0){
+            weakScrollView.contentOffset = CGPointZero;
+        }else{
+            weakScrollView.contentOffset = CGPointMake(0, 135);
+        }
+    
+    };
+    essencePostListVC.view.frame = CGRectMake(kDeviceWidth, 0, kDeviceWidth, SCREEN_HEIGHT-44);
+    
+    postListArray = [@[allPostListVC,essencePostListVC] retain];
+    [allPostListVC release];
+    [essencePostListVC release];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    canYouPostFlag = YES;
+    self.log_pageID = 415;
+    
+    self.view.backgroundColor = [CommonImage colorWithHexString:Color_fafafa];
+    
+    backScrollView = [[UIScrollView alloc] initWithFrame:self.view.bounds];
+    backScrollView.tag = 1111;
+    backScrollView.scrollEnabled = NO;
+    backScrollView.delegate = self;
+    backScrollView.contentSize = CGSizeMake(kDeviceWidth, SCREEN_HEIGHT-44+135);
+    [self.view addSubview:backScrollView];
+   
+    //头部
+    if(self.m_superDic){
+        [self getHeadView];
+    }
+    [self getPostArray];
+    
+    scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 135, kDeviceWidth, SCREEN_HEIGHT-44)];
+    scrollView.contentSize = CGSizeMake(kDeviceWidth*2, scrollView.height);
+    scrollView.delegate = self;
+    scrollView.tag = 999;
+    scrollView.pagingEnabled = YES;
+    scrollView.showsHorizontalScrollIndicator = NO;
+    scrollView.scrollEnabled = YES;
+    scrollView.clipsToBounds = YES;
+    
+    for(PostListViewController *list in postListArray){
+    
+        [scrollView addSubview:list.view];
+    }
+//    [self.view addSubview:scrollView];
+    [backScrollView addSubview:scrollView];
+    if(!self.m_superDic){
+        [self getGroupInfoRequest];
+    }
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)ascrollView
+{
+    int page = ascrollView.contentOffset.x/kDeviceWidth;
+
+    [selectedView justShowSelectedViewAtIndex:page];
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)ascrollView
+{
+    NSLog(@"-----list-detail-%f",ascrollView.contentOffset.y);
+    if(ascrollView.tag == 1111 && isAutoScrollFlag){
+        ascrollView.contentOffset = CGPointMake(0, offsetY);
+    }
+}
+
+- (void)viewDidDisappear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    isAutoScrollFlag = NO;
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+@end

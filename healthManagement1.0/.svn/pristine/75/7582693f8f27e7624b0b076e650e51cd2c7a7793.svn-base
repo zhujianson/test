@@ -1,0 +1,404 @@
+//
+//  ImproveSchemeViewController.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-8-18.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "ImproveSchemeViewController.h"
+#import "ImproveSchemeTableViewCell.h"
+#import "ImproveDataViewController.h"
+#import "DBOperate.h"
+#import "CommonHttpRequest.h"
+#import "ImproveSubscribeViewController.h"
+//#import "IconOperationQueue.h"
+#import "UIImageView+WebCache.h"
+
+@interface ImproveSchemeViewController () <UITableViewDataSource, UITableViewDelegate> {
+    UITableView* m_tableView;
+    NSMutableArray* dataArr;
+    NSMutableArray* userCountArr;
+    int _todays;
+    int _pageNum;
+//    IconOperationQueue *m_OperationQueue;
+    BOOL m_isTabbarDown;
+    BOOL m_down;
+    float m_lastScrollOfferY;
+}
+
+@end
+
+@implementation ImproveSchemeViewController
+
+- (id)initWithNibName:(NSString*)nibNameOrNil bundle:(NSBundle*)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        dataArr = [[NSMutableArray alloc] init];
+        userCountArr = [[NSMutableArray alloc] init];
+        self.log_pageID = 20;
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    [m_tableView release];
+    [dataArr release];
+    [userCountArr release];
+    self.newView = nil;
+    [super dealloc];
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    if (m_tableView) {
+        [self getRequestData:0];
+    }
+    [super viewWillAppear:animated];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    DBOperate* sqlite = [DBOperate shareInstance];
+    [dataArr addObjectsFromArray:[sqlite getPlanAllData:nil type:1 ids:nil]];
+    _todays = (int)[dataArr count];
+    if (_todays < g_everyPageNum) {
+        _pageNum = _todays;
+    } else {
+        _pageNum = g_everyPageNum;
+    }
+    
+    
+//    m_OperationQueue = [[IconOperationQueue alloc] init];
+//    [m_OperationQueue setM_arrayList:dataArr];
+//    m_OperationQueue.delegate = self;
+//    m_OperationQueue.imageKey = @"img";
+//    m_OperationQueue.pathSuffix = @"?imageView2/1/w/560/h/312";
+
+    [self getRequestData:1];
+    // Do any additional setup after loading the view.
+}
+
+//请求方案数据
+- (void)getRequestData:(int)flag
+{
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:@"" forKey:@"planId"];
+    [dic setObject:g_nowUserInfo.userid forKey:@"userId"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:PERPLOE_PLAN_BY_ID values:dic requestKey:PERPLOE_PLAN_BY_ID delegate:self controller:self actiViewFlag:flag title:nil];
+}
+
+- (void)creatTableView
+{
+    if (m_tableView) {
+        UILabel* lab = (UILabel*)[m_tableView.tableFooterView viewWithTag:tableFooterViewLabTag];
+
+        if (_pageNum < _todays) {
+            lab.text = NSLocalizedString(@"加载更多...", nil);
+        } else {
+            lab.text = NSLocalizedString(@"已到底部", nil);
+            lab.textColor = [CommonImage colorWithHexString:@"666666"];
+            lab.frame = CGRectMake(0, 0, kDeviceWidth, 45);
+            UIActivityIndicatorView* activi = (UIActivityIndicatorView*)[m_tableView.tableFooterView viewWithTag:tableFooterViewActivityTag];
+            [activi removeFromSuperview];
+        }
+        
+        [m_tableView reloadData];
+        return;
+    }
+    if (!dataArr.count) {
+        DBOperate* sqlite = [DBOperate shareInstance];
+        [dataArr addObjectsFromArray:[sqlite getPlanAllData:nil type:1 ids:nil]];
+        _todays = (int)[dataArr count];
+        if (_todays < g_everyPageNum) {
+            _pageNum = _todays;
+        } else {
+            _pageNum = g_everyPageNum;
+        }
+    }
+
+    m_tableView = [[UITableView alloc]
+        initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight-35-49)
+                style:UITableViewStyleGrouped];
+    m_tableView.delegate = self;
+    m_tableView.dataSource = self;
+    m_tableView.backgroundColor = [UIColor clearColor];
+    m_tableView.separatorColor = [UIColor clearColor];
+    UIView *view = [[UIView alloc] initWithFrame:CGRectZero];
+    view.backgroundColor = [UIColor clearColor];
+    m_tableView.backgroundView = view;
+    [view release];
+
+    m_tableView.rowHeight = 144+156*kDeviceWidth/320;
+    [self.view addSubview:m_tableView];
+    //创建加载更多
+    UIView* footerView = [Common createTableFooter];
+    m_tableView.tableFooterView = footerView;
+    UILabel* lab = (UILabel*)[m_tableView.tableFooterView viewWithTag:tableFooterViewLabTag];
+
+    if (_pageNum < _todays) {
+        lab.text = NSLocalizedString(@"加载更多...", nil);
+    } else {
+        lab.text = NSLocalizedString(@"已到底部", nil);
+        lab.textColor = [CommonImage colorWithHexString:@"666666"];
+        lab.frame = CGRectMake(0, 0, kDeviceWidth, 45);
+        UIActivityIndicatorView* activi = (UIActivityIndicatorView*)[m_tableView.tableFooterView viewWithTag:tableFooterViewActivityTag];
+        [activi removeFromSuperview];
+    }
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView*)tableView
+{
+    return [dataArr count];
+}
+
+- (NSInteger)tableView:(UITableView*)tableView
+    numberOfRowsInSection:(NSInteger)section
+{
+    return 1;
+}
+
+- (CGFloat)tableView:(UITableView*)tableView
+    heightForHeaderInSection:(NSInteger)section
+{
+    if (section == 0) {
+        return 10;
+    }
+    return 0.1;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section
+{
+    return 10;
+}
+
+- (UITableViewCell*)tableView:(UITableView*)tableView
+        cellForRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    static NSString* identifier = @"cell";
+    ImproveSchemeTableViewCell* cell =
+        [tableView dequeueReusableCellWithIdentifier:identifier];
+    if (!cell) {
+        cell = [[[ImproveSchemeTableViewCell alloc]
+              initWithStyle:UITableViewCellStyleDefault
+            reuseIdentifier:identifier] autorelease];
+        //        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+        cell.backgroundColor = [UIColor clearColor];
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+//        //cell点击背景颜色
+//        cell.selectedBackgroundView = [Common creatCellBackView];
+
+    }
+    if (indexPath.section < dataArr.count && indexPath.section < userCountArr.count) {
+        [cell setDataForCell:dataArr[indexPath.section] UserDic:userCountArr[indexPath.section]];
+        
+        NSString *imagePath = [dataArr[indexPath.section][@"img"] stringByAppendingString:@"?imageView2/1/w/560/h/312"];
+        UIImage *defaul = [UIImage imageNamed:@"common.bundle/common/center_my-family_head_icon.png"];
+        [cell.backImage sd_setImageWithURL:[NSURL URLWithString:imagePath] placeholderImage:defaul];
+        
+//        if ([imagePath length]) {
+//            UIImage *image = [m_OperationQueue getImageForUrl:imagePath];
+//            if (image) {
+//                [cell setPickerImage:image];
+//            }else {
+//                if (tableView.dragging == NO && tableView.decelerating == NO)//table停止不再滑动的时候下载图片（先用默认的图片来代替Cell的image）
+//                {
+//                    [m_OperationQueue startIconDownload:imagePath forIndexPath:indexPath setNo:0];
+//                }
+//                [cell setPickerImage:[UIImage imageNamed:@"common.bundle/common/conversation_logo.png"]];
+//            }
+//        }
+//        else {
+//            [cell setPickerImage:[UIImage imageNamed:@"common.bundle/common/conversation_logo.png"]];
+//        }
+    }
+    return cell;
+}
+
+- (void)tableView:(UITableView*)tableView
+    didSelectRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    UIViewController * view = _newView;
+    if ([userCountArr[indexPath.section][@"issub"] intValue] == 1) {
+        //方案详情
+        ImproveSubscribeViewController* sub = [[ImproveSubscribeViewController alloc] init];
+        sub.userDic = userCountArr[indexPath.section];
+        sub.title = dataArr[indexPath.section][@"title"];
+        sub.headerArr = dataArr[indexPath.section];
+        [view.navigationController pushViewController:sub animated:YES];
+        [sub release];
+    } else {
+        //方案介绍
+        ImproveDataViewController* improve = [[ImproveDataViewController alloc] init];
+        improve.userDic = userCountArr[indexPath.section];
+        improve.dataArr = dataArr[indexPath.section];
+        [view.navigationController pushViewController:improve animated:YES];
+        [improve release];
+    }
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+- (BOOL)tableView:(UITableView*)tableView shouldHighlightRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    ImproveSchemeTableViewCell* cell = (ImproveSchemeTableViewCell*)[tableView cellForRowAtIndexPath:indexPath];
+    [UIView animateWithDuration:0.2 animations:^{
+        cell.backView.backgroundColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_QIAN];
+    } completion:^(BOOL fl) {}];
+    return YES;
+}
+
+- (void)tableView:(UITableView*)tableView didUnhighlightRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    ImproveSchemeTableViewCell* cell = (ImproveSchemeTableViewCell*)[tableView cellForRowAtIndexPath:indexPath];
+    cell.backView.backgroundColor = [UIColor whiteColor];
+}
+
+//UIScrollView滚动停止
+- (void)scrollViewDidEndDecelerating:(UIScrollView*)scrollView
+{
+    m_lastScrollOfferY = scrollView.contentOffset.y;
+    
+    // 下拉到最底部时显示更多数据
+    if (scrollView.contentOffset.y >= (scrollView.contentSize.height - scrollView.frame.size.height - 45)) {
+        if (_pageNum < _todays) {
+            _pageNum += g_everyPageNum;
+            if (_pageNum < _todays) {
+            } else {
+                _pageNum = _todays;
+            }
+            [self creatTableView];
+        }
+    }
+//    NSArray *visiblePaths = [m_tableView indexPathsForVisibleRows];
+//    [m_OperationQueue loadImagesForOnscreenRows:visiblePaths isRow:NO];
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView
+{
+//    float nowY = scrollView.contentOffset.y;
+//    float absy = m_lastScrollOfferY - nowY;
+//    
+//    if (nowY <= 10) {
+//        if (!m_down) {
+//            [[NSNotificationCenter defaultCenter] postNotificationName:@"setTabbarShowHiddle" object:[NSNumber numberWithBool:NO]];
+//            m_isTabbarDown = NO;
+//            m_down = YES;
+//        }
+//        return;
+//    }
+//    if (fabsf(absy) > 10) {
+//        if (absy > 0) {
+//            m_isTabbarDown = YES;
+//        } else {
+//            if (m_down) {
+//                [[NSNotificationCenter defaultCenter] postNotificationName:@"setTabbarShowHiddle" object:[NSNumber numberWithBool:YES]];
+//                m_down = NO;
+//            }
+//            m_isTabbarDown = NO;
+//        }
+//        m_lastScrollOfferY = nowY;
+//    }
+}
+
+- (void)didFinishFail:(ASIHTTPRequest*)loader
+{
+//    [Common TipDialog2:@""];
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    if ([loader.username isEqualToString:PERPLOE_PLAN_BY_ID]) {
+        NSString* responseString = [loader responseString];
+        NSDictionary* dic = [responseString KXjSONValueObject];
+        if (![[dic objectForKey:@"state"] intValue]) {
+            NSDictionary* resultDic = dic[@"rs"];
+            NSLog(@"%@", dic);
+            [userCountArr removeAllObjects];
+            if (resultDic) {
+                for (NSDictionary* dic1 in resultDic) {
+                    NSString* planid = dic1[@"planid"];
+                    NSString* pcount = [NSString stringWithFormat:@"%@", dic1[@"pcount"]];
+                    NSString* userid = g_nowUserInfo.userid;
+                    NSString* issub = [NSString stringWithFormat:@"%@", dic1[@"issub"]];
+                    NSMutableDictionary* dataDic;
+                    if ([issub isEqualToString:@"0"]) {
+                        dataDic = [NSMutableDictionary dictionaryWithDictionary:@{ @"planid" : planid,
+                                                                                   @"pcount" : pcount,
+                                                                                   @"userid" : userid,
+                                                                                   @"issub" : issub,
+                                                                                   @"plantime" : @"" }];
+                        NSLog(@"dataDic:%@", dataDic);
+                    } else {
+                        NSString* plantime = [CommonDate getServerTime:[dic1[@"plantime"] longLongValue] / 1000 type:4];
+                        dataDic = [NSMutableDictionary dictionaryWithDictionary:@{ @"planid" : planid,
+                                                                                   @"pcount" : pcount,
+                                                                                   @"userid" : userid,
+                                                                                   @"issub" : issub,
+                                                                                   @"plantime" : plantime }];
+                    }
+                    [userCountArr addObject:dataDic];
+                }
+            }
+            
+            [self creatTableView];
+        } else {
+            [Common TipDialog:[dic objectForKey:@"msg"]];
+        }
+    }
+}
+
+
+//UIScrollView松开手指
+//- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
+//{
+//    if (!decelerate)//手指松开且不滚动
+//    {
+//        NSArray *visiblePaths = [m_tableView indexPathsForVisibleRows];
+//        [m_OperationQueue loadImagesForOnscreenRows:visiblePaths isRow:NO];
+//    }
+//}
+//- (void)showImageForDownload:(NSDictionary *)imageDicInfo
+//{
+//    if (m_isClose) {
+//        return;
+//    }
+//    
+//    NSMutableDictionary *dicCansu = [[NSMutableDictionary alloc] initWithDictionary:imageDicInfo];
+//    [self performSelectorOnMainThread:@selector(setSellerTableCellImage:) withObject:dicCansu waitUntilDone:YES];
+//}
+//
+//- (void)setSellerTableCellImage:(NSDictionary*)canshu
+//{
+//    UIImage *image = [canshu objectForKey:@"image"];
+//    NSIndexPath *indexPath = [canshu objectForKey:@"indexPath"];
+//    [canshu release];
+//    [m_tableView reloadData];
+//    
+//    ImproveSchemeTableViewCell *cell = (ImproveSchemeTableViewCell*)[m_tableView cellForRowAtIndexPath:indexPath];
+//    [cell setPickerImage:image];
+//}
+
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little
+preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+{
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

@@ -1,0 +1,29 @@
+//
+//  HomeOrderCellTableViewCell.h
+//  jiuhaohealth2.1
+//
+//  Created by 徐国洪 on 14-11-28.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@protocol HomeOredeCellDelegate <NSObject>
+
+- (void)butEventShowHide:(NSDictionary*)dic;
+
+@end
+
+@interface HomeOrderCellTableViewCell : UITableViewCell
+{
+	UILabel *m_labTitle;
+	UILabel *m_labState;
+	
+	UIButton *m_butShowHide;
+}
+
+@property (nonatomic, retain) NSMutableDictionary *m_dicInfo;
+
+//- (void)setDataInfo:(NSMutableArray);
+
+@end

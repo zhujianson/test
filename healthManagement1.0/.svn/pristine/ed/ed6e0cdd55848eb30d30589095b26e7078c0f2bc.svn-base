@@ -1,0 +1,52 @@
+//
+//  CommunityDetailCell.h
+//  jiuhaohealth4.0
+//
+//  Created by jiuhao-yangshuo on 15-4-17.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+static const CGFloat leftMargin = 15.f;//左边空白
+static const CGFloat TopMargin = 15.f;//上边空白
+static const CGFloat spaceMargin = 10.f;//控件间距
+static NSString *const  kIsAddAfter = @"kIsAddAter";//后加入的评论回复
+static const CGFloat m_nameLabelHieght = 15;//左边空白
+static const CGFloat m_ReplaySpaceToedge = 10.f;
+
+#define kImageViewKey  @"kImageViewKey" //图片传递
+#define kImageViewIndex  @"kImageViewIndex" //位置
+#define BeginImageTag  222222 //图片的起始
+
+typedef enum {
+    TopicPraise = 0,
+    TopicDelete,
+    TopicReply,//评论楼
+    TopicReplyPeople,//评论楼里面得人
+    TopicAddReply,//添加评论
+    TopicAddFriend,
+    TopicExpansionReplyList,
+    TopicImageList,
+    TopicTapHeader
+} TopicEventType;
+
+typedef void (^CommunityDetailCellBlock)(TopicEventType topicEventType,NSMutableDictionary*infoDict);
+
+@interface CommunityDetailCell : UITableViewCell
+
+@property(nonatomic,retain) UIImageView *m_headerView;
+
+//@property(nonatomic,retain)  UIButton *goodBtn;
+
+@property(nonatomic,retain)  UILabel *m_commentNumLabel;
+
+-(void)setCommunityDetailBlock:(CommunityDetailCellBlock)_handler withDict:(NSMutableDictionary *)dict;
+
+//行高
++(float)getCellHeightWithDict:(NSMutableDictionary *)dict withHandler:(id)handler;
+
++ (void)actionWithViewLayer:(CALayer *)layer;
+
+
+@end

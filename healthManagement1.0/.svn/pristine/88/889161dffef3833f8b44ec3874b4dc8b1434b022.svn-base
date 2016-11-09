@@ -1,0 +1,153 @@
+//
+//  PerfectCell.m
+//  jiuhaohealth4.0
+//
+//  Created by xjs on 15/5/28.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "PerfectCell.h"
+
+@implementation PerfectCell
+{
+    UIView * redView;
+    
+    UILabel * m_nameLab;
+    UILabel * m_textLab;
+}
+- (void)awakeFromNib {
+    // Initialization code
+}
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        redView = [[UIView alloc]initWithFrame:CGRectMake(5, 41/2, 4, 4)];
+        redView.clipsToBounds = YES;
+        redView.layer.cornerRadius = redView.width/2;
+        redView.backgroundColor = [CommonImage colorWithHexString:COLOR_FF5351];
+        [self addSubview:redView];
+
+        m_nameLab = [Common createLabel:CGRectMake(15, 0, 100, 45) TextColor:@"666666" Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        [self addSubview:m_nameLab];
+        
+        m_textLab = [Common createLabel:CGRectMake(m_nameLab.right, 0, kDeviceWidth-m_nameLab.right-35, 45) TextColor:@"666666" Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentRight labTitle:nil];
+        [self addSubview:m_textLab];
+        
+    }
+    return self;
+}
+
+- (void)setInfoWithDic:(NSDictionary*)dic row:(NSInteger)row
+{
+    m_nameLab.text = dic[@"title"];
+    if (!row) {
+        m_textLab.hidden = YES;
+        UITextField*nameField = (UITextField*)[self viewWithTag:110];
+        if (!nameField) {
+            nameField = [self createTextField:nil];
+            nameField.tag = 110;
+            nameField.frame = CGRectMake(0, 0, kDeviceWidth  - 35, 45);
+            nameField.textAlignment = NSTextAlignmentRight;
+            nameField.delegate = self;
+            nameField.placeholder = @"真实姓名";
+            [self addSubview:nameField];
+        }else{
+            nameField.text = dic[@"nickName"];
+        }
+        
+    }else if(row == 7)
+    {
+        m_textLab.hidden = YES;
+        UITextField*photoField = (UITextField*)[self viewWithTag:111];
+        if (!photoField) {
+            photoField = [self createTextField:nil];
+            photoField.tag = 111;
+            photoField.frame = CGRectMake(0, 0, kDeviceWidth  - 35, 45);
+            photoField.textAlignment = NSTextAlignmentRight;
+            photoField.delegate = self;
+            photoField.placeholder = @"请输入家人手机号(选填)";
+            [self addSubview:photoField];
+        }else{
+            photoField.text = dic[@"photo"];
+        }
+    }else{
+    m_textLab.hidden = NO;
+    m_textLab.text = dic[@"value"];
+    }
+    
+    if (row<4) {
+        redView.hidden = NO;
+    }else{
+        redView.hidden = YES;
+    }
+}
+
+
+- (UITextField*)createTextField:(NSString*)title
+{
+    UITextField* text = [[[UITextField alloc] init]autorelease];
+    text.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+    text.contentMode = UIViewContentModeCenter;
+    text.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    text.placeholder = title;
+    text.returnKeyType = UIReturnKeyDone;
+    
+    //    text.clearButtonMode = YES;
+    text.delegate = self;
+    [text setTextColor:[CommonImage colorWithHexString:@"#666666"]];
+    [text setFont:[UIFont systemFontOfSize:14]];
+    return text;
+}
+
+- (void)textFieldDidEndEditing:(UITextField *)textField
+{
+    UITextField*nameField = (UITextField*)[self viewWithTag:110];
+    UITextField*photoField = (UITextField*)[self viewWithTag:111];
+    NSLog(@"%@,%@",nameField.text,photoField.text);
+    _P_block(@{@"nickName": nameField.text?nameField.text:@"",@"photo": photoField.text?photoField.text:@""});
+    
+}
+
+- (void)setP_block:(PerfectBlock)P_block
+{
+    _P_block = [P_block copy];
+}
+
+- (BOOL)textFieldShouldReturn:(UITextField *)textField
+{
+    [textField resignFirstResponder];
+    return YES;
+}
+
+
+- (BOOL)textField:(UITextField*)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString*)string
+{
+    NSMutableString *changeString = [NSMutableString stringWithString:textField.text];
+    [changeString replaceCharactersInRange:range withString:string];
+    
+    if (textField.tag == 110) {
+        if ([changeString length]>10) {
+            return NO;
+        }
+    }
+    return YES;
+}
+
+- (void)textFieldDidChange:(UITextField *)textField
+{
+    if (textField.tag == 110) {
+    if (textField.text.length > 10) {
+        textField.text = [textField.text substringToIndex:10];
+    }
+    }
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

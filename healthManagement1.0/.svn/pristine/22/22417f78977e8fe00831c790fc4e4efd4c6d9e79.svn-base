@@ -1,0 +1,22 @@
+//
+//  FriendListCell.h
+//  jiuhaohealth3.0
+//
+//  Created by jiuhao-yangshuo on 15-3-9.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface FriendListCell : UITableViewCell
+
+@property(nonatomic,retain) UIImageView* m_headerView;//
+
+@property(nonatomic,retain) UIImageView *redImage;//未读
+
+- (void)setInfoDic:(NSMutableDictionary *)dic ;
+- (void)setAddInfoDic:(NSMutableDictionary *)dic;
+//+(void)convertCreatTimeWithDict:(NSMutableDictionary *)indexDict;
+
+@end
+

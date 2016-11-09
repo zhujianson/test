@@ -1,0 +1,353 @@
+//
+//  DocDetailViewController.m
+//  jiuhaohealth3.0
+//
+//  Created by wangmin on 15-3-10.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "DocDetailViewController.h"
+#import "ComHeaderView.h"
+#import "ModifyViewController.h"
+#import "MsgDBOperate.h"
+
+@interface DocDetailViewController ()
+<UITableViewDataSource,UITableViewDelegate>
+{
+    NSMutableArray *dataArray;
+    ComHeaderView *headerView;
+    UITableView *detailTableView;
+    
+//    __block NSMutableDictionary *newData;
+    UIButton *removeBtn;
+
+}
+
+@property (nonatomic,retain) NSString *onlineTime;
+
+@end
+
+@implementation DocDetailViewController
+@synthesize m_dicInfo;
+
+- (void)dealloc
+{
+    [_onlineTime release];
+    [m_dicInfo release];
+    [detailTableView release];
+    [dataArray release];
+    [super dealloc];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    
+    self.title = @"详细信息";
+    self.hasOnTimeFlag = NO;
+    [self getDocInfo];
+}
+
+
+-(void)createContentView
+{
+    int type = [m_dicInfo[@"type"] intValue];
+    
+    if(type == 1){
+        //医生 带删除
+        
+        removeBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        [removeBtn setBackgroundImage:[UIImage imageNamed:@"common.bundle/common/remove_nor.png"] forState:UIControlStateNormal];
+        [removeBtn setBackgroundImage:[UIImage imageNamed:@"common.bundle/common/remove_pre.png"] forState:UIControlStateHighlighted];
+        removeBtn.frame = CGRectMake(0, 7, 32, 32);// CGRectMake(0, 7, 30, 30);
+        removeBtn.layer.cornerRadius = 16.0f;
+        [removeBtn addTarget:self action:@selector(removeBtnClicked) forControlEvents:UIControlEventTouchUpInside];
+        removeBtn.enabled = NO;//先关闭 详细请求完成后开启
+        
+        UIBarButtonItem *right = [[UIBarButtonItem alloc] initWithCustomView:removeBtn];
+        self.navigationItem.rightBarButtonItem = right;
+        [right release];
+    }
+    
+    dataArray = [[NSMutableArray arrayWithCapacity:0] retain];
+    headerView = [[ComHeaderView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 100)];
+    headerView.backgroundColor = [UIColor whiteColor];
+    
+    WS(weakSelf);
+    headerView.rightBtnBlock = ^(void){
+        
+        ModifyViewController * detail = [[ModifyViewController alloc] init];
+        detail.title = @"备注信息";
+        detail.m_infoDic = m_dicInfo;
+        detail.m_isModify = YES;
+        detail.remarkBlock = ^(NSString *newName) {
+            
+            headerView.firstLabel.text = newName.length ? newName : weakSelf.m_dicInfo[@"nickName"];
+            if (newName.length) {//修改备注名
+                NSString *sql = [NSString stringWithFormat:@"UPDATE friendList SET nickName = '%@' WHERE id = '%@'", newName, m_dicInfo[@"id"]];
+                [[MsgDBOperate shareInstance] updateFriendInfoRow:sql];
+            }
+            [m_dicInfo setObject:newName forKey:@"nickName1"];
+        };
+        [weakSelf.navigationController pushViewController:detail animated:YES];
+        [detail release];
+        
+    };
+    
+    detailTableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, SCREEN_HEIGHT-44)];
+    detailTableView.dataSource = self;
+    detailTableView.delegate = self;
+    detailTableView.backgroundColor = [UIColor clearColor];
+    detailTableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    detailTableView.tableHeaderView = headerView;
+    [headerView release];
+    [Common setExtraCellLineHidden:detailTableView];
+}
+
+//解除绑定
+- (void)removeBtnClicked
+{
+    NSString *message = @"确定删除好友么？";
+    NSString *okMes = @"确定";
+    NSString *cancelMes = @"取消";
+    //提示是否更换
+    UIAlertView* av = [[UIAlertView alloc]
+                       initWithTitle:NSLocalizedString(@"提示", nil)
+                       message:NSLocalizedString(message,
+                                                 nil)
+                       delegate:self
+                       cancelButtonTitle:NSLocalizedString(cancelMes, nil)
+                       otherButtonTitles:NSLocalizedString(okMes, nil), nil];
+    av.tag = 2123;
+    [av show];
+    [av release];
+}
+
+- (void)beSureToRemove
+{
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:m_dicInfo[@"toId"] forKey:@"friendId"];
+
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:REMOVE_FRIEND_URL values:dic requestKey:REMOVE_FRIEND_URL delegate:self controller:self actiViewFlag:1 title:@""];
+}
+
+- (void)alertView:(UIAlertView*)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if(alertView.tag == 2123 ){
+        if( buttonIndex == 1 ){
+            [self beSureToRemove];
+        }
+        return;
+    }
+}
+
+- (void)getDocInfo
+{
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:m_dicInfo[@"friendId"] forKey:@"key"];
+    [dic setObject:@"id" forKey:@"type"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GET_DOCTOR_DATA values:dic requestKey:GET_DOCTOR_DATA delegate:self controller:self actiViewFlag:1 title:@""];
+}
+
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+
+#pragma mark - NetWork Delegate
+- (void)didFinishSuccess:(ASIHTTPRequest *)loader
+{
+    NSString *responseString = [loader responseString];
+    NSDictionary *dic = [responseString KXjSONValueObject];
+    
+    NSDictionary *head = dic[@"head"];
+    if (![[head objectForKey:@"state"] intValue])
+    {
+        NSDictionary *body = dic[@"body"];
+        
+        if ([loader.username isEqualToString:GET_DOCTOR_DATA]) {
+            
+            [self createContentView];
+            NSDictionary *rs = body[@"user_info"];
+            removeBtn.enabled = YES;//开启
+//            [CommonImage setPicImageQiniu:rs[@"head_img"] View:headerView.myPhotoImageView Type:0 Delegate:nil];//头像
+            [CommonImage setImageFromServer:rs[@"head_img"] View:headerView.myPhotoImageView Type:0];
+
+            headerView.secondLabel.text = [NSString stringWithFormat:@"职称：%@",rs[@"rank_name"]];
+            headerView.thirdLabel.text = [NSString stringWithFormat:@"机构：%@",rs[@"hospital"]];
+            
+            NSString *remarkName = [self getStringValue:rs[@"remarkname"]];
+            NSString *nickName = rs[@"nick_name"];
+            
+//            headerView.firstLabel.text = remarkName.length ? remarkName : nickName;
+            if(remarkName.length){
+                headerView.firstLabel.text = remarkName;
+            }else{
+                headerView.firstLabel.text = nickName;
+            }
+            
+            [m_dicInfo setObject:rs[@"nick_name"] forKey:@"nickName"];
+            [m_dicInfo setObject:remarkName forKey:@"nickName1"];
+            [m_dicInfo setObject:@1 forKey:@"m_isFriend"];
+            
+            NSString *isHealthManager = rs[@"is_third"];
+            if(isHealthManager && isHealthManager.intValue == 0){
+                
+                self.hasOnTimeFlag = YES;
+            }else{
+                self.hasOnTimeFlag = NO;
+            }
+            
+            self.onlineTime = [self getStringValue:rs[@"online_time"]];//在线时间
+            [dataArray addObject:[self getStringValue:rs[@"info"]]];
+            [dataArray addObject:[NSString stringWithFormat:@"专业特长:%@",[self getStringValue:rs[@"professional"]]]];
+            [self.view addSubview:detailTableView];
+
+        }
+        else if ([loader.username isEqualToString:REMOVE_FRIEND_URL]) {
+            
+            [[MsgDBOperate shareInstance] deleteRowForFriendId:[NSArray arrayWithObject:m_dicInfo[@"friendId"]]];
+            
+            NSLog(@"%@",self.navigationController.viewControllers);
+            NSArray *viewControllers = self.navigationController.viewControllers;
+            UIViewController *listVC = [self.navigationController.viewControllers objectAtIndex:viewControllers.count-3];
+            [self.navigationController popToViewController:listVC animated:YES];
+            
+        }    
+    }else{
+    
+          [Common TipDialog2:[head objectForKey:@"msg"]];
+    }
+}
+
+- (NSString *)getStringValue:(NSString *)aString
+{
+    if(aString.length){
+        return aString;
+    }else{
+        
+        return @"";
+    }
+    
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section
+{
+    return 20;
+}
+
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    CGFloat height =  [Common heightForString:dataArray[indexPath.section] Width:kDeviceWidth-30 Font:[UIFont systemFontOfSize:15.f]].height+20;
+    
+    if(indexPath.section == 0 && self.hasOnTimeFlag){
+    
+        return height + 40;
+    }else{
+        
+        return height;
+    
+    }
+    
+   
+    return 100;
+
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section
+{
+    UIView *view  = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 20)];
+    view.backgroundColor = [CommonImage colorWithHexString:@"f5f5f5"];
+    return [view autorelease];
+}
+
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return dataArray.count;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    
+    return 1;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *identifier = @"docDetailCell";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
+    if(!cell){
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
+        
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        
+        UILabel *onTimeLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, 0, kDeviceWidth-30, 40)];
+        onTimeLabel.tag = 999;
+        onTimeLabel.textColor = [CommonImage colorWithHexString:@"666666"];
+        onTimeLabel.font = [UIFont systemFontOfSize:15.0f];
+        onTimeLabel.backgroundColor = [UIColor clearColor];
+        [cell.contentView addSubview:onTimeLabel];
+        [onTimeLabel release];
+        
+        UIView *toplineView = [[UIView alloc] initWithFrame:CGRectMake(-15, 0, kDeviceWidth, 0.5)];
+        toplineView.backgroundColor = [CommonImage colorWithHexString:LINE_COLOR];
+        [onTimeLabel addSubview:toplineView];
+        [toplineView release];
+        
+        UILabel *infoLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 40)];
+        infoLabel.tag = 998;
+        infoLabel.numberOfLines = 0;
+        infoLabel.textColor = [CommonImage colorWithHexString:@"666666"];
+        infoLabel.font = [UIFont systemFontOfSize:15.0f];
+        infoLabel.backgroundColor = [UIColor clearColor];
+        [cell.contentView addSubview:infoLabel];
+        [infoLabel release];
+        
+        UIView *infolineView = [[UIView alloc] initWithFrame:CGRectMake(-15, -10, kDeviceWidth, 0.5)];
+        infolineView.backgroundColor = [CommonImage colorWithHexString:LINE_COLOR];
+        [infoLabel addSubview:infolineView];
+        [infolineView release];
+        
+    }
+    
+    UILabel *onTimeLabel = (UILabel *)[cell.contentView viewWithTag:999];
+    UILabel *infoLabel =  (UILabel *)[cell.contentView viewWithTag:998];
+    
+    NSString *infoText = dataArray[indexPath.section];
+    CGFloat height =  [Common heightForString:infoText Width:kDeviceWidth-30 Font:[UIFont systemFontOfSize:15.f]].height;
+    
+    
+    if(indexPath.section == 0  && self.hasOnTimeFlag){
+        onTimeLabel.hidden = NO;
+        onTimeLabel.text = [NSString stringWithFormat:@"值班时间：%@",self.onlineTime];
+        infoLabel.frame = CGRectMake(15, 40+10, kDeviceWidth-30, height);
+        
+    }else {
+        onTimeLabel.hidden = YES;
+        infoLabel.frame = CGRectMake(15, 10, kDeviceWidth-30, height);
+    }
+    infoLabel.text = infoText;
+    return cell;
+}
+
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

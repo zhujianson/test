@@ -1,0 +1,434 @@
+//
+//  DeviceViewController.m
+//  jiuhaohealth2.1
+//
+//  Created by 徐国洪 on 14-8-20.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "DeviceViewController.h"
+#import "DeviceTableViewCell.h"
+#import "AddDeviceViewController.h"
+#import "EGORefreshTableHeaderView.h"
+#import "GetFamilyList.h"
+#import "UIImageView+WebCache.h"
+#import "AddSelectDeviceView.h"
+#import "DeviceModel.h"
+#import "DeviceWeightHelpViewController.h"
+#import "BluetoothManager.h"
+
+@interface DeviceViewController ()<MyDeviceDelegate,EGORefreshTableHeaderDelegate,BluetoothManagerDelegate>
+{
+    EGORefreshTableHeaderView *_headView;
+    BOOL _isloading;
+    
+}
+@end
+
+@implementation DeviceViewController
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        self.title = @"我的设备";
+        //        UIBarButtonItem *right = [[UIBarButtonItem alloc] initWithTitle:@"添加 " style:UIBarButtonItemStylePlain target:self action:@selector(butEventAdd)];
+        self.navigationItem.rightBarButtonItem = [Common CreateNavBarButton3:self setEvent:@selector(butEventAdd) setTitle:@"添加"];
+        //        [right release];
+        
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    if([BluetoothManager sharedInstance].observationInfo)
+    {
+       [[BluetoothManager sharedInstance] removeObserver:self forKeyPath:@"m_isConnected"];
+        NSLog(@"++++++++++++++++++++%@",[BluetoothManager sharedInstance].observationInfo);
+    }
+    [m_tableView release];
+    [m_array release];
+    [_headView release];
+    
+    [super dealloc];
+}
+
+
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    if (m_tableView) {
+        [self beginLoadIng];
+    }
+    [super viewWillAppear:animated];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    m_array = [[NSMutableArray alloc] init];
+
+    [self creatTable];
+}
+
+- (void)creatTable
+{
+    if (m_tableView) {
+        UILabel* lab = (UILabel*)[m_tableView.tableFooterView viewWithTag:tableFooterViewLabTag];
+        if ([m_array count] < g_everyPageNum*m_nowPage) {
+            lab.text = NSLocalizedString(@"已到底部", nil);
+            lab.textColor = [CommonImage colorWithHexString:@"666666"];
+            lab.frame = CGRectMake(0, 0, kDeviceWidth, 45);
+            UIActivityIndicatorView* activi = (UIActivityIndicatorView*)[m_tableView.tableFooterView viewWithTag:tableFooterViewActivityTag];
+            [activi removeFromSuperview];
+        } else {
+            lab.text = NSLocalizedString(@"加载更多...", nil);
+        }
+        
+        [m_tableView reloadData];
+        return;
+    }
+    m_tableView = [[UITableView alloc]initWithFrame:CGRectMake(0,0, kDeviceWidth,kDeviceHeight) style:UITableViewStylePlain];
+    m_tableView.delegate = self;
+    m_tableView.dataSource = self;
+    m_tableView.rowHeight = 65;
+    m_tableView.backgroundColor = [UIColor clearColor];
+    m_tableView.separatorColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_SHEN];
+    if (IOS_7) {
+        m_tableView.separatorInset = UIEdgeInsetsMake(0, 0, 0, 0);
+    }
+    [self.view addSubview:m_tableView];
+    
+    //创建加载更多
+    UIView* footerView = [Common createTableFooter];
+    m_tableView.tableFooterView = footerView;
+    UILabel* lab = (UILabel*)[m_tableView.tableFooterView viewWithTag:tableFooterViewLabTag];
+    
+    if ([m_array count] < g_everyPageNum*m_nowPage) {
+        lab.text = NSLocalizedString(@"已到底部", nil);
+        lab.textColor = [CommonImage colorWithHexString:@"666666"];
+        lab.frame = CGRectMake(0, 0, kDeviceWidth, 45);
+        UIActivityIndicatorView* activi = (UIActivityIndicatorView*)[m_tableView.tableFooterView viewWithTag:tableFooterViewActivityTag];
+        [activi removeFromSuperview];
+    } else {
+        lab.text = NSLocalizedString(@"加载更多...", nil);
+    }
+    
+    _headView = [[EGORefreshTableHeaderView alloc] initWithFrame:CGRectMake(0, -460, kDeviceWidth, 460)];
+    _headView.delegate = self;
+    _headView.backgroundColor = [UIColor clearColor];
+    [m_tableView addSubview:_headView];
+    
+}
+
+- (void)beginLoadIng
+{
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:Get_MYDEVICE_List_Count values:dic requestKey:Get_MYDEVICE_List_Count delegate:self controller:self actiViewFlag:0 title:NSLocalizedString(@"加载中...", nil)];
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+-(void)changeConnectState:(BOOL)state
+{
+    if (!m_array.count)
+    {
+        return;
+    }
+    NSDictionary *deviceDic = m_array[0];
+    if ([deviceDic.allKeys containsObject:@"kWeightDevice"])
+    {
+       
+        DeviceTableViewCell *cell = [m_tableView cellForRowAtIndexPath:[NSIndexPath indexPathForItem:0 inSection:0]];
+        [cell changeStateWithConnectState:state];
+      
+    }
+}
+
+-(void)addDeviceDict
+{
+    NSDictionary *dict = [BluetoothManager fetchSaveDeviceModel];
+    if (dict.count)
+    {
+        NSLog(@"addDeviceDict+++++++");
+        [m_array insertObject:dict atIndex:0];
+        NSDictionary *device = @{dict[@"serialNO"]:dict[@"advertiseName"]};
+        [BluetoothManager sharedInstance].showDeviceListView = NO;
+        if(![BluetoothManager sharedInstance].observationInfo)//防止重复添加
+        {
+            [[BluetoothManager sharedInstance] connectWithSerialNO:device];
+            [[BluetoothManager sharedInstance] addObserver:self forKeyPath:@"m_isConnected" options:NSKeyValueObservingOptionNew context:nil];
+        }
+    }
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+    if (![keyPath isEqualToString:@"m_isConnected"])
+    {
+        return;
+    }
+    BOOL state = [[change objectForKey:@"new"] boolValue];
+    [self changeConnectState:state];
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dict = [responseString KXjSONValueObject];
+    
+    if ([loader.username isEqualToString:Get_MYDEVICE_List_Count]) {
+        if (![[dict[@"head"] objectForKey:@"state"] intValue] == 0) {
+            [Common TipDialog:[dict[@"head"] objectForKey:@"msg"]];
+        } else {
+            [m_array removeAllObjects];
+            NSArray * arr = dict[@"body"][@"result_set"];
+            for (NSMutableDictionary * dicB in arr) {
+                for (int i = 0; i<g_familyList.count; i++) {
+                    if ([[NSString stringWithFormat:@"%@",dicB[@"device_user_id"]] isEqualToString:g_familyList[i][@"id"]]) {
+                        [dicB setObject:g_familyList[i][@"nickName"] forKey:@"nickName"];
+                        break;
+                    }
+                }
+                [m_array addObject:dicB];
+            }
+            
+            [self addDeviceDict];
+            if (m_array.count>0) {
+                [self creatTable];
+                g_nowUserInfo.isBindEquipment = [NSString stringWithFormat:@"%d",(int)m_array.count];
+            }
+            [self finishRefresh];
+        }
+    }else if ([loader.username isEqualToString:Get_DELEGATEMYDEVICE_List_Count]) {
+        //删除设备
+        if ([[dict objectForKey:@"state"] intValue] )
+        {
+            [Common TipDialog:[dict objectForKey:@"msg"]];
+        }
+        else
+        {
+            MBProgressHUD *progress_ = [[MBProgressHUD alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, self.view.frame.size.height)];
+            progress_.labelText = @"删除成功";
+            progress_.mode = MBProgressHUDModeText;
+            progress_.userInteractionEnabled = NO;
+            [[[UIApplication sharedApplication].windows lastObject] addSubview:progress_];
+            [progress_ show:YES];
+            [progress_ showAnimated:YES whileExecutingBlock:^{
+                sleep(1);
+            } completionBlock:^{
+                [progress_ release];
+                [progress_ removeFromSuperview];
+            }];
+            g_nowUserInfo.isBindEquipment = [NSString stringWithFormat:@"%d",(int)m_array.count];
+        }
+    }
+}
+
+
+- (void)butEventAdd
+{
+    WS(weakSelf);
+    [AddSelectDeviceView showShowSelectViewWithBlock:^(id selecteContent) {
+        [weakSelf handleSelectDeviceModel:selecteContent];
+    }];
+}
+
+-(void)handleSelectDeviceModel:(DeviceModel *)modle
+{
+    switch (modle.deviceIndex) {
+        case 0:
+            [self gotoWeightInputDeviceWithScan:YES];
+            break;
+        case 1:
+            [self gotoMultiInputDevice];
+            break;
+        default:
+            break;
+    }
+}
+
+-(void)gotoWeightInputDeviceWithScan:(BOOL)scan
+{
+     NSLog(@"---%@",[BluetoothManager sharedInstance].observationInfo);
+    DeviceWeightHelpViewController *add = [[DeviceWeightHelpViewController alloc] init];
+    add.log_pageID = 82;
+    add.m_scanOrLink = scan;
+    [self.navigationController pushViewController:add animated:YES];
+    [add release];
+}
+
+-(void)gotoMultiInputDevice
+{
+    AddDeviceViewController *add = [[AddDeviceViewController alloc] init];
+    add.log_pageID = 81;
+    [self.navigationController pushViewController:add animated:YES];
+    [add release];
+}
+
+#pragma mark tableviewcellDelegate
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return m_array.count;
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section
+{
+    UIView *viewHeader =[[UIView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, 22)];
+    return [viewHeader autorelease];
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *cellName = @"cell";
+    DeviceTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellName];
+    if (cell == nil)
+    {
+        cell = [[[DeviceTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellName] autorelease];
+//        cell.delegate = self;
+        //cell点击背景颜色
+        cell.selectedBackgroundView = [Common creatCellBackView];
+        //自定义右箭头
+        cell.accessoryView = [CommonImage creatRightArrowX:cell.frame.size.width-22 Y:(cell.frame.size.height-12)/2 cell:cell];
+//        cell.m_device = self;
+        
+    }
+    [cell setM_infoDic:m_array[indexPath.row]];
+    return cell;
+}
+
+- (void)butEventDel:(NSDictionary *)dic
+{
+    int row = (int)[m_array indexOfObject:dic];
+    [m_array removeObject:dic];
+    [m_tableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:row inSection:0]] withRowAnimation:UITableViewRowAnimationNone];
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSDictionary *dic =  m_array[indexPath.row];
+    if ([dic.allKeys containsObject:@"kWeightDevice"])
+    {
+        [self gotoWeightInputDeviceWithScan:NO];
+        return;
+    }
+    AddDeviceViewController *add = [[AddDeviceViewController alloc] init];
+    add.temp = 1;
+    add.modelid = dic[@"device_id"];
+    add.device_no = dic[@"device_no"];
+    
+    [self.navigationController pushViewController:add animated:YES];
+    [add release];
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+//UIScrollView滚动停止
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+{
+    //	NSArray *visiblePaths = [m_tableView indexPathsForVisibleRows];
+    //    [m_OperationQueue loadImagesForOnscreenRows:visiblePaths isRow:YES];
+    if(m_loadingMore == NO)
+    {
+        // 下拉到最底部时显示更多数据
+        if( !m_loadingMore && scrollView.contentOffset.y >= ( scrollView.contentSize.height - scrollView.frame.size.height - 45) )
+        {
+            if ([m_array count]<g_everyPageNum * m_nowPage) {
+            }else{
+                [self beginLoadIng];
+            }
+        }
+    }
+}
+
+//UIScrollView松开手指
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
+{
+    [_headView egoRefreshScrollViewDidEndDragging:scrollView];
+    
+    //    if (!decelerate)//手指松开且不滚动
+    //	{
+    //		NSArray *visiblePaths = [m_tableView indexPathsForVisibleRows];
+    //		[m_OperationQueue loadImagesForOnscreenRows:visiblePaths isRow:YES];
+    //	}
+}
+
+- (void)showImageForDownload:(NSDictionary *)imageDicInfo
+{
+    if (m_isClose) {
+        return;
+    }
+    
+    NSMutableDictionary *dicCansu = [[NSMutableDictionary alloc] initWithDictionary:imageDicInfo];
+    [self performSelectorOnMainThread:@selector(setSellerTableCellImage:) withObject:dicCansu waitUntilDone:YES];
+}
+
+- (void)setSellerTableCellImage:(NSDictionary*)canshu
+{
+    UIImage *image = [canshu objectForKey:@"image"];
+    NSIndexPath *indexPath = [canshu objectForKey:@"indexPath"];
+    [canshu release];
+    DeviceTableViewCell *cell = (DeviceTableViewCell*)[m_tableView cellForRowAtIndexPath:indexPath];
+    [cell setIconImage:image];
+}
+
+#pragma mark - EGORefreshTableHeaderDelegate
+//收起刷新
+- (void)finishRefresh{
+    
+    [_headView egoRefreshScrollViewDataSourceDidFinishedLoading:m_tableView];
+    _isloading = NO;
+}
+
+- (void)egoRefreshTableHeaderDidTriggerRefresh:(EGORefreshTableHeaderView *)view
+{
+    if (_isloading) {
+        return;
+    }
+    _isloading = YES;
+    //下拉刷新 开始请求新数据 ---原数据清除
+    m_nowPage = 1;//复位
+    [self beginLoadIng];
+}
+
+- (BOOL)egoRefreshTableHeaderDataSourceIsLoading:(EGORefreshTableHeaderView *)view
+{
+    return _isloading;
+}
+
+- (NSDate *)egoRefreshTableHeaderDataSourceLastUpdated:(EGORefreshTableHeaderView *)view
+{
+    return [NSDate date];
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView
+{
+    [_headView egoRefreshScrollViewDidScroll:scrollView];
+}
+
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+ #pragma mark - Navigation
+ 
+ // In a storyboard-based application, you will often want to do a little preparation before navigation
+ - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+ {
+ // Get the new view controller using [segue destinationViewController].
+ // Pass the selected object to the new view controller.
+ }
+ */
+
+@end

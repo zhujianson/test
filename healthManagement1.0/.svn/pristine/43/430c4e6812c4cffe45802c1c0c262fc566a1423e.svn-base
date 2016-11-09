@@ -1,0 +1,234 @@
+//
+//  UserDetailViewController.m
+//  jiuhaohealth3.0
+//
+//  Created by wangmin on 15-3-11.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "UserDetailViewController.h"
+#import "ComHeaderView.h"
+//#import "BloodSugarViewController.h"
+#import "ModifyViewController.h"
+
+@interface UserDetailViewController ()
+{
+
+    ComHeaderView *headerView;
+    UIButton *removeBtn;
+//    __block NSMutableDictionary *newData;
+
+}
+
+@end
+
+@implementation UserDetailViewController
+
+- (void)dealloc
+{
+    [_m_dicInfo release];
+    [headerView release];
+    [super dealloc];
+}
+
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    
+    self.title = @"详细信息";
+    removeBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    [removeBtn setBackgroundImage:[UIImage imageNamed:@"common.bundle/common/remove_nor.png"] forState:UIControlStateNormal];
+    [removeBtn setBackgroundImage:[UIImage imageNamed:@"common.bundle/common/remove_pre.png"] forState:UIControlStateHighlighted];
+    removeBtn.frame = CGRectMake(0, 7, 32, 32);// CGRectMake(0, 7, 30, 30);
+    removeBtn.layer.cornerRadius = 16.0f;
+    [removeBtn addTarget:self action:@selector(removeBtnClicked) forControlEvents:UIControlEventTouchUpInside];
+    removeBtn.enabled = NO;
+    UIBarButtonItem *right = [[UIBarButtonItem alloc] initWithCustomView:removeBtn];
+    self.navigationItem.rightBarButtonItem = right;
+    [right release];
+    
+    
+    headerView = [[ComHeaderView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 100)];
+    headerView.backgroundColor = [UIColor whiteColor];
+    
+//    headerView.firstLabel.text = @"苏小米";
+//    headerView.secondLabel.text = @"性别：女";
+    
+    
+    if([self.m_dicInfo[@"toId"] isEqualToString:g_nowUserInfo.userid]){
+        //隐藏删除按钮  修改备注名按钮
+        headerView.rightBtn.hidden = YES;
+        removeBtn.hidden = YES;
+    }else{
+        headerView.firstLabel.text = [_m_dicInfo[@"markName"] length]? _m_dicInfo[@"markName"]:_m_dicInfo[@"nickName"];
+    }
+    
+    WS(weakSelf);
+    headerView.rightBtnBlock = ^(void){
+        ModifyViewController * detail = [[ModifyViewController alloc]init];
+        detail.title = @"备注信息";
+//        [detail.m_Dic addEntriesFromDictionary:self.m_dicInfo];
+        detail.m_infoDic = weakSelf.m_dicInfo;
+        detail.m_isModify = YES;
+        detail.remarkBlock = ^(NSString *newName){
+            
+            headerView.firstLabel.text = newName.length ? newName : weakSelf.m_dicInfo[@"nickName"];
+        };
+        [weakSelf.navigationController pushViewController:detail animated:YES];
+        [detail release];
+    };
+    [self.view addSubview:headerView];
+
+    [self loadUserInfo];
+    
+//    //血糖
+//    BloodSugarViewController  *bloodSugarStatisticDataDetailVC = [[BloodSugarViewController alloc] init];
+//    bloodSugarStatisticDataDetailVC.userId = self.m_dicInfo[@"toId"];
+//    bloodSugarStatisticDataDetailVC.isUserInfoFlag = YES;
+//    bloodSugarStatisticDataDetailVC.type = BloodSugarType;
+//    bloodSugarStatisticDataDetailVC.isShowing = YES;
+//    bloodSugarStatisticDataDetailVC.landRightFlag = NO;
+//    bloodSugarStatisticDataDetailVC.m_superClass = self;
+//    bloodSugarStatisticDataDetailVC.log_pageID = 119;
+//    bloodSugarStatisticDataDetailVC.view.backgroundColor = [UIColor whiteColor];
+//    bloodSugarStatisticDataDetailVC.view.frame = CGRectMake(0, 100, kDeviceWidth, SCREEN_HEIGHT-44);
+//    [self.view addSubview:bloodSugarStatisticDataDetailVC.view];
+//    
+//    [bloodSugarStatisticDataDetailVC release];
+    
+    
+}
+
+- (void)loadUserInfo
+{
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    
+    if([self.m_dicInfo[@"toId"] isEqualToString:g_nowUserInfo.userid]){
+//        [CommonImage setPicImageQiniu:g_nowUserInfo.filePath View:headerView.myPhotoImageView Type:0 Delegate:nil];
+        NSString *imagePath = [g_nowUserInfo.filePath stringByAppendingString:@"?imageView2/1/w/80/h/80"];
+        [CommonImage setImageFromServer:imagePath View:headerView.myPhotoImageView Type:0];
+
+        headerView.secondLabel.text = [NSString stringWithFormat:@"性别：%@",[CommonUser getSex:g_nowUserInfo.sex]];
+        headerView.thirdLabel.text = [NSString stringWithFormat:@"年龄：%@",[CommonDate getAgeWithBirthday:g_nowUserInfo.birthday]];
+
+    }else{
+        
+        [dic setObject:self.m_dicInfo[@"toId"] forKey:@"fid"];
+        [dic setObject:g_nowUserInfo.userid forKey:@"userid"];
+        [dic setObject:self.m_dicInfo[@"friendtype"] forKey:@"friendtype"];
+        [[CommonHttpRequest defaultInstance] sendNewPostRequest:GetFriendInfo values:dic requestKey:GetFriendInfo delegate:self controller:self actiViewFlag:1 title:@""];
+    }
+}
+
+//解除绑定
+- (void)removeBtnClicked
+{
+    NSString *message = @"确定删除好友么？";
+    NSString *okMes = @"确定";
+    NSString *cancelMes = @"取消";
+    //提示是否更换
+    UIAlertView* av = [[UIAlertView alloc]
+                       initWithTitle:NSLocalizedString(@"提示", nil)
+                       message:NSLocalizedString(message,
+                                                 nil)
+                       delegate:self
+                       cancelButtonTitle:NSLocalizedString(cancelMes, nil)
+                       otherButtonTitles:NSLocalizedString(okMes, nil), nil];
+    av.tag = 2123;
+    [av show];
+    [av release];
+}
+
+- (void)beSureToRemove
+{
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:self.m_dicInfo[@"toId"] forKey:@"toId"];
+    [dic setObject:g_nowUserInfo.userid forKey:@"fromId"];
+    [dic setObject:self.m_dicInfo[@"friendRealstionId"] forKey:@"bindId"];
+    
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:kRemoveFriend values:dic requestKey:kRemoveFriend delegate:self controller:self actiViewFlag:1 title:@""];
+}
+
+- (void)alertView:(UIAlertView*)alertView
+clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    
+    if(alertView.tag == 2123 ){
+        if( buttonIndex == 1 ){
+            [self beSureToRemove];
+        }
+        return;
+    }
+    
+}
+
+
+#pragma mark - NetWork Delegate
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest *)loader
+{
+    NSString *responseString = [loader responseString];
+    NSDictionary *dic = [responseString KXjSONValueObject];
+    
+    if (![[dic objectForKey:@"state"] intValue])
+    {
+        if ([loader.username isEqualToString:GetFriendInfo]) {
+            NSDictionary *re = nil;
+                re = dic[@"rs"];            
+             
+//             [CommonImage setPicImageQiniu:re[@"userFilePath"] View:headerView.myPhotoImageView Type:0 Delegate:nil];//头像
+            [CommonImage setImageFromServer:re[@"userFilePath"] View:headerView.myPhotoImageView Type:0];
+
+             headerView.firstLabel.text = re[@"userName"];
+             //添加备注元素
+             removeBtn.enabled = YES;
+             headerView.secondLabel.text = [NSString stringWithFormat:@"性别：%@",[CommonUser getSex:[NSString stringWithFormat:@"%@",re[@"sex"]]]];
+             headerView.thirdLabel.text = [NSString stringWithFormat:@"年龄：%@",re[@"age"]];
+         }else if ([loader.username isEqualToString:kRemoveFriend]) {
+             
+             NSLog(@"解除成功");
+             
+             NSLog(@"%@",self.navigationController.viewControllers);
+             
+             NSArray *viewControllers = self.navigationController.viewControllers;
+             
+             UIViewController *listVC = [self.navigationController.viewControllers objectAtIndex:viewControllers.count-3];
+             [self.navigationController popToViewController:listVC animated:YES];
+
+         }
+    }
+}
+
+- (NSString *)getStringValue:(NSString *)aString
+{
+    if(aString.length){
+        return aString;
+    }else{
+        
+        return @"";
+    }
+    
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

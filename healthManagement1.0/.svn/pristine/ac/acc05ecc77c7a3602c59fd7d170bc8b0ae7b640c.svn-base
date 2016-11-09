@@ -1,0 +1,68 @@
+//
+//  TopicTableViewCell.h
+//  jiuhaohealth2.1
+//
+//  Created by 徐国洪 on 14-8-16.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@protocol TopicCellDelegate <NSObject>
+
+- (void)butShowEvent:(NSDictionary*)dic;
+- (void)butAddEvent:(NSDictionary*)dic;
+
+@end
+
+
+/**
+ *  头
+ */
+@interface TopicTableViewCell1 : UITableViewCell
+{
+    UIImageView *m_imageView;
+    
+    UILabel *m_labTitle;
+}
+
+@property (nonatomic, assign) NSDictionary *infoDic;
+@property (nonatomic, assign) id<TopicCellDelegate> delegate;
+- (void)setInfoDic:(NSDictionary *)dic;
+- (void)setIconImage:(UIImage *)image;
+
+@end
+
+
+/**
+ *  详细
+ */
+@interface TopicTableViewCell2 : UITableViewCell
+{
+    UIImageView *m_imageView;
+    
+    UILabel *m_labTitle;
+    UILabel *m_labDetail;
+}
+
+@property (nonatomic, assign) NSDictionary *infoDic;
+@property (nonatomic, assign) id<TopicCellDelegate> delegate;
+
+@end
+
+
+/**
+ *  详细
+ */
+@interface TopicTableViewCell3 : UITableViewCell
+{
+    UILabel *m_labTitle;
+    UILabel *m_labDetail;
+    
+    UIButton *m_button;
+}
+
+@property (nonatomic, assign) NSDictionary *infoDic;
+@property (nonatomic, assign) id<TopicCellDelegate> delegate;
+
+@end

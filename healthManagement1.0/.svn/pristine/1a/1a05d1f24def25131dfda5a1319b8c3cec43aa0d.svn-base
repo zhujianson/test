@@ -1,0 +1,96 @@
+//
+//  PickerViewController.m
+//  ZLAssetsPickerDemo
+//
+//  Created by 张磊 on 14-11-11.
+//  Copyright (c) 2014年 com.zixue101.www. All rights reserved.
+//
+
+
+#define PICKER_TAKE_DONE @"PICKER_TAKE_DONE"
+
+#import "PickerViewController.h"
+#import "PickerGroupViewController.h"
+
+@interface PickerViewController ()
+
+@property (nonatomic , retain) PickerGroupViewController *groupVc;
+
+@end
+
+@implementation PickerViewController
+
+- (instancetype)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil{
+    if (self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil]) {
+        [self createNavigationController];
+    }
+    return self;
+}
+
+#pragma mark 初始化导航控制器
+- (void) createNavigationController{
+    PickerGroupViewController *groupVc = [[PickerGroupViewController alloc] init];
+    CommonNavViewController *nav = [[CommonNavViewController alloc] initWithRootViewController:groupVc];
+    [groupVc release];
+    
+    nav.view.frame = self.view.bounds;
+    [self addChildViewController:nav];
+    [self.view addSubview:nav.view];
+    [nav release];
+    self.groupVc = groupVc;
+}
+
+- (void)setStatus:(PickerViewShowStatus)status{
+    _status = status;
+    self.groupVc.status = status;
+}
+
+-(void)setSendTitle:(NSString *)sendTitle
+{
+    _sendTitle = sendTitle;
+    self.groupVc.sendTitle = sendTitle;
+}
+
+- (void)setMaxCount:(NSInteger)maxCount{
+    if (maxCount <= 0) return;
+    _maxCount = maxCount;
+    self.groupVc.maxCount = maxCount;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self addNotification];
+}
+
+- (void) addNotification{
+    // 监听异步done通知
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(done:) name:PICKER_TAKE_DONE object:nil];
+    });
+}
+
+- (void) done:(NSNotification *)note{
+    NSArray *selectArray =  note.userInfo[@"selectAssets"];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if ([self.delegate respondsToSelector:@selector(pickerViewControllerDoneAsstes:)]) {
+            [self.delegate pickerViewControllerDoneAsstes:selectArray];
+        }else if (self.callBack){
+            self.callBack(selectArray);
+        }
+        [self dismissViewControllerAnimated:YES completion:nil];
+    });
+}
+
+- (void)dealloc
+{
+    _delegate = nil;
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [super dealloc];
+}
+
+- (void)setDelegate:(id<PickerViewControllerDelegate>)delegate{
+    _delegate = delegate;
+    self.groupVc.delegate = delegate;
+}
+
+@end

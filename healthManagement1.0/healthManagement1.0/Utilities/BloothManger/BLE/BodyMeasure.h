@@ -1,0 +1,43 @@
+#import <Foundation/Foundation.h>
+
+
+typedef NS_ENUM(int, DataTypeEnum) {
+    DataTypeNone = -1,
+    DataTypeWeigh = 0,//秤重数据
+    DatatypeTestFat = 1,//测试脂肪数据
+    DataTypeHistory = 2,//历史数据
+    DataTypeTestFatError = 6//测试脂肪无效
+};
+
+
+@interface BodyMeasure : NSObject
+
+@property (nonatomic, assign) DataTypeEnum dataType;//表示数据类型
+
+@property (nonatomic, assign) int bodyMassKG;//表示体重数据，单位kg, 10times, 初始化值为－1
+@property (nonatomic, assign) int bodyMassLB;//表示体重数据，单位lb, 10times, 初始化值为－1
+@property (nonatomic, assign) BOOL ifStable;//表示体重数据 YES－稳定，NO－不稳定
+@property (nonatomic, assign) NSString *unitID;
+
+@property (nonatomic, assign) int deviceUserID;//表示秤体用户序号，数值范围1～12, 初始化值为－1
+@property (nonatomic, assign) int biologicalSexID;//表示用户性别，0=女性，1=男性, 初始化值为－1
+@property (nonatomic, assign) int age;//表示用户年龄，数值范围10-100, 初始化值为－1
+@property (nonatomic, assign) int heightCM;//表示用户身高，单位厘米, 初始化值为－1
+@property (nonatomic, assign) int heightIN;//表示用户身高，单位英寸, 10times, 初始化值为－1
+@property (nonatomic, assign) int number;//表示历史数据序号，数值范围1～20, 初始化值为－1
+@property (nonatomic, copy) NSString *recordDate;//表示历史数据记录日期，格式yyyy-MM-dd
+@property (nonatomic, assign) int bodyMassIndex;//表示BMI，当设备为八电极时显示(单位无, 1000times), 初始化值为－1
+@property (nonatomic, assign) int bodyFatPercentage;//表示脂肪率，当设备为脂肪秤时显示(单位％, 1000times),当设备为八电极时显示(单位%, 1000times), 初始化值为－1
+@property (nonatomic, assign) int hydro;//表示水分值，当设备为脂肪秤时显示(单位％, 1000times), 初始化值为－1
+@property (nonatomic, assign) int muscle;//表示肌肉值，当设备为脂肪秤时显示(单位％, 1000times),当设备为八电极时显示(单位kg, 10times), 初始化值为－1
+@property (nonatomic, assign) int bone;//表示骨骼值，当设备为脂肪秤时显示(单位％, 1000times),当设备为八电极时显示(单位kg, 10times), 初始化值为－1
+@property (nonatomic, assign) int kcal;//表示基础代谢，当设备为脂肪秤时显示(单位kcal),当设备为八电极时显示(单位kcal), 初始化值为－1
+
+@property (nonatomic, assign) int protein;//当设备为八电极时表示蛋白质，当设备为八电极时显示(单位kg, 1000times), 初始化值为－1
+@property (nonatomic, assign) int visceralFat;//表示内脏脂肪指数, 当设备为八电极时显示(10times), 初始化值为－1
+@property (nonatomic, assign) int cellHydro;//表示水分，当设备为八电极时显示(单位kg, 10times), 初始化值为－1
+@property (nonatomic, assign) int bodyAge;//表示身体年龄，当设备为八电极时显示, 初始化值为－1
+@property (nonatomic, assign) int healthScore;//表示健康得分，当设备为八电极时显示, 初始化值为－1
+@property (nonatomic, assign) int leanBodyMass;//表示瘦体重，当设备为八电极时显示(单位kg, 10times), 初始化值为－1
+
+@end

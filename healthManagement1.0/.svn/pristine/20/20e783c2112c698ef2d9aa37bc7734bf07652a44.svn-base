@@ -1,0 +1,17 @@
+//
+//  SearchResultViewController.h
+//  jiuhaohealth4.0
+//
+//  Created by 徐国洪 on 15-4-21.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface SearchResultViewController : CommonViewController
+
+@property (nonatomic,copy) NSString *searchKeyString;//搜索关键字
+
+@property (nonatomic,copy) NSString *groupId;//圈子ID
+
+@end

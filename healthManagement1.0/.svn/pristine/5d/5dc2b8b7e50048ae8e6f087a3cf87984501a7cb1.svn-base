@@ -1,0 +1,79 @@
+//
+//  ThinViewController.m
+//  jiuhaohealth4.2
+//
+//  Created by xjs on 16/6/1.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "ThinViewController.h"
+
+@interface ThinViewController ()
+
+@end
+
+@implementation ThinViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"享瘦派";
+    self.navigationItem.rightBarButtonItem = [Common CreateNavBarButton3:self setEvent:@selector(again) setTitle:@"重新定制"];
+    
+    [self createHeaderView];
+    // Do any additional setup after loading the view.
+}
+
+- (void)again
+{
+    
+}
+
+- (void)createHeaderView
+{
+    UIView * view = [[UIView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, 250/2)];
+    view.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:view];
+    
+    UILabel * lab = [Common createLabel:CGRectMake(15, 0, 200, 40) TextColor:@"666666" Font:[UIFont systemFontOfSize:14] textAlignment:NSTextAlignmentLeft labTitle:@"我的当前状态"];
+    [view addSubview:lab];
+    
+    lab = [Common createLabel:CGRectMake(15, 40, kDeviceWidth-30, 60) TextColor:@"666666" Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentCenter labTitle:nil];
+    lab.attributedText = [self replaceRedColorWithNSString:@"你离目标还有 5.0 公斤，加油！\n距离方案结束还有：64 天" andUseKeyWord:@"5.0" andWithFontSize:18 TextColor:@"ff5232" andThreeNSString:@"64" andThreeColor:@"00c5ff"];
+    lab.numberOfLines = 0;
+    lab.backgroundColor =[CommonImage colorWithHexString:@"fafafa"];
+    lab.layer.borderWidth = 0.5;
+    lab.clipsToBounds = YES;
+    lab.layer.cornerRadius = 4;
+    lab.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+    [view addSubview:lab];
+    
+    
+}
+
+//描红
+- (NSMutableAttributedString *)replaceRedColorWithNSString:(NSString *)str andUseKeyWord:(NSString *)keyWord andWithFontSize:(float )s TextColor:(NSString*)coler andThreeNSString:(NSString*)three andThreeColor:(NSString*)tColor
+{
+    NSMutableAttributedString *attrituteString = [[NSMutableAttributedString alloc] initWithString:str];
+    NSRange range = [str rangeOfString:keyWord];
+    [attrituteString setAttributes:@{NSForegroundColorAttributeName : [CommonImage colorWithHexString:coler], NSFontAttributeName : [UIFont systemFontOfSize:s]} range:range];
+    
+    NSRange range2 = [str rangeOfString:three];
+    [attrituteString setAttributes:@{NSForegroundColorAttributeName : [CommonImage colorWithHexString:tColor], NSFontAttributeName : [UIFont systemFontOfSize:s]} range:range2];
+    return attrituteString;
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

@@ -1,0 +1,47 @@
+//
+//  CommunityPickerViewCell.h
+//  jiuhaohealth4.0
+//
+//  Created by jiuhao-yangshuo on 15-5-20.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+static NSString *stringPicCellAdd = @"add";
+static NSString *stringPicCellDel = @"del";
+static NSString *stringPicCellLongP = @"longP";
+
+@interface CommunityPickerViewCell : UICollectionViewCell
+{
+    UIImageView *m_imageView;
+    UILabel *m_labTitle;
+    
+    //    UIButton *m_butDel;
+}
+
+@property (nonatomic, retain) UIImageView *m_imageView;
+
+@property (nonatomic, assign) UIView *m_backView;
+
+@property (nonatomic, assign) UIButton *m_butDel;
+
+- (void)setIconImage:(UIImage *)image;
+
+@end
+
+
+@interface CommunityPickerAddViewCell : UICollectionViewCell
+
+@end
+
+
+@interface PickerHeaderCollectionReusableView : UICollectionReusableView
+
+@property (nonatomic , assign) NSInteger count;
+
+// 限制最大数
+@property (nonatomic , assign) NSInteger maxCount;
+
+@end
+

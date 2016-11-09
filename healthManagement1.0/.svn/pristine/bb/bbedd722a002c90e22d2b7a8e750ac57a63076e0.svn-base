@@ -1,0 +1,15 @@
+//
+//  CircleDetailViewController.h
+//  jiuhaohealth4.0
+//
+//  Created by wangmin on 15-4-16.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface CircleDetailViewController : CommonViewController
+
+@property (nonatomic,retain) NSString *groupId;//圈子Id
+
+@end

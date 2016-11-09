@@ -1,0 +1,15 @@
+//
+//  ImproveSubscribeViewController.h
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-8-20.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "Common.h"
+
+@interface ImproveSubscribeViewController : CommonViewController
+@property (nonatomic,retain) NSMutableDictionary * userDic;
+@property (nonatomic,assign) int addOne;
+@property (nonatomic,retain) NSMutableDictionary* headerArr;
+@end

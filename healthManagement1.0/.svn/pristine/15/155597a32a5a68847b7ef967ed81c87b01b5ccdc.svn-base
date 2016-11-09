@@ -1,0 +1,259 @@
+//
+//  ConvertToPostModel.m
+//  jiuhaohealth4.0
+//
+//  Created by wangmin on 15-4-20.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "ConvertToPostModel.h"
+
+@interface ConvertToPostModel ()
+{
+
+    int offsetY;//上下边距
+    int offsetPic;//图片偏移
+}
+@end
+
+@implementation ConvertToPostModel
+
+
+- (void)dealloc
+{
+    self.postTitleFont = nil;
+    self.posterNameFont = nil;
+    self.timeFont = nil;
+    self.postTitleString = nil;
+    self.posterNameString = nil;
+    self.sexImageString = nil;
+    self.senderTimeString = nil;
+    self.commentCountString = nil;
+    self.isSystem = nil;
+
+    [super dealloc];
+}
+
+
+- (id)init
+{
+    self = [super init];
+    if(self){
+        //默认值
+        self.postTitleFont = [UIFont systemFontOfSize:17.0f];
+        self.posterNameFont = [UIFont systemFontOfSize:12.0f];
+        self.timeFont = [UIFont systemFontOfSize:12.0f];
+        self.commentFont = [UIFont systemFontOfSize:12.0f];
+        
+        self.postTitleSize = CGSizeMake(kDeviceWidth-15-25, 17);
+        self.posterSize = CGSizeMake(kDeviceWidth-250, 13);
+        self.commentSize = CGSizeMake(100, 13);
+        offsetY = 15;
+        offsetPic = 0;
+        
+    }
+    return  self;
+}
+
+
+- (void)setPostTitleFont:(UIFont *)postTitleFont
+{
+    if(_postTitleFont != postTitleFont){
+        
+        [_postTitleFont release];
+        _postTitleFont = [postTitleFont retain];
+    }
+    
+    self.postTitleSize = CGSizeMake(kDeviceWidth-15-25, postTitleFont.pointSize);
+
+}
+
+
+- (NSMutableAttributedString *)replaceWithNSString:(NSString *)str andUseKeyWord:(NSString *)keyWord andWithFontSize:(float )size backColor:(NSString *)colorString
+{
+    NSMutableAttributedString *attrituteString = [[[NSMutableAttributedString alloc] initWithString:str] autorelease];
+    if(!keyWord){
+        return attrituteString;
+    }
+    NSRange range = [str rangeOfString:keyWord];
+    [attrituteString setAttributes:@{NSForegroundColorAttributeName: [CommonImage colorWithHexString:@"ffffff"], NSBackgroundColorAttributeName : [CommonImage colorWithHexString:colorString], NSFontAttributeName : [UIFont systemFontOfSize:size]} range:range];
+    return attrituteString;
+}
+
+- (void)getTitleStringOnIOS6:(NSDictionary *)dic
+{
+    NSMutableAttributedString *titleString =  [[NSMutableAttributedString alloc] initWithString:dic[@"postName"]];
+    
+    NSString *label = dic[@"label"];
+    
+    BOOL isPic = [label containsString:@"3"];
+    if(isPic){
+        NSAttributedString *hotAttrStr = [self replaceWithNSString:@" 图  " andUseKeyWord:@" 图 " andWithFontSize:12.0f backColor:@"a2d757"];
+        [titleString insertAttributedString:hotAttrStr atIndex:0];
+    }
+    
+    BOOL isJing = [label containsString:@"4"];
+    if(isJing){
+        NSAttributedString *hotAttrStr = [self replaceWithNSString:@" 精  " andUseKeyWord:@" 精 " andWithFontSize:12.0f backColor:@"5786e5"];
+        [titleString insertAttributedString:hotAttrStr atIndex:0];
+        
+    }
+    BOOL isUP = [label containsString:@"1"];
+    if(isUP){
+        
+        NSAttributedString *hotAttrStr = [self replaceWithNSString:@" 顶  " andUseKeyWord:@" 顶 " andWithFontSize:12.0f backColor:@"ff945f"];
+        [titleString insertAttributedString:hotAttrStr atIndex:0];
+        
+    }
+    BOOL isHot = [label containsString:@"2"];
+    if(isHot){
+        NSAttributedString *hotAttrStr = [self replaceWithNSString:@" hot  " andUseKeyWord:@" hot " andWithFontSize:12.0f backColor:@"ff7979"];
+        [titleString insertAttributedString:hotAttrStr atIndex:0];
+        
+    }
+    self.postTitleString = titleString;
+}
+
+
+- (void)getTitleStringAfterIOS6:(NSDictionary *)dic
+{
+    NSString *postName = dic[@"postName"];
+    
+    NSString *label  = dic[@"label"];
+    
+//    NSString *label = [dic[@"label"] length]? dic[@"label"] : @"";
+    if([dic[@"label"] isKindOfClass:[NSNull class]]){
+        
+        label = @"";
+    }
+    
+    
+    NSMutableAttributedString *titleString = [[NSMutableAttributedString alloc] initWithString:postName];
+    BOOL isPic = [label containsString:@"3"];
+    if(isPic){
+        UIImage *tuImage = [UIImage imageNamed:@"common.bundle/community/PostList/tu.png"];
+        NSTextAttachment *tu = [[NSTextAttachment alloc] init];
+        tu.image = tuImage;
+        tu.bounds = CGRectMake(0, -2, tuImage.size.width, tuImage.size.height);
+        NSAttributedString *tuAttrStr = [NSAttributedString attributedStringWithAttachment:tu];
+        [tu release];
+        [titleString insertAttributedString:tuAttrStr atIndex:0];
+        offsetPic += tuImage.size.width;
+    }
+    
+    BOOL isJing = [label containsString:@"4"];
+    if(isJing){
+        UIImage *jingImage = [UIImage imageNamed:@"common.bundle/community/PostList/jing.png"];
+        NSTextAttachment *jing = [[NSTextAttachment alloc] init];
+        jing.image = jingImage;
+        jing.bounds = CGRectMake(0, -2, jingImage.size.width, jingImage.size.height);
+        NSAttributedString *jingAttrStr = [NSAttributedString attributedStringWithAttachment:jing];
+        [jing release];
+        [titleString insertAttributedString:jingAttrStr atIndex:0];
+        offsetPic += jingImage.size.width;
+        
+    }
+    BOOL isUP = [label containsString:@"1"];
+    if(isUP){
+        
+        UIImage *upImage = [UIImage imageNamed:@"common.bundle/community/PostList/ding.png"];
+        NSTextAttachment *up = [[NSTextAttachment alloc] init];
+        up.image = upImage;
+        up.bounds = CGRectMake(0, -2, upImage.size.width, upImage.size.height);
+        NSAttributedString *upAttrStr = [NSAttributedString attributedStringWithAttachment:up];
+        [up release];
+        [titleString insertAttributedString:upAttrStr atIndex:0];
+        offsetPic += upImage.size.width;
+        
+    }
+    BOOL isHot = [label containsString:@"2"];
+    if(isHot){
+        UIImage *hotImage = [UIImage imageNamed:@"common.bundle/community/PostList/hot.png"];
+        NSTextAttachment *hot = [[NSTextAttachment alloc] init];
+        hot.image = hotImage;
+        hot.bounds = CGRectMake(0, -2, hotImage.size.width, hotImage.size.height);
+        NSAttributedString *hotAttrStr = [NSAttributedString attributedStringWithAttachment:hot];
+        [hot release];
+        [titleString insertAttributedString:hotAttrStr atIndex:0];
+        offsetPic += hotImage.size.width;
+    }
+    
+    self.postTitleString = titleString;
+
+}
+
+- (void)parseWithDic:(NSDictionary *)dic
+{
+    CGFloat width = self.postTitleSize.width;
+    
+    self.postId = [NSString stringWithFormat:@"%@",dic[@"postId"]];
+    
+    self.isSystem = [NSString stringWithFormat:@"%@",dic[@"groupType"]];
+    
+    self.transparent = [dic[@"transparent"] intValue];
+    
+    self.shareTitle = dic[@"shareTitle"];
+
+    self.m_lable = dic[@"label"];
+    self.isRead = @"1";
+    if(iOS_Version < 7.0){
+        [self getTitleStringOnIOS6:dic];
+    }else{
+        [self getTitleStringAfterIOS6:dic];
+        //这里需要去掉图片宽度
+        width -= offsetPic;
+    }
+    
+    NSString *transString = self.postTitleString.mutableString;
+
+    CGFloat height = self.postTitleSize.height;
+  
+    CGSize size = [transString sizeWithFont:self.postTitleFont constrainedToSize:CGSizeMake(width, 999)];
+    
+
+    if(size.height > height+5){
+        //2行
+        self.postTitleHeight = height*2.4;
+    }else{
+    
+        self.postTitleHeight = height+1;
+    }
+    
+    if(self.justGetAttributeTitleFlag){
+        return;
+    }
+
+    //评论数
+    NSString *commentsString = [NSString stringWithFormat:@"%@",dic[@"commentsCount"]];
+    CGSize commentSize = [commentsString sizeWithFont:self.commentFont  constrainedToSize:self.commentSize];
+    self.commentCountWidth = commentSize.width;
+    self.commentCountString = commentsString;
+    
+    //帖子赞数
+    NSString *praiseString = [NSString stringWithFormat:@"%@",dic[@"praiseCount"]];
+    CGSize praiseSize = [praiseString sizeWithFont:self.commentFont  constrainedToSize:self.commentSize];
+    self.praiseCountWidth = praiseSize.width;
+    self.praiseCountString = praiseString;
+    
+    self.posterSize = CGSizeMake(kDeviceWidth-commentSize.width-15-20-70-50, 13);
+    CGSize nameSize = [dic[@"posterName"] sizeWithFont:self.posterNameFont  constrainedToSize:self.posterSize];
+    self.posterNameString = dic[@"posterName"];
+    self.posterNameWidth = nameSize.width == 0? self.posterSize.width: nameSize.width;
+    //性别图片名称
+    NSString *sexString = dic[@"sex"];
+    if([sexString intValue] == 1){
+        self.sexImageString =  @"common.bundle/community/man.png";
+    }else{
+        self.sexImageString = @"common.bundle/community/women.png";
+    }
+    //时间 按格式转换
+    self.senderTimeString = [CommonDate getServerTime:[dic[@"createTime"] longLongValue] type:3];
+  
+    self.allHeight = offsetY*2+self.postTitleHeight+5+self.posterSize.height;
+    
+
+}
+
+
+@end
+

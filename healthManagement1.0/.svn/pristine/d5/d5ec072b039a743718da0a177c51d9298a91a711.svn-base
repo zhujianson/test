@@ -1,0 +1,357 @@
+//
+//  PostTableViewCell.m
+//  jiuhaohealth4.0
+//
+//  Created by 王敏 on 15-4-16.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "PostTableViewCell.h"
+@interface PostTableViewCell()
+{
+    UILabel *postTitleLabel;//帖子标题
+    UILabel  *posterLabel;//发帖人
+    UIImageView *sexImageView;//性别
+    UILabel *postStampLabel;//发送时间
+    UIImageView *commentImageView;//评论图标
+    UILabel *commentCountLabel;//评论数
+    
+    UIImageView *praiseImageView;//赞图标
+    UILabel *praiseCountLabel;//赞数
+    UIImageView *redImage;
+}
+
+@end
+@implementation PostTableViewCell
+
+- (void)dealloc
+{
+    [postTitleLabel release];
+    [posterLabel release];
+    [sexImageView release];
+    [postStampLabel release];
+    [commentImageView release];
+    [commentCountLabel release];
+    
+    [super dealloc];
+}
+
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        // Initialization code
+        [self getSubviews];
+    }
+    return self;
+}
+
+- (void)getSubviews{
+    //标题
+    postTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, 15, kDeviceWidth-15-25, 15)];
+    postTitleLabel.font = [UIFont systemFontOfSize:14.0f];
+    postTitleLabel.numberOfLines = 2;
+    postTitleLabel.textColor = [CommonImage colorWithHexString:@"333333"];
+    postTitleLabel.backgroundColor = [UIColor clearColor];
+    [self.contentView addSubview:postTitleLabel];
+    postTitleLabel.text = @"        糖糖早知道第8期";
+    //发帖人
+    posterLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, postTitleLabel.bottom+5, 100, 13)];
+    posterLabel.font = [UIFont systemFontOfSize:12.0f];
+    posterLabel.textColor = [CommonImage colorWithHexString:@"999999"];
+    posterLabel.backgroundColor = [UIColor clearColor];
+    [self.contentView addSubview:posterLabel];
+    posterLabel.text = @"Abnor";
+    //性别
+    sexImageView = [[UIImageView alloc] initWithFrame:CGRectMake(posterLabel.right+1, posterLabel.origin.y, 12, 12)];
+//    sexImageView.backgroundColor = [UIColor clearColor];
+    [self.contentView addSubview:sexImageView];
+    //发帖时间
+    postStampLabel = [[UILabel alloc] initWithFrame:CGRectMake(sexImageView.right+12    , posterLabel.origin.y, 70, 13)];
+    postStampLabel.font = [UIFont systemFontOfSize:12.0f];
+    postStampLabel.textColor = [CommonImage colorWithHexString:@"999999"];
+    postStampLabel.backgroundColor = [UIColor clearColor];
+    [self.contentView addSubview:postStampLabel];
+    postStampLabel.text = @"21:24";
+    //评论图标
+    commentImageView = [[UIImageView alloc] initWithFrame:CGRectMake(posterLabel.right+3, posterLabel.origin.y, 16, 14)];
+    commentImageView.image = [UIImage imageNamed:@"common.bundle/community/PostList/community_comments.png"];
+    [self.contentView addSubview:commentImageView];
+    //评论数目
+    commentCountLabel = [[UILabel alloc] initWithFrame:CGRectMake(kDeviceWidth-15-30 , posterLabel.origin.y, 100, 13)];
+    commentCountLabel.font = [UIFont systemFontOfSize:12.0f];
+    commentCountLabel.textColor = [CommonImage colorWithHexString:@"999999"];
+    commentCountLabel.backgroundColor = [UIColor clearColor];
+    [self.contentView addSubview:commentCountLabel];
+    commentCountLabel.text = @"1000";
+    
+    UIImage *imgeNormal = [UIImage imageNamed:@"common.bundle/community/floorPraise_n.png"];
+    praiseImageView = [[UIImageView alloc] initWithFrame:CGRectMake(commentImageView.left -20, posterLabel.origin.y, imgeNormal.size.width, imgeNormal.size.height)];
+    praiseImageView.image = imgeNormal;
+    [self.contentView addSubview:praiseImageView];
+    //评论数目
+    praiseCountLabel = [[UILabel alloc] initWithFrame:CGRectMake(commentImageView.left -10 , posterLabel.origin.y, 100, 13)];
+    praiseCountLabel.font = [UIFont systemFontOfSize:12.0f];
+    praiseCountLabel.textColor = [CommonImage colorWithHexString:@"999999"];
+    praiseCountLabel.backgroundColor = [UIColor clearColor];
+    [self.contentView addSubview:praiseCountLabel];
+    praiseCountLabel.text = @"1000";
+    
+    redImage = [[UIImageView alloc]initWithFrame:CGRectMake(postTitleLabel.left - 9, postTitleLabel.top, 6, 6)];
+    redImage.clipsToBounds = YES;
+    redImage.layer.cornerRadius = redImage.width/2.0;
+    redImage.backgroundColor = [CommonImage colorWithHexString:COLOR_FF5351];
+    [self.contentView  addSubview:redImage];
+//    redImage.centerY = postTitleLabel.height/2.0;
+}
+
+-(void)setModel:(ConvertToPostModel *)model
+{
+    if(_model != model){
+        
+        [_model release];
+        _model = [model retain];
+    }
+    
+     postTitleLabel.font = model.postTitleFont;
+     postTitleLabel.attributedText = model.postTitleString;
+     postTitleLabel.frame = CGRectMake(15, 15, model.postTitleSize.width, model.postTitleHeight);
+    
+    CGFloat height = model.posterSize.height;
+    //发帖人
+    posterLabel.text = model.posterNameString;
+    posterLabel.frame = CGRectMake(15, postTitleLabel.bottom+5, model.posterNameWidth, height);
+//    posterLabel.backgroundColor = [UIColor redColor];
+    //性别
+    UIImage *sexImg = [UIImage imageNamed:model.sexImageString];
+    CGFloat offset = 2;
+    if(model.posterNameWidth == 130){
+        offset = -2;
+    }
+    sexImageView.frame = CGRectMake(posterLabel.right+offset, posterLabel.origin.y, sexImg.size.width, sexImg.size.height);
+    sexImageView.image = [UIImage imageNamed:model.sexImageString];
+    
+    //发帖时间
+    postStampLabel.text = model.senderTimeString;
+    postStampLabel.frame = CGRectMake(sexImageView.right+12, posterLabel.origin.y, 90, height);
+    //评论数
+    commentCountLabel.text = model.commentCountString;
+    commentCountLabel.frame = CGRectMake(kDeviceWidth-15-model.commentCountWidth , posterLabel.origin.y, model.commentCountWidth, height);
+    commentImageView.frame = CGRectMake(commentCountLabel.origin.x-20, posterLabel.origin.y+1, 16, 14);
+// 赞
+    praiseCountLabel.text = model.praiseCountString;
+    praiseCountLabel.frame = CGRectMake(commentImageView.left - 15 - model.praiseCountWidth , posterLabel.origin.y, model.praiseCountWidth, height);
+    praiseImageView.frame =  CGRectMake(praiseCountLabel.left - praiseImageView.size.width-8, posterLabel.origin.y-5, praiseImageView.size.width,  praiseImageView.size.height);
+    
+    redImage.hidden = [model.isRead intValue];
+    redImage.centerY = postTitleLabel.centerY;
+}
+
+- (void)setNewPostDic:(NSDictionary *)newPostDic
+{
+    if(_newPostDic != newPostDic){
+        
+        [_newPostDic release];
+        _newPostDic = [newPostDic retain];
+    }
+    //避免紧紧靠在一起建议每个图片后面带一个空格
+    // NSParagraphStyle
+//    NSMutableParagraphStyle *paraStyle01 = [[NSMutableParagraphStyle alloc] init];
+//    paraStyle01.lineHeightMultiple =1.2;
+//    NSDictionary *attrDict01 = @{ NSParagraphStyleAttributeName: paraStyle01,
+//                                  NSFontAttributeName: [UIFont systemFontOfSize: 13]
+//                                 };
+//    
+//    NSMutableAttributedString *titleString = [[NSMutableAttributedString alloc] initWithString:@"糖糖早知道第8期糖糖早知道第8期待道第8期" attributes:attrDict01];
+    
+    NSMutableAttributedString *titleString = [[NSMutableAttributedString alloc] initWithString:@"糖糖早知道"];
+    BOOL isPic = 1;//[postDic[@"upFlag"] boolValue];
+    if(isPic){
+        UIImage *tuImage = [UIImage imageNamed:@"tu.png"];
+        NSTextAttachment *tu = [[NSTextAttachment alloc] init];
+        tu.image = tuImage;
+        tu.bounds = CGRectMake(0, -2, tuImage.size.width, tuImage.size.height);
+        NSAttributedString *tuAttrStr = [NSAttributedString attributedStringWithAttachment:tu];
+        [tu release];
+        [titleString insertAttributedString:tuAttrStr atIndex:0];
+    }
+    
+    BOOL isJing = 1;//[postDic[@"upFlag"] boolValue];
+    if(isJing){
+        UIImage *jingImage = [UIImage imageNamed:@"jing.png"];
+        NSTextAttachment *jing = [[NSTextAttachment alloc] init];
+        jing.image = jingImage;
+        jing.bounds = CGRectMake(0, -2, jingImage.size.width, jingImage.size.height);
+        NSAttributedString *jingAttrStr = [NSAttributedString attributedStringWithAttachment:jing];
+        [jing release];
+        [titleString insertAttributedString:jingAttrStr atIndex:0];
+        
+    }
+    BOOL isUP = 1;//[postDic[@"upFlag"] boolValue];
+    if(isUP){
+        
+        UIImage *upImage = [UIImage imageNamed:@"ding.png"];
+        NSTextAttachment *up = [[NSTextAttachment alloc] init];
+        up.image = upImage;
+        up.bounds = CGRectMake(0, -2, upImage.size.width, upImage.size.height);
+        NSAttributedString *upAttrStr = [NSAttributedString attributedStringWithAttachment:up];
+        [up release];
+
+        [titleString insertAttributedString:upAttrStr atIndex:0];
+        
+    }
+    BOOL isHot = 1;//[postDic[@"hotFlag"] boolValue];
+    if(isHot){
+        UIImage *hotImage = [UIImage imageNamed:@"hot.png"];
+        NSTextAttachment *hot = [[NSTextAttachment alloc] init];
+        hot.image = hotImage;
+        hot.bounds = CGRectMake(0, -2, hotImage.size.width, hotImage.size.height);
+        NSAttributedString *hotAttrStr = [NSAttributedString attributedStringWithAttachment:hot];
+        [hot release];
+        [titleString insertAttributedString:hotAttrStr atIndex:0];
+        
+    }
+    
+    postTitleLabel.attributedText = titleString;
+    
+    
+    NSString *transString = titleString.mutableString;
+    
+    CGFloat width = postTitleLabel.size.width;
+    UIFont *font = postTitleLabel.font;
+    CGSize size = [transString sizeWithFont:font constrainedToSize:CGSizeMake(width, 999)];
+    
+    //    NSLog(@"size:%@",NSStringFromCGSize(size));
+    if(size.height > 17){
+        //2行
+        postTitleLabel.frame = CGRectMake(15, 15, kDeviceWidth-15-25, 35);
+    }
+    
+    CGSize nameSize = [@"Abnor" sizeWithFont:posterLabel.font constrainedToSize:CGSizeMake(150, posterLabel.size.height)];
+    
+    //发帖人
+    posterLabel.frame = CGRectMake(15, postTitleLabel.bottom, nameSize.width, 13);
+    //性别
+    sexImageView.frame = CGRectMake(posterLabel.right+5, posterLabel.origin.y, 12, 12);
+    
+    sexImageView.image = [UIImage imageNamed:@"community_male.png"];
+    
+    //发帖时间
+    postStampLabel.frame = CGRectMake(sexImageView.right+12, posterLabel.origin.y, 100, 13);
+    //评论数
+    commentCountLabel.frame = CGRectMake(kDeviceWidth-15-30 , posterLabel.origin.y, 100, 13);
+    commentImageView.frame = CGRectMake(commentCountLabel.origin.x-15, posterLabel.origin.y, 12, 12);
+}
+
+
+- (void)setPostDic:(NSDictionary *)postDic
+{
+    if(_postDic != postDic){
+        
+        [_postDic release];
+        _postDic = [postDic retain];
+    }
+
+    NSMutableAttributedString *titleString = [[NSMutableAttributedString alloc] initWithString:@"糖糖早知道第8期糖糖早知道第8期糖糖早知道第8期"];
+    
+    BOOL isPic = 1;//[postDic[@"upFlag"] boolValue];
+    if(isPic){
+        NSAttributedString *hotAttrStr = [self replaceWithNSString:@" 图  " andUseKeyWord:@" 图 " andWithFontSize:12.0f backColor:@"a2d757"];
+        [titleString insertAttributedString:hotAttrStr atIndex:0];
+    }
+    
+    BOOL isJing = 1;//[postDic[@"upFlag"] boolValue];
+    if(isJing){
+        NSAttributedString *hotAttrStr = [self replaceWithNSString:@" 精  " andUseKeyWord:@" 精 " andWithFontSize:12.0f backColor:@"5786e5"];
+        [titleString insertAttributedString:hotAttrStr atIndex:0];
+        
+    }
+    BOOL isUP = 1;//[postDic[@"upFlag"] boolValue];
+    if(isUP){
+        
+        NSAttributedString *hotAttrStr = [self replaceWithNSString:@" 顶  " andUseKeyWord:@" 顶 " andWithFontSize:12.0f backColor:@"ff945f"];
+        [titleString insertAttributedString:hotAttrStr atIndex:0];
+        
+    }
+    BOOL isHot = 1;//[postDic[@"hotFlag"] boolValue];
+    if(isHot){
+        NSAttributedString *hotAttrStr = [self replaceWithNSString:@" hot  " andUseKeyWord:@" hot " andWithFontSize:12.0f backColor:@"ff7979"];
+        [titleString insertAttributedString:hotAttrStr atIndex:0];
+        
+    }
+    
+    postTitleLabel.attributedText = titleString;
+    
+    NSString *transString = titleString.mutableString;
+    
+    CGFloat width = postTitleLabel.size.width;
+    UIFont *font = postTitleLabel.font;
+    CGSize size = [transString sizeWithFont:font constrainedToSize:CGSizeMake(width, 999)];
+    
+//    NSLog(@"size:%@",NSStringFromCGSize(size));
+    if(size.height > 15){
+        //2行
+        postTitleLabel.frame = CGRectMake(15, 15, kDeviceWidth-15-25, 40);
+    }
+    
+    CGSize nameSize = [@"Abnor" sizeWithFont:posterLabel.font constrainedToSize:CGSizeMake(150, posterLabel.size.height)];
+    
+    //发帖人
+    posterLabel.frame = CGRectMake(15, postTitleLabel.bottom, nameSize.width, 13);
+    //性别
+    sexImageView.frame = CGRectMake(posterLabel.right+5, posterLabel.origin.y, 12, 12);
+    
+    sexImageView.image = [UIImage imageNamed:@"community_male.png"];
+    
+    //发帖时间
+    postStampLabel.frame = CGRectMake(sexImageView.right+12, posterLabel.origin.y, 100, 13);
+    //评论数
+    commentCountLabel.frame = CGRectMake(kDeviceWidth-15-30 , posterLabel.origin.y, 100, 13);
+    commentImageView.frame = CGRectMake(commentCountLabel.origin.x-15, posterLabel.origin.y, 12, 12);
+}
+
+
+- (NSMutableAttributedString *)replaceWithNSString:(NSString *)str andUseKeyWord:(NSString *)keyWord andWithFontSize:(float )size backColor:(NSString *)colorString
+{
+    NSMutableAttributedString *attrituteString = [[[NSMutableAttributedString alloc] initWithString:str] autorelease];
+    if(!keyWord){
+        return attrituteString;
+    }
+    NSRange range = [str rangeOfString:keyWord];
+    [attrituteString setAttributes:@{NSForegroundColorAttributeName: [CommonImage colorWithHexString:@"ffffff"], NSBackgroundColorAttributeName : [CommonImage colorWithHexString:colorString], NSFontAttributeName : [UIFont systemFontOfSize:size]} range:range];
+    return attrituteString;
+}
+
+
+- (UIView *)getIconWithString:(NSString *)str backColor:(NSString *)color size:(CGSize)size
+{
+    UILabel *iconLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, size.width, size.height)];
+    
+    iconLabel.textAlignment = NSTextAlignmentCenter;
+    iconLabel.text = str;
+    iconLabel.textColor = [UIColor whiteColor];
+    iconLabel.font = [UIFont systemFontOfSize:12.0f];
+    iconLabel.backgroundColor = [CommonImage colorWithHexString:color];
+    
+    return [iconLabel autorelease];
+    
+}
+
+-(void)hiddenRedImage
+{
+    redImage.hidden = YES;
+}
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

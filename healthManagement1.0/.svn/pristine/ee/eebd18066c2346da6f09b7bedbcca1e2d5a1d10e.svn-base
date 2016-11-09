@@ -1,0 +1,41 @@
+//
+//  HeaderCollectionReusableView.h
+//  healthManagement1.0
+//
+//  Created by xjs on 16/7/5.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+typedef void(^HeaderCollectionBlock)(int blockTag);
+@interface HeaderCollectionReusableView : UICollectionReusableView
+@property (strong, nonatomic) UILabel *label;
+@property (strong, nonatomic) UIButton *butMore;
+@property (strong, nonatomic) UIImageView * rightI;
+@property (strong, nonatomic) UIView *viewheader;
+@property (strong, nonatomic) UIView *viewheader2;
+@property (strong, nonatomic) UIView * lineView;
+@property (nonatomic,strong) HeaderCollectionBlock m_block;
+
+@end
+
+
+
+
+@interface Header2CollectionReusableView : UICollectionReusableView
+@property (strong, nonatomic) UILabel *label;
+//@property (strong, nonatomic) UIImageView * rightI;
+@property (strong, nonatomic) UIView *viewheader;
+@property (strong, nonatomic) UIView *viewheader2;
+@property (strong, nonatomic) UIView * lineView;
+@property (nonatomic,strong) HeaderCollectionBlock m_block;
+
+@end
+
+
+
+
+@interface FooterCollectionReusableView : UICollectionReusableView
+
+@end

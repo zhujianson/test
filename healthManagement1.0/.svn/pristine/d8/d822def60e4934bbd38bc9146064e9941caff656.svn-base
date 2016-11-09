@@ -1,0 +1,340 @@
+//
+//  FastLoginViewController.m
+//  healthManagement1.0
+//
+//  Created by xuguohong on 16/7/20.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "FastLoginViewController.h"
+#import "WXApiObject.h"
+#import "WXApi.h"
+#import <ShareSDK/ShareSDK.h>
+
+@interface FastLoginViewController ()
+{
+    UITextField *m_phoneText;
+    UITextField *m_codeText;
+    
+    UIView *m_codeView;
+    
+    UIButton *m_butLogin;
+    UIButton *m_butCode;
+    
+    NSTimer *m_timer;
+    
+    int timing;
+}
+
+@end
+
+@implementation FastLoginViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    
+    //手机号
+    UIView *view1 = [[UIView alloc] initWithFrame:CGRectMake(25, 26, kDeviceWidth-50, 50)];
+    [self.view addSubview:view1];
+    
+    UIButton *butCountry = [UIButton buttonWithType:UIButtonTypeCustom];
+    butCountry.frame = CGRectMake(0, 0, 56, view1.height);
+    [butCountry setTitle:@"+86" forState:UIControlStateNormal];
+    [butCountry addTarget:self action:@selector(selectCountry:) forControlEvents:UIControlEventTouchUpInside];
+    [butCountry setTitleColor:[CommonImage colorWithHexString:@"666666"] forState:UIControlStateNormal];
+    butCountry.titleLabel.font = [UIFont systemFontOfSize:17];
+    [view1 addSubview:butCountry];
+    
+    m_phoneText = [self createTextField:@"请输入手机号"];
+    [m_phoneText setKeyboardType:UIKeyboardTypeNumberPad];
+    m_phoneText.frame = CGRectMake(butCountry.right, 0, view1.width-butCountry.right, view1.height);
+    [view1 addSubview:m_phoneText];
+    
+    UIView *line = [[UILabel alloc] initWithFrame:CGRectMake(0, view1.height - 0.5, view1.width, 0.5)];
+    line.backgroundColor = [CommonImage colorWithHexString:LINE_COLOR];
+    [view1 addSubview:line];
+    
+    //验证码
+    m_codeView = [[UIView alloc] initWithFrame:CGRectMake(view1.left, view1.bottom, view1.width, view1.height)];
+    m_codeView.alpha = 0;
+    [self.view addSubview:m_codeView];
+    
+    m_codeText = [self createTextField:@"验证码"];
+    [m_codeText setKeyboardType:UIKeyboardTypeNumberPad];
+    m_codeText.frame = CGRectMake(0, 0, view1.width-100, view1.height);
+    [m_codeView addSubview:m_codeText];
+    
+    m_butCode = [UIButton buttonWithType:UIButtonTypeCustom];
+    m_butCode.frame = CGRectMake(m_codeText.right, 0, 100, view1.height);
+    [m_butCode setTitleColor:[CommonImage colorWithHexString:@"37de80"] forState:UIControlStateNormal];//
+    [m_butCode setTitleColor:[CommonImage colorWithHexString:@"666666"] forState:UIControlStateDisabled];//666666
+    [m_butCode addTarget:self action:@selector(getCodeForServer) forControlEvents:UIControlEventTouchUpInside];
+    [m_butCode setTitle:@"重新发送" forState:UIControlStateNormal];
+    [m_codeView addSubview:m_butCode];
+    
+    m_butLogin = [UIButton buttonWithType:UIButtonTypeCustom];
+    m_butLogin.frame = CGRectMake(m_codeView.left, view1.bottom+30, m_codeView.width, 45);
+    [m_butLogin setTitle:@"下一步" forState:UIControlStateNormal];
+    [m_butLogin addTarget:self action:@selector(selectCountry:) forControlEvents:UIControlEventTouchUpInside];
+    [m_codeView addSubview:m_butLogin];
+    
+    
+    if ([WXApi isWXAppInstalled]) {
+        UIView *line = [[UIView alloc] initWithFrame:CGRectMake(m_codeView.left, kDeviceHeight - 150-10, m_codeView.width, 1)];
+        line.backgroundColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"common.bundle/common/xuxian.png"]];
+        [self.view addSubview:line];
+        
+        UILabel *labTitle = [Common createLabel];
+        labTitle.backgroundColor = [UIColor whiteColor];
+        labTitle.frame = CGRectMake((kDeviceWidth-100)/2.f, line.top-10, 100, 20);
+        labTitle.text = @"第三方账号登录";
+        labTitle.font = [UIFont systemFontOfSize:13];
+        labTitle.textColor = [CommonImage colorWithHexString:@"999999"];
+        labTitle.textAlignment = NSTextAlignmentCenter;
+        [self.view addSubview:labTitle];
+        
+        UIImage *image = [UIImage imageNamed:@"common.bundle/login/weixin.png"];
+        UIButton *butWeixin = [UIButton buttonWithType:UIButtonTypeCustom];
+        butWeixin.frame = CGRectMake((kDeviceWidth-100)/2.f, labTitle.bottom+30, 80, 80);
+        [butWeixin setTitle:@"微信登录" forState:UIControlStateNormal];
+        [butWeixin setImage:image forState:UIControlStateNormal];
+        [butWeixin addTarget:self action:@selector(threeLogin:) forControlEvents:UIControlEventTouchUpInside];
+        [self.view addSubview:butWeixin];
+        
+        CGSize size = butWeixin.currentImage.size;
+        float widht = [butWeixin.titleLabel.text sizeWithAttributes:@{NSFontAttributeName:butWeixin.titleLabel.font}].width;
+        [butWeixin setTitleEdgeInsets:UIEdgeInsetsMake(size.height/2+5, -size.width, -size.height/2-5, 0)];
+        [butWeixin setImageEdgeInsets:UIEdgeInsetsMake(-6, 0, 6, -widht)];
+        
+//        [noremalImgeArrays addObject:@"common.bundle/login/login_btn_wechat.png"];
+    }
+}
+
+- (UITextField*)createTextField:(NSString*)title
+{
+    UITextField* text = [[UITextField alloc] init];
+    text.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+    text.contentMode = UIViewContentModeCenter;
+    text.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    text.placeholder = title;
+    text.clearButtonMode = YES;
+    text.delegate = self;
+    [text setTextColor:[CommonImage colorWithHexString:@"#666666"]];
+    [text setFont:[UIFont systemFontOfSize:17]];
+    return text;
+}
+
+- (void)setShowCodeView:(BOOL)is
+{
+    float y;
+    if (is) {
+        y = 40;
+    }
+    else {
+        y = 0;
+    }
+    
+    [UIView animateWithDuration:0.2 animations:^{
+        m_codeView.alpha = is;
+        m_butLogin.transform = CGAffineTransformMakeTranslation(0, 40);
+    }];
+}
+
+- (void)getCodeForServer
+{
+    if (m_phoneText.text.length == 0) {
+        NSString *str = [NSString stringWithFormat:@"请输入手机号"];
+        [Common TipDialog:NSLocalizedString(str, nil)];
+        [m_phoneText becomeFirstResponder];
+        return;
+    }
+//    [self HideKeyboard];
+//    phoneStr = m_phone.text;
+//    if (![textDic[@"regin"] isEqualToString:@"中国大陆"] && textDic) {
+//        phoneStr = [NSString stringWithFormat:@"%@%@",textDic[@"num"],m_phone.text];
+//    }
+    // 获取验证码
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:m_phoneText.text forKey:@"phone"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:CHECKPHOTO_API_URL values:dic requestKey:CHECKPHOTO_API_URL delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"加载中...", nil)];
+    
+    if (!m_timer) {
+        m_timer = [[NSTimer alloc] initWithFireDate:[NSDate distantFuture] interval:4 target:self selector:@selector(timeBegin) userInfo:nil repeats:YES];
+        [[NSRunLoop currentRunLoop] addTimer:m_timer forMode:NSDefaultRunLoopMode];
+    }
+    timing = 90;
+    [m_timer setFireDate:[NSDate date]]; //继续。
+    
+    m_butCode.enabled = NO;
+}
+
+//- (void)pausePlayAdv
+//{
+//    if (!m_playTimer) {
+//        return;
+//    }
+//    [m_playTimer setFireDate:[NSDate distantFuture]];//暂停
+//}
+
+- (void)selectCountry:(UIButton*)but
+{
+    
+}
+
+- (void)butEventSend
+{
+}
+
+- (void)timeBegin
+{
+    timing--;
+    
+    if (!timing) {
+        m_butCode.enabled = YES;
+        
+        [m_timer setFireDate:[NSDate distantFuture]];//暂停
+        [m_butCode setTitle:@"重新发送" forState:UIControlStateNormal];
+        return;
+    }
+    [m_butCode setTitle:[NSString stringWithFormat:@"%d", timing] forState:UIControlStateDisabled];
+}
+
+-(void)sendAuthRequest
+{
+    //构造SendAuthReq结构体
+    SendAuthReq* req =[[SendAuthReq alloc ] init ];
+    req.scope = @"snsapi_userinfo" ;
+    req.state = @"123" ;
+    //第三方向微信终端发送一个SendAuthReq消息结构
+    [WXApi sendReq:req];
+}
+
+- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string
+{
+    NSMutableString *changeString = [NSMutableString stringWithString:textField.text];
+    [changeString replaceCharactersInRange:range withString:string];
+    if (textField == m_phoneText) {
+        if ([changeString length] > 7) {
+            
+            [self setShowCodeView:YES];
+            
+            if ([changeString length]>11) {
+                return NO;
+            }
+        }
+        else {
+            
+        }
+    }
+    
+    return YES;
+}
+
+- (BOOL)textFieldShouldReturn:(UITextField *)textField
+{
+    if ([textField isEqual:m_phoneText]) {
+        [m_codeText resignFirstResponder];
+    }
+    return YES;
+}
+
+- (void)threeLogin:(UIButton*)btn
+{
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"kangxun_goToView"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    
+
+//    [ShareSDK cancelAuthWithType:ShareTypeWeixiSession];
+//    
+//    //清理授权
+//    ShareType shareType = ShareTypeWeixiSession;
+//    
+//    //隐藏sharesdk 标示
+//    id<ISSAuthOptions> authOptions = [ShareSDK authOptionsWithAutoAuth:YES allowCallback:YES scopes:nil powerByHidden:YES followAccounts:nil authViewStyle:SSAuthViewStyleModal viewDelegate:nil authManagerViewDelegate:nil];
+    
+//    [ShareSDK getUserInfoWithType:shareType
+//                      authOptions:authOptions
+//                           result:^(BOOL result, id<ISSPlatformUser> userInfo, id<ICMErrorInfo> error) {
+//                               
+//                               if (result)
+//                               {
+//                                   NSLog(@"uid = %@",[userInfo uid]);
+//                                   NSLog(@"name = %@",[userInfo nickname]);
+//                                   NSLog(@"icon = %@",[userInfo profileImage]);
+//                                   thirdUserInfo = [[NSDictionary alloc]initWithDictionary:@{@"tID":userInfo.uid,@"tNickName":userInfo.nickname,@"thirdFlag":thirdType}];
+////                                   [self  sendThirdLoginRequetWithUerId:userInfo.uid];
+//                               }
+//                               else
+//                               {
+//                                   NSLog(@"登录失败,错误码:%ld,错误描述:%@", (long)[error errorCode], NSLocalizedString([error errorDescription],nil));
+//                                   NSString *message = [error errorDescription];
+//                                   int errorInt = (int)[error errorCode];
+//                                   if (errorInt == -22003)
+//                                   {
+//                                       message = @"未检测到微信客户端";
+//                                   }
+//                                   else if (errorInt == -6004)
+//                                   {
+//                                       message = @"未检测到QQ客户端";
+//                                   }
+//                                   else if (errorInt == -106)
+//                                   {
+//                                       message = @"请链接网络!";
+//                                       [Common TipDialog:message];
+//                                   }
+//                                   if (errorInt == -22003 || errorInt == -6004)
+//                                   {
+//                                       UIAlertView *av = [[UIAlertView alloc] initWithTitle:message message:@"去注册康迅360账号吧" delegate:self cancelButtonTitle:@"注册" otherButtonTitles:nil, nil];
+//                                       av.tag = 923;
+//                                       [av show];
+//                                       [av release];
+//                                   }
+//                               }
+//                           }];
+}
+
+- (void)didFinishFail:(ASIHTTPRequest*)loader
+{
+
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dict = [responseString KXjSONValueObject];
+    
+    NSDictionary *head = dict[@"head"];
+    if ([head[@"state"] intValue]) {
+        
+        [Common TipDialog2:[head objectForKey:@"msg"]];
+    }
+    else {
+        
+        NSDictionary *body = dict[@"body"];
+        if ([loader.username isEqualToString:LOGIN_API_URL])
+        {
+            g_nowUserInfo = [Common initWithUserInfoDict:body];
+            
+
+        }
+//        else if (<#expression#>)
+    }
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

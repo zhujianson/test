@@ -1,0 +1,25 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "abdb8c0e-602b-4b51-ad46-690ae5c3609f++8677",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+    "abdb8c0e-602b-4b51-ad46-690ae5c3609f++8677" : {
+
+    }
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "abdb8c0e-602b-4b51-ad46-690ae5c3609f++8677" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "EA3DBC29-2C4E-4E2E-AE52-A743050FFE5B",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "abdb8c0e-602b-4b51-ad46-690ae5c3609f++8677" : "healthManagement1.0\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "healthManagement1.0",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "healthManagement1.0.xcworkspace",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "svn:\/\/192.168.0.19:7890\/KANGXUN-NEW-V100R002C06",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Subversion",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "abdb8c0e-602b-4b51-ad46-690ae5c3609f++8677"
+    }
+  ]
+}

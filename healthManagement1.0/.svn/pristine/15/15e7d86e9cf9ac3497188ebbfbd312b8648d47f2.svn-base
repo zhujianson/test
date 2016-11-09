@@ -1,0 +1,444 @@
+//
+//  KXShareManager.m
+//  jiuhaohealth4.0
+//
+//  Created by wangmin on 15/9/11.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "KXShareManager.h"
+#import <ShareSDK/ShareSDK.h>
+#import "WeiboSDK.h"
+#import <TencentOpenAPI/QQApiInterface.h>
+#import "TencentOpenAPI/TencentOAuth.h"
+#import "WXApi.h"
+#import "AppDelegate.h"
+
+@implementation KXShareManager
+{
+    __block MBProgressHUD *_m_Progress;
+}
+
++ (KXShareManager *)sharedManager
+{
+    static KXShareManager *class;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        class = [[KXShareManager alloc] init];
+        [ShareSDK registerApp:@"332d6a53e11a"];//参数为ShareSDK官网中添加应用后得到的AppKey
+    });
+    
+    return class;
+}
+
+/**
+ *  初始化分享
+ */
+- (void)initPlatform
+{
+    
+    //当使用新浪微博客户端分享的时候需要按照下面的方法来初始化新浪的平台
+    [ShareSDK connectSinaWeiboWithAppKey:@"1353282292"
+                               appSecret:@"dfb35df87edd339d96ada48bd77dee91"
+                             redirectUri:@"http://www.kangxun360.com"
+                             weiboSDKCls:[WeiboSDK class]];
+    
+    //    //添加QQ空间应用  注册网址  http://connect.qq.com/intro/login/
+    [ShareSDK connectQZoneWithAppKey:@"1103145508"
+                           appSecret:@"q4dprWxam8Yrj7K3"
+                   qqApiInterfaceCls:[QQApiInterface class]
+                     tencentOAuthCls:[TencentOAuth class]];
+    //    [ShareSDK connectQZoneWithAppKey:@"100371282"
+    //                           appSecret:@"aed9b0303e3ed1e27bae87c33761161d"
+    //                   qqApiInterfaceCls:[QQApiInterface class]
+    //                     tencentOAuthCls:[TencentOAuth class]];
+    
+    //添加微信应用 注册网址 http://open.weixin.qq.com
+    [ShareSDK connectWeChatWithAppId:@"wx3c38c18729e3387d"
+                           appSecret:@"7c2f6a508c20729e0e22100c4aa3a310"
+                           wechatCls:[WXApi class]];
+    
+    //    [ShareSDK connectWeChatWithAppId:@"wx4868b35061f87885"
+    //                           appSecret:@"64020361b8ec4c99936c0e3999a9f249"
+    //                           wechatCls:[WXApi class]];
+    //QQ
+    [ShareSDK connectQQWithQZoneAppKey:@"1103145508"
+                     qqApiInterfaceCls:[QQApiInterface class]
+                       tencentOAuthCls:[TencentOAuth class]];
+}
+
+
+- (void)noneUIShareAllButtonClickHandler:(id)sender
+                                 Content:(NSString *)contentStrings
+                               ImagePath:(UIImage *)imagePath
+                                AndTitle:(NSString *)titleString
+                                     Url:(NSString *)url
+                          haveCustomItem:(BOOL)haveCutomItem
+{
+    //    NSString *imagePath = [[NSBundle mainBundle] pathForResource:IMAGE_NAME ofType:IMAGE_EXT];
+    //    NSString *imagePath = [[NSBundle mainBundle] pathForResource:@"sharesdk_img" ofType:@"jpg"];
+    //    imagePath = nil
+    
+    if(!url){
+        
+        url = @"http://www.kangxun360.com";
+    }
+    if (contentStrings.length > 80)
+    {
+        contentStrings = [contentStrings substringToIndex:80];
+    }
+    //    titleString = [titleString stringByAppendingFormat:@"[详情]:%@", url];
+    
+    //    UIImage *shareImage = [UIImage imageNamed:@"common.bundle/common/news_logo.png"];
+    //    NSString * iconUrl = ;
+    
+    NSString *defaultContent = @"";
+    NSString *sinaTitle = titleString;
+    NSString *WXFirendCircleTitle = titleString;
+    
+    id imageIcon = [ShareSDK imageWithUrl:@"http://kangxun.qiniudn.com/%E5%9B%BE%E6%A0%87.jpg"];
+    id sinaImage = imageIcon;//[ShareSDK imageWithUrl:((NSString*)imagePath)];
+    
+    NSString *sinaShareUrl = [NSString stringWithFormat:@"%@operation/activity/share",NOTICE_DETAIL_URL];
+    if([url  rangeOfString:@"&step" options:NSCaseInsensitiveSearch].length || ([url hasPrefix:sinaShareUrl])){
+        //        imageIcon = [ShareSDK jpegImageWithImage:imagePath quality:0.5];
+        sinaImage = imageIcon;
+        defaultContent = contentStrings;
+        sinaTitle = contentStrings;
+        WXFirendCircleTitle = contentStrings;
+    }
+    
+    
+    //构造分享内容
+    id<ISSContent> publishContent = [ShareSDK content:contentStrings
+                                       defaultContent:defaultContent
+                                                image:imageIcon
+                                                title:titleString
+                                                  url:url
+                                          description:contentStrings
+                                            mediaType:SSPublishContentMediaTypeNews];
+    
+    
+    
+    ///////////////////////
+    //以下信息为特定平台需要定义分享内容，如果不需要可省略下面的添加方法
+    
+    
+    UIImage *weiboImageView = [UIImage imageNamed:@"Resource.bundle/Icon_7/sns_icon_1.png"];
+    UIImage *qzImageView = [UIImage imageNamed:@"Resource.bundle/Icon_7/sns_icon_6.png"];
+    UIImage *wxImageView = [UIImage imageNamed:@"Resource.bundle/Icon_7/sns_icon_22.png"];
+    UIImage *pyqImageView = [UIImage imageNamed:@"Resource.bundle/Icon_7/sns_icon_23.png"];
+    UIImage *qqImageView = [UIImage imageNamed:@"Resource.bundle/Icon_7/sns_icon_24.png"];
+    UIImage *communityImageView = [UIImage imageNamed:@"common.bundle/community/shareCommunity.png"];
+    //定制QQ空间信息
+    [publishContent addQQSpaceUnitWithTitle:INHERIT_VALUE
+                                        url:INHERIT_VALUE
+                                       site:nil
+                                    fromUrl:nil
+                                    comment:INHERIT_VALUE
+                                    summary:INHERIT_VALUE
+                                      image:INHERIT_VALUE
+                                       type:INHERIT_VALUE
+                                    playUrl:nil
+                                       nswb:nil];
+    
+    //定制微信好友信息
+    [publishContent addWeixinSessionUnitWithType:INHERIT_VALUE
+                                         content:INHERIT_VALUE
+                                           title:INHERIT_VALUE
+                                             url:INHERIT_VALUE
+                                      thumbImage:imageIcon
+                                           image:INHERIT_VALUE
+                                    musicFileUrl:nil
+                                         extInfo:nil
+                                        fileData:nil
+                                    emoticonData:nil];
+    
+    //定制微信朋友圈信息
+    //                                                  [ShareSDK jpegImageWithImage:shareImage quality:0.5]
+    [publishContent addWeixinTimelineUnitWithType:[NSNumber numberWithInteger:SSPublishContentMediaTypeNews]
+                                          content:INHERIT_VALUE
+                                            title:WXFirendCircleTitle
+                                              url:INHERIT_VALUE
+                                            image:imageIcon
+                                     musicFileUrl:nil
+                                          extInfo:nil
+                                         fileData:nil
+                                     emoticonData:nil];
+    
+    //定制QQ分享信息
+    [publishContent addQQUnitWithType:INHERIT_VALUE
+                              content:INHERIT_VALUE
+                                title:INHERIT_VALUE
+                                  url:INHERIT_VALUE
+                                image:INHERIT_VALUE];
+    
+    
+    //结束定制信息
+    ////////////////////////
+    
+    //创建弹出菜单容器
+    id<ISSContainer> container = [ShareSDK container];
+    [container setIPadContainerWithView:sender arrowDirect:UIPopoverArrowDirectionUp];
+    
+    id<ISSAuthOptions> authOptions = [ShareSDK authOptionsWithAutoAuth:YES
+                                                         allowCallback:YES
+                                                         authViewStyle:SSAuthViewStyleFullScreenPopup
+                                                          viewDelegate:nil
+                                               authManagerViewDelegate:nil];
+    [authOptions setPowerByHidden:YES];
+    
+    
+    //自定义新浪微博分享菜单项
+    
+    
+    id<ISSShareActionSheetItem> sinaItem =
+    [ShareSDK shareActionSheetItemWithTitle:[ShareSDK getClientNameWithType:ShareTypeSinaWeibo]
+                                       icon:weiboImageView
+                               clickHandler:^{
+                                   // NSString *titleString2 = titleString;
+                                   NSString *titleString2 = sinaTitle;
+                                   if (titleString.length > 80)
+                                   {
+                                       titleString2 = [titleString substringToIndex:80];
+                                   }
+                                   titleString2 = [titleString2 stringByAppendingFormat:@"[详情]:%@", url];
+                                   //构造分享内容
+                                   id<ISSContent> publishContent2 = [ShareSDK content:titleString2
+                                                                       defaultContent:@""
+                                                                                image:sinaImage
+                                                                                title:@""
+                                                                                  url:url
+                                                                          description:INHERIT_VALUE
+                                                                            mediaType:SSPublishContentMediaTypeNews];
+                                   
+                                   [ShareSDK shareContent:publishContent2
+                                                     type:ShareTypeSinaWeibo
+                                              authOptions:authOptions
+                                            statusBarTips:NO
+                                                   result:^(ShareType type, SSResponseState state, id<ISSPlatformShareInfo> statusInfo, id<ICMErrorInfo> error, BOOL end) {
+                                                       
+                                                       if (state == SSPublishContentStateSuccess)
+                                                       {
+                                                           
+                                                           _m_Progress = [Common ShowMBProgress:[UIApplication sharedApplication].keyWindow.rootViewController.view MSG:@"分享成功" Mode:MBProgressHUDModeText];
+                                                           _m_Progress.userInteractionEnabled = NO;
+                                                           [self performSelector:@selector(hiddenProgressView) withObject:nil afterDelay:2];
+                                                           
+                                                           [self sendShare];
+                                                       }
+                                                       else if (state == SSPublishContentStateFail)
+                                                       {
+                                                           _m_Progress = [Common ShowMBProgress:[UIApplication sharedApplication].keyWindow.rootViewController.view MSG:[NSString stringWithFormat:@"分享失败:%@",[error errorDescription]] Mode:MBProgressHUDModeText];
+                                                           [self performSelector:@selector(hiddenProgressView) withObject:nil afterDelay:2];
+                                                           _m_Progress.userInteractionEnabled = NO;
+                                                           NSLog(NSLocalizedString(@"TEXT_SHARE_FAI", @"分享失败,错误码:%d,错误描述:%@"), [error errorCode], [error errorDescription]);
+                                                       }
+                                                   }];
+                               }];
+    
+    //自定义QQ空间分享菜单项
+    id<ISSShareActionSheetItem> qzoneItem =
+    [ShareSDK shareActionSheetItemWithTitle:[ShareSDK getClientNameWithType:ShareTypeQQSpace]
+                                       icon:qzImageView
+                               clickHandler:^{
+                                   [ShareSDK shareContent:publishContent
+                                                     type:ShareTypeQQSpace
+                                              authOptions:authOptions
+                                            statusBarTips:NO
+                                                   result:^(ShareType type, SSResponseState state, id<ISSPlatformShareInfo> statusInfo, id<ICMErrorInfo> error, BOOL end) {
+                                                       
+                                                       if (state == SSPublishContentStateSuccess)
+                                                       {
+                                                           _m_Progress = [Common ShowMBProgress:[UIApplication sharedApplication].keyWindow.rootViewController.view MSG:@"分享成功" Mode:MBProgressHUDModeText];
+                                                           _m_Progress.userInteractionEnabled = NO;
+                                                           [self performSelector:@selector(hiddenProgressView) withObject:nil afterDelay:2];
+                                                           
+                                                           [self sendShare];
+                                                       }
+                                                       else if (state == SSPublishContentStateFail)
+                                                       {
+                                                           _m_Progress = [Common ShowMBProgress:[UIApplication sharedApplication].keyWindow.rootViewController.view MSG:[NSString stringWithFormat:@"分享失败:%@",[error errorDescription]] Mode:MBProgressHUDModeText];
+                                                           _m_Progress.userInteractionEnabled = NO;
+                                                           [self performSelector:@selector(hiddenProgressView) withObject:nil afterDelay:2];
+                                                       }
+                                                   }];
+                               }];
+    
+    
+    //微信好友
+    id<ISSShareActionSheetItem> wxsItem =
+    [ShareSDK shareActionSheetItemWithTitle:[ShareSDK getClientNameWithType:ShareTypeWeixiSession]
+                                       icon:wxImageView
+                               clickHandler:^{
+                                   [ShareSDK clientShareContent:publishContent
+                                                           type:ShareTypeWeixiSession
+                                                  statusBarTips:NO
+                                                         result:^(ShareType type, SSResponseState state, id<ISSPlatformShareInfo> statusInfo, id<ICMErrorInfo> error, BOOL end) {
+                                                             
+                                                             if (state == SSPublishContentStateSuccess)
+                                                             {
+                                                                 _m_Progress = [Common ShowMBProgress:[UIApplication sharedApplication].keyWindow.rootViewController.view MSG:@"分享成功" Mode:MBProgressHUDModeText];
+                                                                 _m_Progress.userInteractionEnabled = NO;
+                                                                 [self performSelector:@selector(hiddenProgressView) withObject:nil afterDelay:2];
+                                                                 
+                                                                 [self sendShare];
+                                                             }
+                                                             else if (state == SSPublishContentStateFail)
+                                                             {
+                                                                 _m_Progress = [Common ShowMBProgress:[UIApplication sharedApplication].keyWindow.rootViewController.view MSG:[NSString stringWithFormat:@"分享失败:%@",[error errorDescription]] Mode:MBProgressHUDModeText];
+                                                                 _m_Progress.userInteractionEnabled = NO;
+                                                                 [self performSelector:@selector(hiddenProgressView) withObject:nil afterDelay:2];
+                                                                 NSLog(NSLocalizedString(@"TEXT_SHARE_FAI", @"分享失败,错误码:%d,错误描述:%@"), [error errorCode], [error errorDescription]);
+                                                             }
+                                                         }];
+                               }];
+    //微信朋友圈
+    id<ISSShareActionSheetItem> wxtItem = [ShareSDK shareActionSheetItemWithTitle:[ShareSDK getClientNameWithType:ShareTypeWeixiTimeline]
+                                                                             icon:pyqImageView
+                                                                     clickHandler:^{
+                                                                         [ShareSDK clientShareContent:publishContent
+                                                                                                 type:ShareTypeWeixiTimeline
+                                                                                        statusBarTips:NO
+                                                                                               result:^(ShareType type, SSResponseState state, id<ISSPlatformShareInfo> statusInfo, id<ICMErrorInfo> error, BOOL end) {
+                                                                                                   
+                                                                                                   if (state == SSPublishContentStateSuccess)
+                                                                                                   {
+                                                                                                       _m_Progress = [Common ShowMBProgress:[UIApplication sharedApplication].keyWindow.rootViewController.view MSG:@"分享成功" Mode:MBProgressHUDModeText];
+                                                                                                       _m_Progress.userInteractionEnabled = NO;
+                                                                                                       [self performSelector:@selector(hiddenProgressView) withObject:nil afterDelay:2];
+                                                                                                       
+                                                                                                       [self sendShare];
+                                                                                                   }
+                                                                                                   else if (state == SSPublishContentStateFail)
+                                                                                                   {
+                                                                                                       NSLog(@"fail");
+                                                                                                       
+                                                                                                       _m_Progress = [Common ShowMBProgress:[UIApplication sharedApplication].keyWindow.rootViewController.view MSG:[NSString stringWithFormat:@"分享失败:%@",[error errorDescription]] Mode:MBProgressHUDModeText];
+                                                                                                       _m_Progress.userInteractionEnabled = NO;
+                                                                                                       [self performSelector:@selector(hiddenProgressView) withObject:nil afterDelay:2];
+                                                                                                       
+                                                                                                   }
+                                                                                               }];
+                                                                     }];
+    
+    id<ISSShareActionSheetItem> qqItem = [ShareSDK shareActionSheetItemWithTitle:[ShareSDK getClientNameWithType:ShareTypeQQ]
+                                                                            icon:qqImageView
+                                                                    clickHandler:^{
+                                                                        [ShareSDK clientShareContent:publishContent
+                                                                                                type:ShareTypeQQ
+                                                                                       statusBarTips:NO
+                                                                                              result:^(ShareType type, SSResponseState state, id<ISSPlatformShareInfo> statusInfo, id<ICMErrorInfo> error, BOOL end) {
+                                                                                                  
+                                                                                                  if (state == SSPublishContentStateSuccess)
+                                                                                                  {
+                                                                                                      _m_Progress = [Common ShowMBProgress:[UIApplication sharedApplication].keyWindow.rootViewController.view MSG:@"分享成功" Mode:MBProgressHUDModeText];
+                                                                                                      _m_Progress.userInteractionEnabled = NO;
+                                                                                                      [self performSelector:@selector(hiddenProgressView) withObject:nil afterDelay:2];
+                                                                                                      [self sendShare];
+                                                                                                  }
+                                                                                                  else if (state == SSPublishContentStateFail)
+                                                                                                  {
+                                                                                                      _m_Progress = [Common ShowMBProgress:[UIApplication sharedApplication].keyWindow.rootViewController.view MSG:[NSString stringWithFormat:@"分享失败:%@",[error errorDescription]] Mode:MBProgressHUDModeText];
+                                                                                                      _m_Progress.userInteractionEnabled = NO;
+                                                                                                      [self performSelector:@selector(hiddenProgressView) withObject:nil afterDelay:2];
+                                                                                                  }
+                                                                                              }];
+                                                                    }];
+    
+    id<ISSShareActionSheetItem> myItem = nil;
+    if (haveCutomItem)
+    {
+        myItem = [ShareSDK shareActionSheetItemWithTitle:@"糖圈"
+                                                    icon:communityImageView
+                                            clickHandler:^{
+                                                NSLog(@"执行你的分享代码!");
+                                                if([Common getAppDelegate].customShareDelegate && [[Common getAppDelegate].customShareDelegate respondsToSelector:@selector(sendPostToCircle)]){
+                                                    
+                                                    [[Common getAppDelegate].customShareDelegate performSelector:@selector(sendPostToCircle) withObject:nil];
+                                                }
+                                            }];
+    }
+    //创建自定义分享列表
+    NSArray *shareList = nil;
+    if ([QQApi isQQInstalled] && [WXApi isWXAppInstalled])
+    {
+        shareList = [ShareSDK customShareListWithType:
+                     sinaItem,
+                     qzoneItem,
+                     wxsItem,
+                     wxtItem,
+                     qqItem,
+                     myItem,
+                     nil];
+    }
+    else  if ([QQApi isQQInstalled] && ![WXApi isWXAppInstalled])
+    {
+        shareList = [ShareSDK customShareListWithType:
+                     sinaItem,
+                     qzoneItem,
+                     qqItem,
+                     myItem,
+                     nil];
+    }
+    else  if (![QQApi isQQInstalled] && [WXApi isWXAppInstalled])
+    {
+        shareList = [ShareSDK customShareListWithType:
+                     sinaItem,
+                     wxsItem,
+                     wxtItem,
+                     myItem,
+                     nil];
+    }
+    else  if (![QQApi isQQInstalled] && ![WXApi isWXAppInstalled])
+    {
+        shareList = [ShareSDK customShareListWithType:
+                     sinaItem,
+                     myItem,
+                     nil];
+    }
+    [ShareSDK showShareActionSheet:container
+                         shareList:shareList
+                           content:publishContent
+                     statusBarTips:NO
+                       authOptions:authOptions
+                      shareOptions:[ShareSDK defaultShareOptionsWithTitle:nil
+                                                          oneKeyShareList:[NSArray defaultOneKeyShareList]
+                                                           qqButtonHidden:NO
+                                                    wxSessionButtonHidden:NO
+                                                   wxTimelineButtonHidden:NO
+                                                     showKeyboardOnAppear:NO
+                                                        shareViewDelegate:nil
+                                                      friendsViewDelegate:nil
+                                                    picViewerViewDelegate:nil]
+                            result:^(ShareType type, SSResponseState state, id<ISSPlatformShareInfo> statusInfo, id<ICMErrorInfo> error, BOOL end) {
+                                
+                                if (state == SSPublishContentStateSuccess)
+                                {
+                                    //                                    NSLog(NSLocalizedString(@"TEXT_SHARE_SUC", @"发表成功"));
+                                }
+                                else if (state == SSPublishContentStateFail)
+                                {
+                                    //                                    NSLog(NSLocalizedString(@"---------TEXT_SHARE_FAI", @"发布失败!error code == %d, error code == %@"), [error errorCode], [error errorDescription]);
+                                }
+                            }];
+}
+
+- (void)sendShare
+{
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:URL_grouppointForForwardPost values:dic requestKey:URL_grouppointForForwardPost delegate:self controller:nil actiViewFlag:0 title:0];
+}
+
+
+
+- (void)hiddenProgressView
+{
+    if (_m_Progress)
+    {
+        [_m_Progress removeFromSuperview];
+        _m_Progress  = nil;
+    }
+}
+
+@end

@@ -1,0 +1,979 @@
+//
+//  HMHomeViewController.m
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 15/10/19.
+//  Copyright © 2015年 xuGuohong. All rights reserved.
+//
+
+#import "HMHomeViewController.h"
+#import "AppDelegate.h"
+#import "UIImageView+WebCache.h"
+#import "SettingViewController.h"
+#import "BoxListViewController.h"
+#import "DiaryModelView.h"
+#import "DoctorViewController.h"
+#import "ScanDeviceListView.h"
+//#import "SteperHomeViewController.h"
+#import "HealthNewsListViewController.h"
+//#import "ToolsViewController.h"
+#import "AccountInformationViewController.h"
+#import "DBOperate.h"
+//#import "WebViewController.h"
+#import "ShowConsultViewController.h"
+#import "MsgDBOperate.h"
+#import "EScrollerView.h"
+#import "NoticeDetailViewController.h"
+#import "WalletViewController.h"
+#import "PersonalCenterViewController.h"
+#import "HomeIndexItemViewController.h"
+#import "HomeModel.h"
+#import "TopicDetailsViewController.h"
+#import "ThinViewController.h"
+
+
+static NSString *const kReportTime  = @"kReportTimet";
+static NSString *const kNewsTime  = @"kNewsTime";
+static NSInteger kImageViewTag  = 1601;
+static NSInteger kRedImageViewTag  = 1603;
+
+
+@interface HMHomeViewController ()<EScrollerViewDelegate>
+{
+    UIScrollView *m_scrollView;
+    UIImageView *m_navRedImage;
+    UILabel *tipTimeLable;//@"下午好"
+    UILabel *tipContent;//@"大雪天要
+    UIButton *m_tipImageView;
+    
+    EScrollerView *m_advScroller;
+    NSDictionary *m_dict;
+    NSMutableDictionary *m_lastMsgDic;/*聊天消息   徐国洪*/
+    BOOL m_refreshScroe; //只是刷新报告内容
+    
+    float m_viewScale;
+    NSMutableArray *m_menusViewArray;
+    float kImageHeight;
+    UIImageView *m_docRedImage;
+    
+    CGFloat beforeNewHeight;
+    UIView *m_buttonsView;
+    
+    NSMutableDictionary *m_thinDic;
+}
+
+//@property (nonatomic,retain) PanViewRoom *panViewRoom;
+
+
+@property (nonatomic,strong) LeftSliderViewController *m_leftView;
+@end
+
+@implementation HMHomeViewController
+@synthesize m_leftView;
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self)
+    {
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reciveMesg:) name:@"reciveMesg" object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(homeDataLoad) name:kRfreshHome object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(refleshThin) name:@"refleshThin" object:nil];
+        // Custom initialization
+        [self createNav];
+        m_refreshScroe = NO;
+        m_viewScale = kRelativity6DeviceWidth;
+        m_menusViewArray = [[NSMutableArray alloc] init];
+        kImageHeight  = 160;
+    
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    
+}
+//start
+- (void)reciveMesg:(NSNotification*)aNotification
+{
+    NSDictionary *dicc = [aNotification.object objectForKey:@"extras"];
+    if (m_lastMsgDic) {
+        if (([dicc[@"createTime"] longLongValue] - [m_lastMsgDic[@"createTime"] longLongValue]) >= 3000) {
+            if ([dicc[@"content"] isEqualToString:m_lastMsgDic[@"content"]]) {
+                return;
+            }
+        }
+        m_lastMsgDic = nil;
+    }
+    
+    m_lastMsgDic = [[NSMutableDictionary alloc] initWithDictionary:dicc];
+    
+    if (!g_nowUserInfo) {
+        return;
+    }
+    
+    [m_lastMsgDic setObject:@"1" forKey:@"forSelf"];
+    NSString *fromId = [NSString stringWithFormat:@"%@", [m_lastMsgDic objectForKey:@"fromId"]];
+    [m_lastMsgDic setObject:fromId forKey:@"friendId"];
+    [m_lastMsgDic setObject:fromId forKey:@"toId"];
+    [m_lastMsgDic setObject:@"0" forKey:@"isSendOK"];
+    [m_lastMsgDic setObject:@"0" forKey:@"isInsertDB"];
+    
+    id vc = ((CommonNavViewController*)self.navigationController).nowViewController;
+    int is = 0;
+    ShowConsultViewController *m_showView = nil;
+    
+    NSString *ff;
+    if ([vc isKindOfClass:[ShowConsultViewController class]]) {
+        m_showView = vc;
+        ff = [NSString stringWithFormat:@"%@", m_showView.friendModel.accountId];
+        if ([ff isEqualToString:fromId]) {
+            is = 1;
+        }
+    }
+    else if ([vc isKindOfClass:[DoctorViewController class]]) {
+        is = 2;
+    }
+    
+    if (is == 1) {
+        //        [[DBOperate shareInstance] insertChatRecordToDBWithData:m_lastMsgDic];
+        [m_showView addMessage:m_lastMsgDic isLishi:NO];
+    } else {
+        
+        if (is == 2) {
+            //            NSString *onlyId = [NSString stringWithFormat:@"%@_%@", g_nowUserInfo.userid, fromId];
+            //
+            //            NSString *sql = [NSString stringWithFormat:@"UPDATE friendList SET createTime = '%@', content = '%@', contentType = '%@' WHERE onlyId = '%@'", m_lastMsgDic[@"createTime"], m_lastMsgDic[@"content"], m_lastMsgDic[@"contentType"], onlyId];
+            //
+            //            [[MsgDBOperate shareInstance] updateFriendInfoRow:sql];
+            
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"refreshFriendList" object:nil];
+        }
+        
+        //未读红点
+        g_nowUserInfo.doctorMsgCount += 1;
+        
+        [self refleshTip];
+        //        [[NSNotificationCenter defaultCenter] postNotificationName:@"refleshTip" object:nil];
+        //
+        //        NSString *msg = nil;
+        //        switch ([[m_lastMsgDic objectForKey:@"contentType"] intValue]) {
+        //            case 0:
+        //                msg = [m_lastMsgDic objectForKey:@"content"];
+        //                break;
+        //            case 1:
+        //                msg = @"您收到一张图片";
+        //                break;
+        //            case 2:
+        //                msg = @"您收到一条语音消息";
+        //                break;
+        //            case 3:
+        //                msg = @"您收到一个图片表情";
+        //                break;
+        //            default:
+        //                msg = @"您收到一条新的消息";
+        //                break;
+        //        }
+        SystemSoundID soundID = 0;
+        NSString *mainBundlPath = [[NSBundle mainBundle] bundlePath];
+        NSString *filePath =[mainBundlPath stringByAppendingPathComponent:@"common.bundle/mp3/newdatatoast.wav"];
+        
+        NSURL* fileURL =  [NSURL fileURLWithPath:filePath];
+        
+        if (fileURL != nil) {
+            SystemSoundID theSoundID;
+            OSStatus error = AudioServicesCreateSystemSoundID((__bridge CFURLRef)fileURL, &theSoundID);
+            if (error == kAudioServicesNoError) {
+                soundID = theSoundID;
+            } else {
+                NSLog(@"Failed to create sound ");
+            }
+        }
+        AudioServicesPlaySystemSound(soundID);
+        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
+        
+        m_lastMsgDic = nil;
+    }
+    
+    [self refreshNoReadRedImage];
+}
+
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    
+    AppDelegate *myDelegate = [Common getAppDelegate];
+    myDelegate.navigationVC = self.navigationController;
+    
+    kImageHeight =  kImageHeight *m_viewScale;
+    if (IS_4_INCH_SCREEN)
+    {
+        kImageHeight -= 11;
+    }
+    [self createScrollView];
+    
+    if ([g_nowUserInfo.userToken length])
+    {
+        [self getMyInfo];
+        [self getMyInformation];
+    }
+}
+
+-(void)createScrollView
+{
+    m_scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight)];
+    m_scrollView.backgroundColor = [CommonImage colorWithHexString:VERSION_BACKGROUD_COLOR2];
+    m_scrollView.showsVerticalScrollIndicator = NO;
+    [self.view addSubview:m_scrollView];
+    
+    UIImageView *backImage = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, kImageHeight)];
+    backImage.tag = 1088;
+    backImage.image = [UIImage imageNamed:@"common.bundle/common/conversation_logo.png"];
+    [m_scrollView addSubview:backImage];
+    
+}
+
+//创建广告滚动条
+//创建广告滚动条
+- (void)createAdvertising:(NSMutableArray*)array
+{
+    if (m_advScroller) {
+        [m_advScroller setCreatBackViewStr:array];
+    }else{
+        m_advScroller = [[EScrollerView alloc] initWithFrameRect:CGRectMake(0, 0, kDeviceWidth, kImageHeight) ImageArray:array isAutoPlay:NO setImageKey:@"img_url"];
+        m_advScroller.delegate = self;
+        [m_scrollView addSubview:m_advScroller];
+        m_advScroller.showPageControl = YES;
+        [m_advScroller setUpPageControlCenterX];
+        UIView *backView = [m_scrollView viewWithTag:1088];
+        [backView removeFromSuperview];
+    }
+    
+}
+
+-(void)createContentView
+{
+    float viewHight = kImageHeight;
+    
+    [self createViewWithStartX:viewHight];
+}
+
+-(void)fillReminderEntity
+{
+//    NSDictionary *m_homeDict = m_dict[@"reminderEntity"];
+//
+//    tipTimeLable.text  = [HomeModel analysisTimeSegmentFromDict:m_homeDict];//@"下午好"
+//    tipTimeLable.backgroundColor = [CommonImage colorWithHexString:m_homeDict[@"backgroundColour"]];
+//    tipTimeLable.layer.borderColor = [CommonImage colorWithHexString:m_homeDict[@"boderColourl"]].CGColor;
+//    tipContent.text = m_homeDict[@"contents"];//@"大雪天要
+//    //    tipContent.text =  @"雪天要雪天要雪天要雪天要雪天要雪天要雪天要雪天要雪天要雪天要雪天要雪天要雪天要雪天要雪天要雪天要";
+//    [CommonImage setBackImageFromServer:m_homeDict[@"imgUrl"] View:m_tipImageView Type:2];
+    
+    NSMutableArray *menusArray = m_dict[@"menus"];
+    [self updateMenusWithArray:menusArray];
+}
+
+- (void)createViewWithStartX:(float)startX
+{
+    if (m_buttonsView)
+    {
+        return;
+    }
+    UIView *lineView = nil;
+    int num = 3;
+    float viewHight = startX;
+    NSLog(@"%d",num);
+    
+    NSMutableArray *menusArray = m_dict[@"menus"];
+//    NSArray * m_dataArr = menusArray.count + 1;
+    NSMutableArray * m_dataArr = [[NSMutableArray alloc] init];
+    [m_dataArr addObjectsFromArray:menusArray];
+    [m_dataArr addObject:@""];
+    
+    CGFloat w,h;
+    UIButton * backViewBtn = nil;
+    
+    UIView *buttonsView = [[UIView alloc] initWithFrame:CGRectMake(0, viewHight, kDeviceWidth, 0.1)];
+    buttonsView.backgroundColor = [UIColor clearColor];
+    m_buttonsView = buttonsView;
+    [m_scrollView addSubview:buttonsView];
+    
+    CGFloat viewW = kDeviceWidth/num,viewH = 103.0*m_viewScale;
+    
+    for (int i = 0; i<m_dataArr.count; i++) {
+        h = i%num;
+        w = i/num;
+        __block UIImageView * imageV;
+        backViewBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        
+        backViewBtn.tag = 100+i;
+        backViewBtn.frame = CGRectMake(h * viewW, w * viewH , viewW, viewH);
+        backViewBtn.backgroundColor = [UIColor whiteColor];
+        [buttonsView addSubview:backViewBtn];
+//        NSString * titleBtn = m_dataArr[i];
+        
+        imageV = [[UIImageView alloc]initWithFrame:CGRectMake(0, 0, 40, 40)];
+//        imageV.image = [UIImage imageNamed:@"common.bundle/common/conversation_logo.png"];
+        imageV.center = CGPointMake(backViewBtn.width/2, (backViewBtn.height-30)/2);
+        imageV.contentMode = UIViewContentModeScaleAspectFit;
+        imageV.tag = kImageViewTag;
+        [backViewBtn addSubview:imageV];
+        
+//        if (m_dataArr[i]) {
+//            imageV.image = [UIImage imageNamed:[NSString stringWithFormat:@"common.bundle/wallet/money_new%@.png",m_dataArr[i]]];
+//        }else{
+//            //            [CommonImage setImageFromServer:m_dataArr[i] View:imageV Type:2];
+//        }
+        [backViewBtn.titleLabel setContentMode:UIViewContentModeCenter];
+        [backViewBtn.titleLabel setFont:[UIFont systemFontOfSize:15]];
+        [backViewBtn setTitleEdgeInsets:UIEdgeInsetsMake(40,
+                                                         0,
+                                                         0.0,
+                                                         0.0)];
+        [backViewBtn setTitleColor:[CommonImage colorWithHexString:@"666666"] forState:UIControlStateNormal];
+        [backViewBtn setTitleColor:[CommonImage colorWithHexString:@"666666"] forState:UIControlStateHighlighted];
+//        [backViewBtn setTitle:titleBtn forState:UIControlStateNormal];
+        
+        [backViewBtn addTarget:self action:@selector(setJumpEvents:) forControlEvents:UIControlEventTouchUpInside];
+        UIImage* HighlenbleImage = [CommonImage createImageWithColor:[CommonImage colorWithHexString:@"f5f5f5"]];
+        [backViewBtn setBackgroundImage:HighlenbleImage forState:UIControlStateHighlighted];
+        [m_menusViewArray addObject:backViewBtn];
+        
+        UIImageView *redImage = [[UIImageView alloc]initWithFrame:CGRectMake(imageV.right -2, imageV.top+2, 8, 8)];
+        redImage.backgroundColor = [CommonImage colorWithHexString:VERSION_ERROR_TEXT_COLOR];
+        redImage.clipsToBounds = YES;
+        redImage.tag = kRedImageViewTag;
+        redImage.layer.cornerRadius = 4;
+        redImage.hidden = YES;
+        redImage.backgroundColor = [UIColor redColor];
+        [backViewBtn addSubview:redImage];
+        
+    }
+    int lineNum = (int)(m_dataArr.count-1)/num+1;
+    for (int i = 0; i<lineNum; i++) {
+        lineView  = [[UIView alloc] initWithFrame:CGRectMake(0, backViewBtn.height*i-0.25,kDeviceWidth, 0.5)];
+        lineView.backgroundColor =  [CommonImage colorWithHexString:@"ededed"];
+        [buttonsView addSubview:lineView];
+    }
+    
+    for (int i = 0; i< num-1; i++) {
+        lineView  = [[UIView alloc] initWithFrame:CGRectMake(backViewBtn.width*(i+1)-0.25,0,0.5, backViewBtn.bottom )];
+        lineView.backgroundColor =  [CommonImage colorWithHexString:@"ededed"];
+        [buttonsView addSubview:lineView];
+    }
+    
+    buttonsView.height = backViewBtn.bottom;
+    viewHight = buttonsView.bottom;
+    
+    viewHight +=  8.0*m_viewScale;
+    beforeNewHeight = viewHight;
+//    [self getHealthNews:viewHight];
+}
+
+//健康管理
+- (void)getHealthNews:(float)startY
+{
+    float viewHight = startY;
+    
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, startY, kDeviceWidth, 40)];
+    titleLabel.textColor = [CommonImage colorWithHexString:@"333333"];
+    titleLabel.font = [UIFont systemFontOfSize:15.0f];
+    titleLabel.backgroundColor = [UIColor whiteColor];
+    titleLabel.text = @"      健康资讯";
+    titleLabel.userInteractionEnabled = YES;
+    [m_scrollView addSubview:titleLabel];
+    
+    UIView *viewheader = [[UIView alloc] initWithFrame:CGRectMake(15, startY+12, 2, 16)];
+    viewheader.backgroundColor = [CommonImage colorWithHexString:@"8adb4e"];
+    [m_scrollView addSubview:viewheader];
+    
+    UIButton *butMore = [UIButton buttonWithType:UIButtonTypeCustom];
+    butMore.frame = CGRectMake(kDeviceWidth-80, startY, 80, 40);
+    [butMore setTitle:@"更多" forState:UIControlStateNormal];
+    [butMore setTitleColor:[CommonImage colorWithHexString:@"999999"] forState:UIControlStateNormal];
+    [butMore addTarget:self action:@selector(butEventMoreNews) forControlEvents:UIControlEventTouchUpInside];
+    butMore.titleLabel.font = [UIFont systemFontOfSize:14];
+    [m_scrollView addSubview:butMore];
+    
+    UIImageView *imageV = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"common.bundle/common/right-arrow_pre.png"]];
+    imageV.frame = CGRectMake(butMore.width-20, 0, 8, butMore.height);
+    imageV.contentMode = UIViewContentModeCenter;
+    [butMore addSubview:imageV];
+    
+    
+    viewHight += 40;
+    
+    int i = 0;
+    for(NSDictionary *dic in m_dict[@"newsList"]){
+        UIView *lineView  = [[UIView alloc] initWithFrame:CGRectMake(0,viewHight-0.5,kDeviceWidth, 0.5)];
+        lineView.backgroundColor =  [CommonImage colorWithHexString:@"ededed"];
+        [m_scrollView addSubview:lineView];
+        
+        [self getNewsCell:viewHight imageURL:dic[@"img"] text:dic[@"postName"] viewCount:[NSString stringWithFormat:@"%@",dic[@"viewCount"]] tag:9900+i];
+        viewHight += 95;
+        i++;
+    }
+    
+    m_scrollView.contentSize = CGSizeMake(kDeviceWidth, viewHight);
+}
+
+- (void)butEventMoreNews
+{
+    
+    UIStoryboard *healthNewsSB = [UIStoryboard storyboardWithName:@"HealthNews" bundle:nil];
+    HealthNewsListViewController *helthNewsVC = [healthNewsSB instantiateViewControllerWithIdentifier:@"HealthNewsList"];
+    [self.navigationController pushViewController:helthNewsVC animated:YES];
+}
+
+- (void)goToWebDetail:(UITapGestureRecognizer *)tapGesture
+{
+    UIView *view = tapGesture.view;
+    
+    long index = view.tag - 9900;
+    NSArray *newsArray = m_dict[@"newsList"];
+    NSDictionary *newsDic = newsArray[index];
+    //修改浏览数
+    UILabel *viewCountLabel = [view viewWithTag:119];
+    
+    NSAttributedString *lastAttributedString = viewCountLabel.attributedText;
+    
+    NSAttributedString *countAttrString = [lastAttributedString attributedSubstringFromRange:NSMakeRange(1, lastAttributedString.length-1)];
+    NSString *newViewCount = [NSString stringWithFormat:@"%lld",countAttrString.string.longLongValue+1];
+    NSMutableAttributedString *titleString = [[NSMutableAttributedString alloc] initWithString:newViewCount];
+    UIImage *tuImage = [UIImage imageNamed:@"common.bundle/home/see_img.png"];
+    NSTextAttachment *tu = [[NSTextAttachment alloc] init];
+    tu.image = tuImage;
+    tu.bounds = CGRectMake(0, -2, tuImage.size.width, tuImage.size.height);
+    NSAttributedString *tuAttrStr = [NSAttributedString attributedStringWithAttachment:tu];
+    [titleString insertAttributedString:tuAttrStr atIndex:0];
+    
+    viewCountLabel.attributedText = titleString;
+
+    
+    
+
+    TopicDetailsViewController * top = [[TopicDetailsViewController alloc] init];
+    top.m_dic = newsDic;
+    top.shareTitle = newsDic[@"postName"];
+    //    top.shareImage = [dic objectForKey:@"titleFilepath"];
+    top.shareContentString = newsDic[@"shareTitle"];
+    top.shareURL = [self getShareURLType:@"theme" andId:newsDic[@"postId"]];
+    [self.navigationController pushViewController:top animated:YES];
+    
+
+
+}
+
+- (void)getNewsCell:(CGFloat)startY imageURL:(NSString *)url text:(NSString *)text viewCount:(NSString *)count tag:(int)tag
+{
+    UIView *cellView = [[UIView alloc] initWithFrame:CGRectMake(0, startY, kDeviceWidth, 95)];
+    cellView.backgroundColor = [UIColor whiteColor];
+    cellView.tag = tag;
+    [m_scrollView addSubview:cellView];
+    
+    UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                                 action:@selector(goToWebDetail:)];
+    [cellView addGestureRecognizer:tapGesture];
+    
+    //图片
+    UIImageView *imageViw = [[UIImageView alloc] initWithFrame:CGRectMake(15, 15, 85, 65)];
+    [CommonImage setImageFromServer:url View:imageViw Type:2];
+    [cellView addSubview:imageViw];
+    //文字
+    
+    CGFloat height = 20;
+    if(text.length >10){
+        
+        height = 40;
+    }
+    UILabel *textLabel = [[UILabel alloc] initWithFrame:CGRectMake(imageViw.right+15, 15, kDeviceWidth-(imageViw.right+30), height)];
+    textLabel.font = [UIFont systemFontOfSize:15.0f];
+    textLabel.textColor = [CommonImage colorWithHexString:@"333333"];
+    textLabel.numberOfLines = 2;
+    [cellView addSubview:textLabel];
+    
+    textLabel.text = text;
+    
+    UILabel *viewCountLabel = [[UILabel alloc] initWithFrame:CGRectMake(kDeviceWidth-15-100, imageViw.bottom-13, 100, 13)];
+    viewCountLabel.font = [UIFont systemFontOfSize:12.0f];
+    viewCountLabel.textAlignment = NSTextAlignmentRight;
+    viewCountLabel.textColor = [CommonImage colorWithHexString:@"cccccc"];
+    [cellView addSubview:viewCountLabel];
+    viewCountLabel.tag = 119;
+    
+    NSMutableAttributedString *titleString = [[NSMutableAttributedString alloc] initWithString:count];
+    UIImage *tuImage = [UIImage imageNamed:@"common.bundle/home/see_img.png"];
+    NSTextAttachment *tu = [[NSTextAttachment alloc] init];
+    tu.image = tuImage;
+    tu.bounds = CGRectMake(0, -2, tuImage.size.width, tuImage.size.height);
+    NSAttributedString *tuAttrStr = [NSAttributedString attributedStringWithAttachment:tu];
+    [titleString insertAttributedString:tuAttrStr atIndex:0];
+    
+    viewCountLabel.attributedText = titleString;
+}
+
+- (void)btnClick:(id )sender
+{
+    NSMutableDictionary *m_homeDict = m_dict[@"reminderEntity"];
+    if ([m_homeDict[@"isLink"] intValue] == 2)
+    {
+        NSLog(@"跳转 %@",m_homeDict[@"linkUrl"]);
+        [m_homeDict setObject:@"0" forKey:@"isShare"];
+        [m_homeDict setObject:m_homeDict[@"linkUrl"] forKey:@"iconUrl"];
+        [m_homeDict setObject:@"健康小贴士" forKey:kWebTitle];
+        [self gotoWebViewWithDict:m_homeDict];
+    }
+    NSLog(@"图片");
+    
+    UIView *tipView = [m_scrollView viewWithTag:5451];
+    tipView.backgroundColor = [CommonImage colorWithHexString:@"ffffff"];
+}
+
+-(void)buttonHighlightCancel:(id)sender
+{
+     NSLog(@"buttonHighlightCancel");
+    UIView *tipView = [m_scrollView viewWithTag:5451];
+    tipView.backgroundColor = [CommonImage colorWithHexString:@"ffffff"];
+}
+
+-(void)buttonHighlight:(id)sender
+{
+    NSLog(@"buttonHighlight");
+    UIView *tipView = [m_scrollView viewWithTag:5451];
+    tipView.backgroundColor = [CommonImage colorWithHexString:@"f5f5f5"];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    
+    [self refleshTip];
+    //    [self setUserInfo];
+    [self refreshNoReadRedImage];
+    
+    if (IOS_7) {
+        [[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleLightContent];
+    }
+    
+    [self enBleLeftViewShowWith:YES];
+    
+    if (m_leftView)
+    {
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"getWallet" object:nil];
+    }
+//    [self getMsg];
+}
+
+-(void)viewWillDisappear:(BOOL)animated
+{
+    [self enBleLeftViewShowWith:NO];
+    [super viewWillDisappear:animated];
+}
+
+
+-(void)enBleLeftViewShowWith:(BOOL)show
+{
+    if (m_leftView)
+    {
+        [m_leftView panGestureRecognizerEnble:show WithMainViewController:self];
+    }
+}
+
+- (void)viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
+    if (m_advScroller) {
+        [m_advScroller startPlayAdv];
+    }
+}
+
+- (void)refleshTip
+{
+    if(m_docRedImage)
+    {
+        m_docRedImage.hidden = !MAX(g_nowUserInfo.doctorMsgCount, 0);
+    }
+}
+
+- (void)setUserInfo
+{
+    
+}
+
+#pragma mark - Event response
+//广告点击回调
+- (void)touchAdvertising:(NSMutableDictionary*)dic
+{
+    NSDictionary *dicItem = dic;
+    
+    if ([dicItem[@"islink"] boolValue]) {
+        
+        //跳转到活动页面
+        NoticeDetailViewController *noticeDetailVC = [[NoticeDetailViewController alloc] init];
+        noticeDetailVC.m_isHideNavBar = [dicItem[@"transparentYn"] isEqualToString:@"Y"];
+        
+        NSString *requestURL = dic[@"click_url"];
+        NSMutableDictionary *dicc = [NSMutableDictionary dictionary];
+        [dicc setObject:requestURL forKey:@"url"];
+        noticeDetailVC.m_url = requestURL;
+        [dicc setObject:dic[@"isShare"] forKey:@"isShare"];
+        [noticeDetailVC setM_dicInfo:dicc];
+        noticeDetailVC.shareURL = requestURL;
+        noticeDetailVC.titleName = dicItem[@"title"];
+        noticeDetailVC.subTitle = dicItem[@"subtitle"];
+        noticeDetailVC.newsId = dicItem[@"detailID"];
+        [self.navigationController pushViewController:noticeDetailVC animated:YES];
+    }
+}
+//刷新红点显示
+-(void)refreshNoReadRedImage
+{
+    int count = [[DBOperate shareInstance] getNoReadCount];
+    m_navRedImage.hidden = !MAX(count + g_nowUserInfo.broadcastNotReadNum, 0);
+}
+
+- (void)butEventHeader
+{
+    //    AccountInformationViewController * scanning = [[AccountInformationViewController alloc]init];
+    //    [self.navigationController pushViewController:scanning animated:YES];
+    //    PersonalCenterViewController * personal = [[PersonalCenterViewController alloc]init];
+    //    [self.navigationController pushViewController:personal animated:YES];
+    [m_leftView showHideSidebar];
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
+{
+    return YES;
+}
+
+-(void)butEventShowEmail
+{
+    BoxListViewController *email = [[BoxListViewController alloc] init];
+    [self.navigationController pushViewController:email animated:YES];
+}
+
+- (void)butEventshowSet
+{
+    SettingViewController * seting = [[SettingViewController alloc]init];
+    seting.log_pageID = 103;
+    [self.navigationController pushViewController:seting animated:YES];
+}
+
+-(void)gotoWebViewWithDict:(NSMutableDictionary *)dict
+{
+    NoticeDetailViewController *noticeDetailVC = ( NoticeDetailViewController *)[HomeIndexItemViewController  fetchViewControllerWithDict:dict];
+    if (!noticeDetailVC)
+    {
+        return;
+    }
+    [self.navigationController pushViewController:noticeDetailVC animated:YES];
+    [HomeModel setNoRedImageWithDict:dict];
+}
+
+
+-(void)updateMenusWithArray:(NSArray *)menusArray
+{
+    NSInteger count = MIN(menusArray.count+1, m_menusViewArray.count);
+    for (NSInteger i = 0 ; i < count;i++)
+    {
+        UIButton *backViewBtn = m_menusViewArray[i];
+        UIImageView *imageV = (UIImageView*)[backViewBtn viewWithTag:kImageViewTag];
+        NSDictionary *dict = nil;
+        if (i != count-1)
+        {
+            NSInteger index = MIN(i, menusArray.count-1);
+            dict = menusArray[index];
+            //iconType为1原生应用 根据iconTarget查找本地字典确定应用指向 为2 H5页面 取iconTarget为页面地址
+            [CommonImage setImageFromServer:dict[@"imgUrl"] View:imageV Type:2];
+            [backViewBtn setTitle:dict[@"iconName"] forState:UIControlStateNormal];
+        }
+        else
+        {
+            imageV.image = [UIImage imageNamed:@"common.bundle/home/homeMore.png"];
+            [backViewBtn setTitle:@"太平送福" forState:UIControlStateNormal];
+            dict = @{};
+        }
+        backViewBtn.dicInfo = dict;
+        if ([@"question" isEqualToString:dict[@"iconTarget"]])
+        {
+             UIImageView *redImageV = (UIImageView*)[backViewBtn viewWithTag:kRedImageViewTag];
+            m_docRedImage = redImageV;
+        }
+        [self setHidenRedImageWithShow:[HomeModel isShowRedImageWithDict:dict] withButton:backViewBtn];
+    }
+}
+
+-(void)setHidenRedImageWithShow:(BOOL)show withButton:(UIButton *)backViewBtn
+{
+    UIImageView *redImageV = (UIImageView*)[backViewBtn viewWithTag:kRedImageViewTag];
+    redImageV.hidden = show;
+}
+
+-(void)setJumpEvents:(UIButton *)btn
+{
+    m_thinDic = nil;
+    NSMutableDictionary *dict = btn.dicInfo;
+    if (dict &&!dict.count)
+    {
+        WS(weakSelf);
+        HomeIndexItemViewController * wallet = [[HomeIndexItemViewController alloc]init];
+        [wallet setKXBlock:^(id content) {
+            [weakSelf updateMenusWithArray:content];
+        }];
+        [self.navigationController pushViewController:wallet animated:YES];
+        return;
+    }
+    else
+    {
+        int iconType = [dict[@"iconType"] intValue];
+        NSString *iconTarget = dict[@"iconTarget"];
+        //iconType为1原生应用
+        if (iconType == 2)
+        {
+            if ([iconTarget isEqualToString:@"ThinViewController"]) {
+                m_thinDic = dict;
+            }
+            if ([dict.allKeys containsObject:@"iconName"])
+            {
+                 [dict setObject:dict[@"iconName"] forKey:kWebTitle];
+            }
+            [self gotoWebViewWithDict:dict];
+            [self setHidenRedImageWithShow:YES withButton:btn];
+        }
+        else
+        {
+//            ThinViewController * thin = [[ThinViewController alloc]init];
+//            [self.navigationController pushViewController:thin animated:YES];
+
+            NSString *viewC = [HomeModel fetchViewControllerStrWith:iconTarget];
+            UIViewController *viewController = [[NSClassFromString(viewC) alloc]init];
+            if (viewController)
+            {
+                [self.navigationController pushViewController:viewController animated:YES];
+            }
+        }
+        return;
+    }
+}
+
+- (void)refleshThin
+{
+    if (m_thinDic) {
+        [m_thinDic setObject:[NSNumber numberWithInt:1] forKey:@"iconType"];
+    }
+}
+
+//只是刷新得分
+-(void)refreshScore
+{
+    m_refreshScroe = YES;
+    [self getMyInfo];
+}
+#pragma mark - Set-getUi
+- (void)createNav
+{
+    //    UIBarButtonItem *leftBtn = [[UIBarButtonItem alloc] initWithTitle:@"  个人中心" style:UIBarButtonItemStylePlain target:self action:@selector(butEventHeader)];
+    //    self.navigationItem.leftBarButtonItem = leftBtn;
+    
+    self.navigationItem.leftBarButtonItem = [Common CreateNavBarButton3:self setEvent:@selector(butEventHeader) setTitle:@"个人中心"];
+    //    self.navigationItem.rightBarButtonItem = [Common CreateNavBarButton3:self setEvent:@selector(butEventShowEmail) setTitle:@"消息"];
+    UIButton *butMail = [UIButton buttonWithType:UIButtonTypeCustom];
+    [butMail setTitleColor:[CommonImage colorWithHexString:@"ffffff"] forState:UIControlStateNormal];
+    [butMail setTitleColor:[CommonImage colorWithHexString:@"ffffff" alpha:0.4] forState:UIControlStateHighlighted];
+    [butMail setTitle:@"消息" forState:UIControlStateNormal];
+    [butMail addTarget:self action:@selector(butEventShowEmail) forControlEvents:UIControlEventTouchUpInside];
+    butMail.titleLabel.font = [UIFont systemFontOfSize:17];
+    NSDictionary* attributes = [NSDictionary dictionaryWithObjectsAndKeys:butMail.titleLabel.font, NSFontAttributeName, nil];
+    float widht = 0;
+    if (IOS_7) {
+        widht = [@"消息" sizeWithAttributes:attributes].width;
+    } else {
+        widht = [Common sizeForString:@"消息" andFont:17].width;
+    }
+    butMail.frame = CGRectMake(0, 0, widht, 44);
+    UIBarButtonItem* right = [[UIBarButtonItem alloc] initWithCustomView:butMail];
+    self.navigationItem.rightBarButtonItem = right;
+    //    UIButton *butMail = self.navigationItem.rightBarButtonItem.customView;
+    m_navRedImage = [[UIImageView alloc]initWithFrame:CGRectMake(butMail.width-4, 11, 8, 8)];
+    m_navRedImage.backgroundColor = [CommonImage colorWithHexString:VERSION_ERROR_TEXT_COLOR];
+    m_navRedImage.clipsToBounds = YES;
+    m_navRedImage.layer.cornerRadius = 4;
+    m_navRedImage.hidden = YES;
+    m_navRedImage.backgroundColor = [UIColor redColor];
+    [butMail addSubview:m_navRedImage];
+    
+    UIImageView *imageV = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 120, 44)];
+    imageV.contentMode = UIViewContentModeCenter;
+    imageV.image = [UIImage imageNamed:@"common.bundle/home/homeLogo.png"];
+    self.navigationItem.titleView = imageV;
+}
+
+//获取未读消息
+- (void)getMsg
+{
+    NSString *time = [[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"%@boxLastRowTime1", g_nowUserInfo.userid]];
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [dic setObject:time?time:@"-1" forKey:@"time"];
+    [dic setObject:[DiaryModelView getTimeWithKey:@"kLastPostTime"] forKey:@"postTime"];
+    [dic setObject:[DiaryModelView getTimeWithKey:@"kLastTime"]  forKey:@"replyTime"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GET_MSG_NOT_READ_COUNT values:dic requestKey:GET_MSG_NOT_READ_COUNT delegate:self controller:self actiViewFlag:0 title:NSLocalizedString(@"加载中...", nil)];
+}
+
+- (void)getMyInfo
+{
+    [g_nowUserInfo setMyBasicInformation:[[NSUserDefaults standardUserDefaults] objectForKey:@"user_Info"]];
+//    [self removeAdvView];
+    
+    [self homeDataLoad];
+ }
+
+-(void)homeDataLoad
+{
+    if (!g_nowUserInfo.userToken) {
+        return;
+    }
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GET_API_USERIFNO_URL values:dic requestKey:GET_API_USERIFNO_URL delegate:self controller:self actiViewFlag:0 title:NSLocalizedString(@"", nil)];
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dic = [responseString KXjSONValueObject];
+    
+    NSDictionary *head = dic[@"head"];
+    if (![head[@"state"] intValue]) {
+        NSDictionary *body = dic[@"body"];
+        if (!body.count)
+        {
+            return;
+        }
+        if ([loader.username isEqualToString:GET_API_USERIFNO_URL])
+        {
+            m_dict = body;
+            [self removeAdvView];
+            
+            g_nowUserInfo.broadcastNotReadNum = [[body objectForKey:@"brocastCounts"] intValue]; //信箱未读数
+            g_nowUserInfo.doctorMsgCount = [[body objectForKey:@"questionCounts"] intValue]; //医生未读数
+            g_nowUserInfo.myPlanCounts = [[body objectForKey:@"planCounts"] intValue]; //看健康未读数
+//          g_nowUserInfo.myReportCounts = [[body objectForKey:@"reportCounts"] intValue]; //报告未读数
+            [self refreshNoReadRedImage];
+            
+            [APP_DELEGATE2 setUserID:g_nowUserInfo.userid];
+            //公告栏
+            NSArray *announcementlist = [body objectForKey:@"list"];
+            if (announcementlist.count) {
+                
+                NSMutableDictionary *dicItem;
+                NSMutableArray *array = [NSMutableArray array];
+                for (NSDictionary *item in announcementlist) {
+                    
+                    NSString *detailID = item[@"id"];
+                    NSString *img_url = [Common isNULLString3:item[@"img"]];
+                    
+                    NSString *click_url = [Common isNULLString3:item[@"url"]];
+                    NSString *isShare = [HomeModel getShareFromDict:item withKey:@"isShare"];
+                    dicItem = [NSMutableDictionary dictionaryWithDictionary:
+                               @{@"typestr":@"公告栏",
+                                 @"title":[Common isNULLString3: item[@"title"]],
+                                 @"img_url":img_url,
+                                 @"click_url":click_url,
+                                 @"islink": [Common isNULLString3:item[@"islink"]],
+                                 @"isShare": isShare,//0 不分享  1：分享
+                                 @"detailID":detailID,
+                                 @"subtitle":[Common isNULLString3:item[@"content"]]}];
+                    
+                    [array addObject:dicItem];
+                }
+                [self createAdvertising:array];
+                                                    
+                [self createContentView];
+                [self fillReminderEntity];
+                [self getHealthNews:beforeNewHeight];
+                
+                if (!m_leftView)
+                {
+                    m_leftView = [PersonalCenterViewController showLeftSliderViewControllerWithMainViewController:self];
+                }
+            }
+            
+        }else if ([loader.username isEqualToString:LOGIN_API_URL])
+        {
+            g_nowUserInfo = [Common initWithUserInfoDict:body];
+            [self getMyInfo];
+            [self getMyInformation];
+//            [self getMsg];
+        }
+        else if ([loader.username isEqualToString:GET_MSG_NOT_READ_COUNT])
+        {
+            NSDictionary * body = dic[@"body"];
+            g_nowUserInfo.broadcastNotReadNum = [[body objectForKey:@"brocastCounts"] intValue]; //信箱未读数
+            g_nowUserInfo.myMessageNoReadNum = [[body objectForKey:@"unread_comment"] intValue]; //评论未读数
+            g_nowUserInfo.totalunreadMsgCount = [[body objectForKey:@"unread_friend"] intValue]; //总未读数
+            g_nowUserInfo.doctorMsgCount = [[body objectForKey:@"unread_doctor"] intValue]; //医生未读数
+            g_nowUserInfo.friendMsgCount = [[body objectForKey:@"friendMsgCount"] intValue]; //糖友未读数
+            g_nowUserInfo.myPostNotRead = [[body objectForKey:@"my_post_not_read"] intValue]; //我的帖子未读总数量
+            g_nowUserInfo.myThreadNotRead = [[body objectForKey:@"my_thread_not_read"] intValue]; //我的跟帖未读总数量
+            g_nowUserInfo.integral = [body[@"points_available"] intValue];
+            [self refreshNoReadRedImage];
+        }
+        else if ([loader.username isEqualToString:GETMYINFO_API_URL])
+        {
+            [g_nowUserInfo setMyBasicInformation:[dic objectForKey:@"body"][@"user_info"]];
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"getWallet" object:nil];
+        }
+    }
+    else
+    {
+        [Common TipDialog2:head[@"msg"]];
+    }
+}
+
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    if ([loader.username isEqualToString:GETMYINFO_API_URL])
+    {
+        [g_nowUserInfo setMyBasicInformation:[[NSUserDefaults standardUserDefaults] objectForKey:@"user_Info"]];
+        [self removeAdvView];
+        [self setUserInfo];
+        [APP_DELEGATE2 setUserID:g_nowUserInfo.userid];
+    }
+}
+
+#pragma mark - PrivateMethod
+- (void)removeAdvView
+{
+    [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:NO];
+    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void) {
+        sleep(2);
+        dispatch_async( dispatch_get_main_queue(), ^(void){
+            
+            AppDelegate* myDelegate = [Common getAppDelegate];
+            UIImageView *imageV = (UIImageView*)[myDelegate.window viewWithTag:99];
+            
+            [UIView animateWithDuration:0.2 animations:^{
+                imageV.alpha = 0;
+            } completion:^(BOOL finished) {
+                [imageV removeFromSuperview];
+            }];
+        });
+    });
+}
+
+- (void)getMyInformation
+{
+    //获取个人信息
+    NSMutableDictionary* dic1 = [NSMutableDictionary dictionary];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GETMYINFO_API_URL values:dic1 requestKey:GETMYINFO_API_URL delegate:self controller:self actiViewFlag:0 title:NSLocalizedString(@"登录中...", nil)];
+}
+@end

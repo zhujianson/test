@@ -1,0 +1,306 @@
+//
+//  BluetoothManager.m
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 16/2/23.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "BluetoothManager.h"
+#import "SSBLEDeviceManager.h"
+#import "CBPeripheralAdditions.h"
+#import "BodyMeasure.h"
+#import "Unit.h"
+#import "ScanDeviceListView.h"
+#import "ResultView.h"
+#import "DiaryModelView.h"
+
+static NSString *const kDeviceSave = @"kDeviceSave";
+
+@interface BluetoothManager()<SSBLEDeviceDelegate>
+
+@end
+
+
+@implementation BluetoothManager
+{
+    SSBLEDeviceManager *m_bleMgr;
+    NSMutableDictionary *m_deviceIDToPeripheralMap;
+    NSMutableArray *m_deviceList;
+    
+    BOOL m_isConnected;
+    BOOL m_isAllowWrite;
+    NSTimer *_sendTimer;
+    BOOL isMeasureSuscess;
+}
++ (instancetype)sharedInstance
+{
+    static id sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[self alloc] init];
+    });
+    return sharedInstance;
+}
+
+-(id)init
+{
+    self = [super init];
+    if (self)
+    {
+        [g_winDic setObject:[NSMutableArray array] forKey:[NSString stringWithFormat:@"%x", (unsigned int)self]];
+        m_bleMgr = [[SSBLEDeviceManager alloc] init];
+        m_deviceIDToPeripheralMap = [NSMutableDictionary dictionary];
+        m_deviceList = [[NSMutableArray alloc] init];
+        _showDeviceListView = YES;
+    }
+    return self;
+}
+
+-(void)startScanDevice
+{
+    [m_bleMgr addDelegate:self];
+    [m_bleMgr scanPeripherals];
+    [m_deviceList removeAllObjects];
+}
+
+-(void)closeScanDevice
+{
+    [m_bleMgr removeDelegate:self];
+}
+
+- (void)peripheralDidDiscover:(CBPeripheral *)peripheral {
+    CBPeripheral *temp = [m_deviceIDToPeripheralMap objectForKey:peripheral.deviceID];
+    if (peripheral.newRSSI.intValue == 127) {
+        return;
+    }
+    temp.newRSSI = peripheral.newRSSI;
+    if (!temp) {
+        temp = peripheral;
+        [m_deviceList addObject:peripheral];
+        [m_deviceIDToPeripheralMap setObject:peripheral forKey:peripheral.deviceID];
+        dispatch_async(dispatch_get_main_queue(), ^(void){
+            [self showDeviceList];
+        });
+    }
+}
+
+-(void)showDeviceList
+{
+    if (!_showDeviceListView)
+    {
+        return;
+    }
+    WSS(weakSelf);
+    [ScanDeviceListView showScanDeviceListViewWithBlock:^(id selecteContent) {
+        [weakSelf handleSelectDeviceModel:selecteContent];
+    } withDataArray:m_deviceList];
+}
+
+-(void)handleSelectDeviceModel:(CBPeripheral *)modle
+{
+    NSDictionary *deviceDict = @{modle.serialNO: modle.advertiseName};
+    [self connectWithSerialNO:deviceDict];
+    [[self class] saveDeviceModel:deviceDict];
+}
+
+#pragma mark - SSBLEDeviceDelegate
+-(void)connectWithSerialNO:(NSDictionary *)dict
+{
+    [m_bleMgr connectWithSerialNO:dict];
+    [m_bleMgr addDelegate:self];
+}
+
+-(void)disconnectWithSerialNO:(NSString *)serialNO
+{
+    [m_bleMgr disconnectWithSerialNO:serialNO];
+    [m_bleMgr removeDelegate:self];
+}
+
+- (void)peripheralDidConnect:(CBPeripheral *)peripheral {
+    m_isConnected = YES;
+    
+    dispatch_async(dispatch_get_main_queue(), ^(void){
+         [Common MBProgressTishi:@"蓝牙连接成功" forHeight:kDeviceHeight];
+        if ([_bluetoothManagerDelegate respondsToSelector:@selector(changeConnectState:)])
+        {
+            [_bluetoothManagerDelegate changeConnectState:m_isConnected];
+        }
+    });
+    NSLog(@"---------%d",m_isConnected);
+}
+
+- (void)peripheralDidDisconnect:(CBPeripheral *)peripheral {
+    m_isConnected = NO;
+    m_isAllowWrite = NO;
+     isMeasureSuscess = NO;
+     NSLog(@"m_isAllowWrite ++++++------%d",m_isAllowWrite);
+    dispatch_async(dispatch_get_main_queue(), ^(void){
+         [Common MBProgressTishi:@"蓝牙连接断开" forHeight:kDeviceHeight];
+        if ([_bluetoothManagerDelegate respondsToSelector:@selector(changeConnectState:)])
+        {
+            [_bluetoothManagerDelegate changeConnectState:m_isConnected];
+        }
+    });
+}
+
+- (void)peripheralDidAllowWrite:(CBPeripheral *)peripheral {
+    m_isAllowWrite = YES;
+    isMeasureSuscess = NO;
+     NSLog(@"m_isAllowWrite---------%d",m_isAllowWrite);
+    [self testFat];
+}
+
+-(void)sendDataValue:(BodyMeasure *)value
+{
+//    private String deviceNo;//设备标号
+//    private Long measuringTime;//上传时间 时间戳
+//    private String weight;//体重（kg）
+//    private String fatPre;//脂肪率
+//    private String waterPre;// 水分率
+//    private String calories;//卡路里
+//    private String musclePre;//肌肉率
+//    private String bonePre;//骨骼率
+    [ResultView showResultViewWithBodyMeasuret:value];
+    NSString * timeStr = [NSString stringWithFormat:@"%lld",[CommonDate getLonglongTime]];
+    NSString *weightFat = [NSString stringWithFormat:@"%.1f", value.bodyMassKG / 10.0f];
+    NSString *lblFat = [NSString stringWithFormat:@"%.1f", value.bodyFatPercentage / 10.f];
+    NSString *lblHydration = [NSString stringWithFormat:@"%.1f", value.hydro / 10.f];
+    NSString *lblMuscle = [NSString stringWithFormat:@"%.1f", value.muscle / 10.f];
+    NSString *lblBone = [NSString stringWithFormat:@"%.1f", value.bone / 10.f];
+    NSString *lblKcal = [NSString stringWithFormat:@"%d", value.kcal];
+    
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:weightFat forKey:@"weight"];
+    [dic setObject:timeStr forKey:@"measuringTime"];
+//    [dic setObject:weightFat forKey:@"deviceNo"];
+    [dic setObject:lblFat forKey:@"fatPre"];
+    [dic setObject:lblHydration forKey:@"waterPre"];
+    [dic setObject:lblKcal forKey:@"calories"];
+    [dic setObject:lblMuscle forKey:@"musclePre"];
+    [dic setObject:lblBone forKey:@"bonePre"];
+    [DiaryModelView saveTimeWithKey:kDeviceSaveTime withTimeStr:timeStr];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:UPLOAD_DEVICEDATA values:dic requestKey:UPLOAD_DEVICEDATA delegate:self controller:self actiViewFlag:0 title:NSLocalizedString(@"登录中...", nil)];
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dic = [responseString KXjSONValueObject];
+    NSDictionary *head = dic[@"head"];
+    if (![head[@"state"] intValue]) {
+        NSDictionary *body = dic[@"body"];
+        if (!body.count)
+        {
+            return;
+        }
+        if ([loader.username isEqualToString:UPLOAD_DEVICEDATA])
+        {
+            [Common MBProgressTishi:@"上传成功" forHeight:kDeviceHeight];
+            isMeasureSuscess = NO;
+        }
+        else
+        {
+            [Common TipDialog2:dic[@"msg"]];
+        }
+    }
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    isMeasureSuscess = NO;
+}
+
+- (void)peripheralDidReceived:(CBPeripheral *)peripheral value:(BodyMeasure *)value values:(NSMutableArray *)values {
+    dispatch_async(dispatch_get_main_queue(), ^(void){
+        if (value && value.dataType == DataTypeWeigh) {
+            
+            NSString *lblWeightKg= [NSString stringWithFormat:@"体重：%.1f kg", value.bodyMassKG / 10.0f];
+            NSString *lblWeightlb = [NSString stringWithFormat:@"体重：%.1f lb", value.bodyMassLB / 10.0f];
+            NSString *lblStable = [NSString stringWithFormat:@"数据：%@", (value.ifStable ? @"稳定" : @"不稳定")];
+            NSLog(@"----%@----%@-----%@",lblWeightKg,lblWeightlb,lblStable);
+            if ([_bluetoothManagerDelegate respondsToSelector:@selector(changeConnectState:)])
+            {
+                [_bluetoothManagerDelegate changeConnectState:m_isConnected];
+            }
+    
+        } else if (value && value.dataType == DatatypeTestFat) {
+            //            ErrL是脂肪偏低  ErrH是脂肪偏高
+            NSString *lblFat = [NSString stringWithFormat:@"脂肪率：%.1f %%", value.bodyFatPercentage / 10.f];
+            NSString *lblHydration = [NSString stringWithFormat:@"水分值：%.1f %%", value.hydro / 10.f];
+            NSString *lblMuscle = [NSString stringWithFormat:@"肌肉值：%.1f %%", value.muscle / 10.f];
+            NSString *lblBone = [NSString stringWithFormat:@"骨骼值：%.1f %%", value.bone / 10.f];
+            NSString *lblKcal = [NSString stringWithFormat:@"卡路里：%d kcal", value.kcal];
+            if (!isMeasureSuscess)
+            {
+                isMeasureSuscess = value.ifStable;
+                [self sendDataValue:value];
+            }
+        } else if (value && value.dataType == DataTypeHistory) {
+            //            BodyMeasure *temp = value;
+            //            self.lblHistory.text = [NSString stringWithFormat:@"用户序号：%d, \r\n历史数据序号：%d, \r\n历史记录日期：%@, \r\n体重：%.1f kg, \r\n体重：%.1f lb, \r\n脂肪率：%.1f %%, \r\n水分值：%.1f %%, \r\n肌肉值：%.1f %%, \r\n骨骼值：%.1f %%, \r\n卡路里：%d kcal\r\n\r\n%@", temp.deviceUserID, temp.number, temp.recordDate, temp.bodyMassKG / 10.f, temp.bodyMassLB / 10.f, temp.bodyFatPercentage / 10.f, temp.hydro / 10.f, temp.muscle / 10.f, temp.bone / 10.f, temp.kcal, self.lblHistory.text];
+            //
+            //            CGSize size = [self.lblHistory.text sizeWithFont:self.lblHistory.font constrainedToSize:CGSizeMake(self.lblHistory.frame.size.width, INT32_MAX)];
+            //            self.lblHistory.frame = CGRectMake(0.0f, 0.0f, self.lblHistory.frame.size.width, size.height);
+            
+        } else if (values && values.count > 0) {
+            //            self.lblHistory.text = @"";
+            //            for (int i = 0; i < [values count]; i++) {
+            //                BodyMeasure *temp = [values objectAtIndex:i];
+            //                self.lblHistory.text = [NSString stringWithFormat:@"用户序号：%d, \r\n历史数据序号：%d, \r\n历史记录日期：%@, \r\n体重：%.1f kg, \r\n体重：%.1f lb, \r\n脂肪率：%.1f %%, \r\n水分值：%.1f %%, \r\n肌肉值：%.1f %%, \r\n骨骼值：%.1f %%, \r\n卡路里：%d kcal\r\n\r\n%@", temp.deviceUserID, temp.number, temp.recordDate, temp.bodyMassKG / 10.f, temp.bodyMassLB / 10.f, temp.bodyFatPercentage / 10.f, temp.hydro / 10.f, temp.muscle / 10.f, temp.bone / 10.f, temp.kcal, self.lblHistory.text];
+            //            }
+            //
+            //            CGSize size = [self.lblHistory.text sizeWithFont:self.lblHistory.font constrainedToSize:CGSizeMake(self.lblHistory.frame.size.width, INT32_MAX)];
+            //            self.lblHistory.frame = CGRectMake(0.0f, 0.0f, self.lblHistory.frame.size.width, size.height);
+            
+        }
+    });
+}
+
+- (void)testFat
+{
+    if (!m_isAllowWrite) {
+//        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:@"not allow send" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+//        [alert show];
+        return;
+    }
+    
+    Unit *unit = [[Unit getHeightUnitDictionary] objectForKey:@"in"];
+    int heightCM = g_nowUserInfo.height >0 ? g_nowUserInfo.height:175;
+    //(1男2女 转为 sex表示性别，0-女,1-男)，
+    int sex = g_nowUserInfo.sex.intValue == 2? 0:1;
+    int age = [[CommonDate getAgeWithBirthday:g_nowUserInfo.birthday] intValue];
+    int heightInch = heightCM * unit.ExchangeRate;
+    NSLog(@"sex =%d,age = %d,heightCM = %d",sex,age,heightCM);
+    CBPeripheral *peripheral = m_bleMgr.deviceIDToPeripheralMap.allValues.lastObject;
+    [m_bleMgr sendSENSSUNFATTestFatWithSex:sex userID:1 age:age heightCM:heightCM heightInch:heightInch * 10 peripheral:peripheral];
+}
+
+#pragma mark - PrivateMethod
++(void)saveDeviceModel:(NSDictionary *)deviceDict
+{
+    [[NSUserDefaults standardUserDefaults] setObject:deviceDict forKey:kDeviceSave];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
++(NSMutableDictionary *)fetchSaveDeviceModel
+{
+    NSMutableDictionary *dict = [NSMutableDictionary dictionaryWithDictionary:[[NSUserDefaults standardUserDefaults] objectForKey:kDeviceSave]];
+    if (dict.count)
+    {
+        [dict setObject:dict.allKeys[0] forKey:@"serialNO"];
+        [dict setObject:dict.allValues[0] forKey:@"advertiseName"];
+        [dict setObject:@"康迅体重称" forKey:@"device_name"];
+        [dict setObject:@"康迅体重称" forKey:@"nickName"];
+        [dict setObject:@1 forKey:kWeightDevice];
+        NSString *timeStr = [DiaryModelView getTimeWithKey:kDeviceSaveTime];
+        NSString *timeString =@"";
+        if (timeStr.length)
+        {
+            timeString = [CommonDate getServerTime:(long)[timeStr longLongValue] type:11];
+        }
+        [dict setObject:timeString forKey:kDeviceSaveTime];
+    }
+    return dict;
+}
+@end

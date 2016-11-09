@@ -1,0 +1,408 @@
+//
+//  FlyMSC.m
+//  jiuhaohealth3.0
+//
+//  Created by jiuhao-yangshuo on 15-1-20.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "FlyMSC.h"
+#import "iflyMSC/IFlySpeechConstant.h"
+#import "iflyMSC/IFlySpeechUtility.h"
+#import "iflyMSC/IFlyRecognizerView.h"
+//#import "IFlyFlowerCollector.h"
+#import "AudioInputView.h"
+#import "iflyMSC/IFlySpeechRecognizerDelegate.h"
+//#import "RecognizerFactory.h"
+#import "iflyMSC/IFlySpeechRecognizer.h"
+//#import "ISRDataHelper.h"
+#import "iflyMSC/iflySetting.h"
+
+#define APPID_VALUE @"54c9d134"
+#define TIMEOUT_VALUE         @"20000"             // timeout      连接超时的时间，以ms为单位
+
+@interface FlyMSC ()<IFlyRecognizerViewDelegate,IFlySpeechRecognizerDelegate>
+{
+    completionBlock _inBLock;
+    IFlyRecognizerView *_iFlyRecognizerView;//识别有页面
+    __block  IFlySpeechRecognizer * _iFlySpeechRecognizer;//识别无页面
+    
+    AudioInputView *_audioInputView;//自定义识别页面
+    UIView * m_view;
+}
+@property(nonatomic)BOOL                 isCanceled;
+@property (nonatomic, copy) NSString             * result;
+@end
+
+@implementation FlyMSC
+@synthesize isCanceled;
+
++(FlyMSC *)shareInstance
+{
+    static FlyMSC *shareManagerInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        shareManagerInstance = [[self alloc]init];
+    });
+    return shareManagerInstance;
+}
+
+-(void)dealloc
+{
+    m_view = nil;
+    _audioInputView = nil;
+    _iFlySpeechRecognizer.delegate = self;
+    _iFlyRecognizerView.delegate = self;
+    self.result = nil;
+    _iFlySpeechRecognizer = nil;
+    _iFlyRecognizerView  = nil;
+    _inBLock = nil;
+    [super dealloc];
+}
+
+-(id)init
+{
+    self = [super init];
+    if (self)
+    {
+        //设置log等级，此处log为默认在app沙盒目录下的msc.log文件
+        [IFlySetting setLogFile:LVL_NONE];//不进行打印
+        //输出在console的log开关
+        [IFlySetting showLogcat:NO];
+        
+        //创建语音配置,appid必须要传入，仅执行一次则可
+        NSString *initString = [NSString stringWithFormat:@"appid=%@,timeout=%@",APPID_VALUE,TIMEOUT_VALUE];
+        //所有服务启动前，需要确保执行createUtility
+        [IFlySpeechUtility createUtility:initString];
+        
+/** IFlyFlowerCollector是统计的核心类，本身不需要实例化，所有方法以类方法的形式提供.
+         */
+//        [IFlyFlowerCollector SetDebugMode:YES];
+//        [IFlyFlowerCollector SetCaptureUncaughtException:YES];
+//        [IFlyFlowerCollector SetAppid:APPID_VALUE];
+//        [IFlyFlowerCollector SetAutoLocation:YES];
+        [self initiFlySpeechRecognizer];
+    }
+    return self;
+}
+
+
+-(void)setIFlYRecognizerViewCenterInFatherView:(UIView *)fatherView
+{
+    _iFlyRecognizerView = [[IFlyRecognizerView alloc] initWithCenter:fatherView.center];
+    /**应用领域。
+     */
+    [_iFlyRecognizerView setParameter: @"search" forKey:[IFlySpeechConstant IFLY_DOMAIN]];
+    /**
+     返回结果的数据格式，可设置为json，xml，plain，默认为json。
+     */
+    [_iFlyRecognizerView setParameter:@"plain" forKey:[IFlySpeechConstant RESULT_TYPE]];
+    [_iFlyRecognizerView setParameter: @"16000" forKey:[IFlySpeechConstant SAMPLE_RATE]];
+    /**设置是否有标点符号
+     */
+    [_iFlyRecognizerView setParameter:@"0" forKey:[IFlySpeechConstant ASR_PTT]];
+    /** VAD前端点超时<br>
+     
+     可选范围：0-10000(单位ms)<br>
+     */
+    [_iFlyRecognizerView setParameter: @"1800" forKey:[IFlySpeechConstant VAD_BOS]];
+    [_iFlyRecognizerView setParameter: @"1000" forKey:[IFlySpeechConstant VAD_EOS]];
+
+    _iFlyRecognizerView.delegate = self;
+}
+
+-(void)initiFlySpeechRecognizer
+{
+    _iFlySpeechRecognizer =  [IFlySpeechRecognizer sharedInstance];
+    _iFlySpeechRecognizer.delegate = self;
+    //设置为录音模式
+    [_iFlySpeechRecognizer setParameter:IFLY_AUDIO_SOURCE_MIC forKey:@"audio_source"];
+   [_iFlySpeechRecognizer setParameter: @"10000" forKey:[IFlySpeechConstant VAD_BOS]];
+   [_iFlySpeechRecognizer setParameter: @"10000" forKey:[IFlySpeechConstant VAD_EOS]];
+    [_iFlySpeechRecognizer setParameter:@"plain" forKey:[IFlySpeechConstant RESULT_TYPE]];
+    [_iFlySpeechRecognizer setParameter: @"16000" forKey:[IFlySpeechConstant SAMPLE_RATE]];
+    [_iFlySpeechRecognizer setParameter:@"0" forKey:[IFlySpeechConstant ASR_PTT]];
+    [_iFlySpeechRecognizer setParameter: @"iat" forKey:[IFlySpeechConstant IFLY_DOMAIN]];
+    //设置为非语义模式
+    [_iFlySpeechRecognizer setParameter:@"0" forKey:[IFlySpeechConstant ASR_SCH]];
+    //关闭保存录音
+    [_iFlySpeechRecognizer setParameter:@"111" forKey:[IFlySpeechConstant ASR_AUDIO_PATH]];
+}
+
+-(void)createIFlyRecognizerView:(UIView*)view
+{
+    //创建识别
+    self.result = @"";
+    if (_audioInputView)
+    {
+         _audioInputView = nil;
+    }
+    
+    [self createVoiceView];
+}
+
+//开启语音
+-(void)startVoice
+{
+    bool ret = [_iFlySpeechRecognizer startListening];
+    self.isCanceled = NO;
+    if (ret)
+    {
+        NSLog(@"正在识别+++++++");
+    }
+    else
+    {
+        NSLog(@"启动识别服务失败，请稍后重试");
+        return;
+    }
+}
+
+-(void)createVoiceView
+{
+    m_view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight+64)];
+    m_view.backgroundColor = [UIColor colorWithWhite:0 alpha:0.8];
+    [APP_DELEGATE addSubview:m_view];
+    
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(removeAllVoiceView)];
+    [m_view addGestureRecognizer:tap];
+    [tap release];
+    
+     __block FlyMSC *weakSelf = self;
+    _audioInputView = [[AudioInputView alloc] init];
+    [_audioInputView setAudioInputViewOKBlock:^(int isOK, int lenght) {
+        //            m_registerTimeLen = lenght;
+        switch (isOK) {
+            case 0://取消
+                [weakSelf onBtnCancel];
+                [weakSelf removeView];
+                break;
+            case 1://取消
+                [weakSelf startVoice];
+                break;
+            case 2://开始
+                [weakSelf onBtnStop];
+                [weakSelf removeView];
+                break;
+            default:
+                break;
+        }
+    }];
+    //    }
+    _audioInputView.frameY = m_view.height;
+    [_audioInputView showWithAlpha:m_view];
+}
+
+-(void)removeView
+{
+    [UIView animateWithDuration:0.2 animations:^ {
+        _audioInputView.frameY = m_view.bottom;
+        m_view.backgroundColor = [UIColor clearColor];
+    } completion:^(BOOL is) {
+        [_audioInputView removeFromSuperview];
+        _audioInputView = nil;
+        [m_view removeFromSuperview];
+    }];
+}
+
+-(void)removeAllVoiceView
+{
+    [self removeView];
+    [self onBtnCancel];
+}
+
+-(void)endIFlyRecognizerView
+{
+    [_iFlySpeechRecognizer cancel];
+    [_iFlySpeechRecognizer setDelegate: nil];
+}
+
+-(void)listenword:(completionBlock)handler
+{
+    _inBLock = [handler copy];
+//    [self cancelRecognizer];
+//    BOOL start =[_iFlyRecognizerView start];
+//    if (start == NO)
+//    {
+//        NSLog(@"启动失败");
+//    }
+//    else
+//    {
+//        NSLog(@"启动成功");
+//    }
+}
+
+/*
+ * @ 暂停录音
+ */
+- (void) onBtnStop
+{
+    [_iFlySpeechRecognizer stopListening];
+}
+
+/*
+ * @取消识别
+ */
+- (void) onBtnCancel
+{
+    self.isCanceled = YES;
+    [_iFlySpeechRecognizer cancel];
+}
+
+
+#pragma mark - IFlySpeechRecognizerDelegate
+
+/**
+ * @fn      onVolumeChanged
+ * @brief   音量变化回调
+ *
+ * @param   volume      -[in] 录音的音量，音量范围1~100
+ * @see
+ */
+- (void) onVolumeChanged: (int)volume
+{
+    //    NSLog(@"onVolumeChanged=%d",volume);
+//    if (self.isCanceled) {
+//        
+//        [_popUpView removeFromSuperview];
+//        
+//        return;
+//    }
+
+    _audioInputView.nowVolume = volume;
+//    NSString * vol = [NSString stringWithFormat:@"音量：%d",volume];
+}
+
+///** 识别结果回调方法
+// @param resultArray 结果列表
+// @param isLast YES 表示最后一个，NO表示后面还有结果
+// */
+//- (void)onResult:(NSArray *)resultArray isLast:(BOOL)isLast
+//{
+//    NSMutableString *result = [[NSMutableString alloc] init];
+//    NSDictionary *dic = [resultArray objectAtIndex:0];
+//    
+//    for (NSString *key in dic) {
+//        [result appendFormat:@"%@",key];
+//    }
+//    
+//    if ([result isEqual:@" "]||[result length] == 0)
+//    {
+//        return;
+//    }
+//    else
+//    {
+//        _inBLock(result,0);
+//    }
+//    NSString *str = [NSString stringWithFormat:@"%@",result];
+//    NSLog(@"%@++++++++",str);
+//}
+
+
+/** 识别结果回调
+ 
+ 在识别过程中可能会多次回调此函数，你最好不要在此回调函数中进行界面的更改等操作，只需要将回调的结果保存起来。
+ 
+ 使用results的示例如下：
+ <pre><code>
+ - (void) onResults:(NSArray *) results{
+ NSMutableString *result = [[NSMutableString alloc] init];
+ NSDictionary *dic = [results objectAtIndex:0];
+ for (NSString *key in dic)
+ {
+ //[result appendFormat:@"%@",key];//合并结果
+ }
+ }
+ </code></pre>
+ 
+ @param   results     -[out] 识别结果，NSArray的第一个元素为NSDictionary，NSDictionary的key为识别结果，value为置信度。
+ @param   isLast      -[out] 是否最后一个结果
+ */
+
+- (void)onResults:(NSArray *) resultArray isLast:(BOOL)isLast
+{
+    NSMutableString *resultString = [[NSMutableString alloc] init];
+    NSDictionary *dic = [resultArray objectAtIndex:0];
+    
+    for (NSString *key in dic) {
+        [resultString appendFormat:@"%@",key];
+    }
+    NSString *str = [NSString stringWithFormat:@"%@",resultString];
+    NSLog(@"----------------%@",str);
+    if (![self decideIsNullWithString:resultString])
+    {
+         self.result =[NSString stringWithFormat:@"%@%@", self.result,resultString];
+         [resultString release];
+    }
+   
+    if (isLast)
+    {
+        if (![self decideIsNullWithString:self.result])
+        {
+             _inBLock(self.result,0);
+        }
+        if (_audioInputView)
+        {
+             [self removeView];
+        }
+    }
+}
+
+-(BOOL)decideIsNullWithString:(NSString *)str
+{
+    if ([str isEqual:@" "]||[str length] == 0)
+    {
+        return YES;
+    }
+    return NO;
+}
+
+//取消识别
+-(void)cancelRecognizer
+{
+    [_iFlyRecognizerView cancel];
+}
+
+/** 识别结束回调方法
+ @param error 识别错误
+ */
+- (void)onError:(IFlySpeechError *)error
+{
+//    [Common TipDialog2:@"识别结束"];
+    NSLog(@"errorCode:%d",[error errorCode]);
+}
+
+/**
+ * @fn      onBeginOfSpeech
+ * @brief   开始识别回调
+ *
+ * @see
+ */
+- (void) onBeginOfSpeech
+{
+    NSLog(@"onBeginOfSpeech");
+    
+}
+
+/**
+ * @fn      onEndOfSpeech
+ * @brief   停止录音回调
+ *
+ * @see
+ */
+- (void) onEndOfSpeech
+{
+    NSLog(@"onEndOfSpeech");
+}
+
+/**
+ * @fn      onCancel
+ * @brief   取消识别回调
+ * 当调用了`cancel`函数之后，会回调此函数，在调用了cancel函数和回调onError之前会有一个短暂时间，您可以在此函数中实现对这段时间的界面显示。
+ * @param
+ * @see
+ */
+- (void) onCancel
+{
+    NSLog(@"识别取消");
+}
+@end

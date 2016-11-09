@@ -1,0 +1,19 @@
+//
+//  PerfectInformation.h
+//  jiuhaohealth4.0
+//
+//  Created by xjs on 15/4/22.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "Common.h"
+
+@interface PerfectInformation : CommonViewController<UITextFieldDelegate,UITableViewDataSource,UITableViewDelegate>
+@property(nonatomic,assign) int whichStep;
+@property(nonatomic,copy) NSString* photoStr;
+@property(nonatomic,copy) NSString* pasWod;
+@property(nonatomic,copy) NSString* m_token;
+@property (nonatomic, retain) NSMutableDictionary *m_infoDic;
+
+
+@end

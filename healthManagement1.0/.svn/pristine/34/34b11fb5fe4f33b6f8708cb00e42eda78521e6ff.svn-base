@@ -1,0 +1,25 @@
+//
+//  CommunityCellTableViewCell.h
+//  jiuhaohealth4.0
+//
+//  Created by 徐国洪 on 15-4-17.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface CommunityTableViewCell : UITableViewCell
+{
+    UILabel *m_labTitle;
+    UILabel *m_labBriefIntro;
+    UILabel *m_labPostsCount;
+    
+//    UIImageView *m_imageView;
+}
+
+@property (nonatomic, assign) NSMutableDictionary *m_infoDic;
+@property (nonatomic, assign) UIImageView *m_imageView;
+
+- (void)setIconImage:(UIImage*)image;
+
+@end

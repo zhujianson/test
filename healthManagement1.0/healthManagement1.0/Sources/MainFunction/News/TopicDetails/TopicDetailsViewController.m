@@ -1,0 +1,456 @@
+//
+//  TopicDetailsViewController.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-8-31.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "TopicDetailsViewController.h"
+#import "CommentsInput.h"
+//#import "CommunityDetailCell.h"
+#import "AppDelegate.h"
+#import <MediaPlayer/MPMoviePlayerController.h>
+#import <MediaPlayer/MediaPlayer.h>
+#import "AudioPlayer.h"
+#import "ALMoviePlayerController.h"
+#import "ALMoviePlayerControls.h"
+//#import "CommunityDetailViewController.h"
+//#import "CommunityViewController.h"
+
+static const float kBottomHeight = 0;
+@interface TopicDetailsViewController ()
+{
+    NSMutableDictionary* dataDic;
+//    int comments;
+//    int praiseCount;
+    BOOL isFromSearch;//搜索进来的web
+    BOOL isNavHiden;
+}
+@property (nonatomic) CGRect defaultFrame;
+
+@end
+
+@implementation TopicDetailsViewController
+
+- (id)init
+{
+    self = [super init];
+    if (self) {
+        // Custom initialization
+//        self.title = @"圈子详情";
+        dataDic = [[NSMutableDictionary alloc]init];
+      
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [dataDic release];
+    [super dealloc];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    
+    [self beginLooding];
+//    if (self.m_isHideNavBar &&[self.navigationController.viewControllers[self.navigationController.viewControllers.count -2] isKindOfClass:[CommunityViewController class]])
+//    {
+//          //隐藏状态栏
+//          isFromSearch = YES;
+//          [self performSelector:@selector(hideNavBar) withObject:nil afterDelay:0.0];
+//    }
+}
+
+-(void) hideNavBar {
+    
+    if (self.navigationController.navigationBar.hidden == NO)
+    {
+        [self.navigationController setNavigationBarHidden:YES animated:NO];
+    }
+}
+
+- (void)addNumber
+{
+    UIButton * btn;
+    if (self.m_isHideNavBar) {
+        btn = (UIButton*)[self.view viewWithTag:66];
+    }else{
+        btn = (UIButton*)[self.navigationController.view viewWithTag:66];
+    }
+//    NSString * numStr = dataDic[@"discussCount"];
+//    int data = [numStr intValue] +1;
+    [btn setTitle:[NSString stringWithFormat:@"%@评论",dataDic[@"comments"]] forState:UIControlStateNormal];
+    //上一页面数量变更
+//    UIView * view = (UIView*)[_experCell.backView viewWithTag:1002];
+    
+//    if(view)
+//    {
+//        UILabel * lab = (UILabel*)[view viewWithTag:92];
+//        lab.text = [NSString stringWithFormat:@"%d",data];
+//    }
+//    [dataDic setObject:[NSString stringWithFormat:@"%d",data] forKey:@"discussCount"];
+}
+
+/**
+ *  跳转评论界面
+ */
+- (void)butEventShowShare
+{
+    if (isFromSearch)
+    {
+        [self.navigationController setNavigationBarHidden:NO animated:NO];
+    }
+    WS(weakSelf);
+//    CommunityDetailViewController * communityDetailVC = [[CommunityDetailViewController alloc] init];
+//    communityDetailVC.isfromSearchListFlag = NO;
+//    communityDetailVC.isfromTopicDataFlag = YES;
+//    communityDetailVC.m_superDic = [NSMutableDictionary dictionaryWithDictionary:_m_dic];
+//    communityDetailVC.myCommunityDetailViewControllerBlock = ^(NSString *str){
+//        if ([kPraisePost isEqualToString:str])
+//        {
+//            UIView *headView =  [weakSelf.view viewWithTag:1110];
+//            if (headView)
+//            {
+//                UIButton *praiseCount = (UIButton *)[headView viewWithTag:1002];
+//                [weakSelf praiseButtonTapWithButton:praiseCount];
+//            }
+//        }
+//    };
+//    [self.navigationController  pushViewController:communityDetailVC animated:YES];
+//    [communityDetailVC release];
+
+}
+
+- (void)touchTopic:(UIButton*)btn
+{
+    switch (btn.tag - 100) {
+    case 2: {
+        //分享
+        [self goToShare];
+    } break;
+    default:
+        break;
+    }
+}
+
+- (void)createRight:(BOOL)naHider
+{
+    UIButton * btn = (UIButton*)[self.view viewWithTag:33];
+    [self.view bringSubviewToFront:btn];
+    isNavHiden = naHider;
+    
+    [self showLoadingActiview];
+    NSString * url = [NSString stringWithFormat:@"%@article_app.html?id=%@&token=%@",Share_Server_URL, _m_dic[@"postId"],g_nowUserInfo.userToken];//Share_Server_URL
+    self.shareURL = [NSString stringWithFormat:@"%@article.html?postId=%@&token=%@",Share_Server_URL, _m_dic[@"postId"],g_nowUserInfo.userToken];
+
+    [self.m_webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:url]]];
+    
+    UISwipeGestureRecognizer * left = [[UISwipeGestureRecognizer alloc]initWithTarget:self action:@selector(butEventShowShare)];
+    left.direction = UISwipeGestureRecognizerDirectionLeft;
+    [self.m_webView addGestureRecognizer:left];
+    [left release];
+    
+    //评论和分享
+    NSString * readStr =[NSString stringWithFormat:@"%@评论",dataDic[@"comments"]];
+    CGFloat w = [Common unicodeLengthOfString:readStr]*10;
+    UIView* navaView = [[UIView alloc] initWithFrame:CGRectMake(kDeviceWidth - 80, 0, 75, 44)];
+    UIBarButtonItem* rightBar = [[UIBarButtonItem alloc] initWithCustomView:navaView];
+    if (naHider) {
+        [self.view addSubview:navaView];
+        navaView.frame = [Common rectWithOrigin:navaView.frame x:kDeviceWidth-90 y:IOS_7?20:0];
+        navaView.hidden = YES;
+    }else{
+        self.navigationItem.rightBarButtonItem = rightBar;
+    }
+    [rightBar release];
+    [navaView release];
+    
+    UIButton* right1 = [UIButton buttonWithType:UIButtonTypeCustom];
+    [right1 setTitleColor:[CommonImage colorWithHexString:VERSION_ERROR_TEXT_COLOR] forState:UIControlStateNormal];
+//    [right1 setTitle:@"A+" forState:UIControlStateNormal];
+    [right1 setImage:[UIImage imageNamed:@"common.bundle/nav/nav_plus.png"] forState:UIControlStateNormal];
+//    [right1 setImage:[UIImage imageNamed:@"common.bundle/nav/top_share_icon_pre.png"] forState:UIControlStateHighlighted];
+    right1.frame = CGRectMake(0, 0, 32, 44);
+    right1.tag = 102;
+    [right1 addTarget:self action:@selector(frontPlusAndSubtract:) forControlEvents:UIControlEventTouchUpInside];
+    [navaView addSubview:right1];
+    
+    UIButton* right2 = [UIButton buttonWithType:UIButtonTypeCustom];
+    [right2 setTitleColor:[CommonImage colorWithHexString:VERSION_ERROR_TEXT_COLOR] forState:UIControlStateNormal];
+//    [right2 setTitle:@"A-" forState:UIControlStateNormal];
+    [right2 setImage:[UIImage imageNamed:@"common.bundle/nav/nav_reduce.png"] forState:UIControlStateNormal];
+//    [right1 setImage:[UIImage imageNamed:@"common.bundle/nav/top_share_icon_pre.png"] forState:UIControlStateHighlighted];
+    right2.frame = CGRectMake(43, 0, 32, 44);
+    right2.tag = 103;
+    [right2 addTarget:self action:@selector(frontPlusAndSubtract:) forControlEvents:UIControlEventTouchUpInside];
+    [navaView addSubview:right2];
+    
+    self.m_webView.frameHeight = (isNavHiden?kDeviceHeight+64: kDeviceHeight) - kBottomHeight;
+    UIView *bottomView = [[[UIView alloc]initWithFrame:CGRectMake(0,self.m_webView.bottom, kDeviceWidth, kBottomHeight)] autorelease];
+    bottomView.backgroundColor = [CommonImage colorWithHexString:Color_fafafa];
+    bottomView.tag = 1110;
+    bottomView.hidden = YES;//隐藏
+    [self.view addSubview:bottomView];
+    float bottomWidth = kDeviceWidth/3.0;
+    
+    UILabel *lineLabel = [Common createLineLabelWithHeight:0];
+    lineLabel.backgroundColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_SHEN];;
+    [bottomView addSubview:lineLabel];
+    
+//    NSString *commentsStr =[NSString stringWithFormat:@"评论 %@",dataDic[@"comments"]];
+//    NSString *praiseCountStr =[NSString stringWithFormat:@"赞 %@",dataDic[@"praiseCount"]];
+    NSArray *array =@[@"分享",@"评论",@"点赞"];
+    BOOL isPraise = [dataDic[@"isPraise"] boolValue];
+    float labelHeight = 20.0;
+    for (int i = 0; i< array.count ; i++)
+    {
+        UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+        button.frame = CGRectMake(bottomWidth*i, 0, bottomWidth, bottomView.height);
+        [button setTitle:array[i] forState:UIControlStateNormal];
+        button.tag = 1000+i;
+        [button addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
+        [button setTitleColor:[CommonImage colorWithHexString:COLOR_333333] forState:UIControlStateNormal];
+        button.titleLabel.font = [UIFont systemFontOfSize:M_FRONT_SEVENTEEN];
+        [button setTitle:array[i] forState:UIControlStateNormal];
+        [bottomView addSubview:button];
+        if (i != array.count-1)
+        {
+            UILabel *lineLabel = [Common createLabel:CGRectMake(button.width-0.5, (bottomView.height-labelHeight)/2.0, 0.5, labelHeight) TextColor:nil Font:nil textAlignment:NSTextAlignmentCenter labTitle:@""];
+            lineLabel.backgroundColor = [CommonImage colorWithHexString:LINE_COLOR];
+            [button addSubview:lineLabel];
+        }
+        if (i == array.count-1 && isPraise)
+        {
+            [self praiseButtonTapWithButton:button];
+            break;
+        }
+    }
+//    UIButton * rightBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+//    rightBtn.frame = CGRectMake(52, 19/2, [Common unicodeLengthOfString:readStr]*10, 25);
+//    rightBtn.clipsToBounds = YES;
+//    rightBtn.layer.borderWidth = 0.8;
+//    rightBtn.layer.borderColor = [CommonImage colorWithHexString:COLOR_FF5351].CGColor;
+//    rightBtn.layer.cornerRadius = 25/2;
+//    rightBtn.titleLabel.font = [UIFont systemFontOfSize:12];
+//    [rightBtn setTitleColor:[CommonImage colorWithHexString:COLOR_FF5351] forState:UIControlStateNormal];
+//    [rightBtn setTitle:readStr forState:UIControlStateNormal];
+//    rightBtn.tag = 66;
+//    [rightBtn addTarget:self action:@selector(butEventShowShare) forControlEvents:UIControlEventTouchUpInside];
+//    [navaView addSubview:rightBtn];
+    
+}
+
+-(void)frontPlusAndSubtract:(UIButton *)btn
+{
+    switch (btn.tag) {
+        case 102:
+            [self.m_webView stringByEvaluatingJavaScriptFromString:@"zoomP()"];
+            break;
+        case 103:
+            [self.m_webView stringByEvaluatingJavaScriptFromString:@"zoomM()"];
+            break;
+        default:
+            break;
+    }
+}
+
+//评论
+- (void)commentsBtn
+{
+    CommentsInput* com = [[CommentsInput alloc] init];
+    [com setCommentsInputViewBlock:^(NSString* str) {
+        NSLog(@"%@",str);
+        if ([str length]>0) {
+            NSMutableDictionary *sendDic = [[NSMutableDictionary alloc] init];
+            [sendDic setObject:_m_dic[@"postId"]  forKey:@"postId"];
+            [sendDic setObject:str forKey:@"content"];
+            [sendDic setObject:[NSArray array] forKey:@"pictureArray"];
+            [[CommonHttpRequest defaultInstance] sendNewPostRequest:kAddGroupPostComments values:sendDic requestKey:kAddGroupPostComments delegate:self controller:self actiViewFlag:1 title:nil];
+            [sendDic release];
+        }
+    }];
+}
+
+- (void)secondBtn:(UIButton*)btn
+{
+    btn.selected = !btn.selected;
+    
+    switch (btn.tag-100) {
+        case 0:
+            [self goToShare];
+            break;
+        default:
+            break;
+    }
+}
+
+/**
+ *  开始加载数据
+ */
+- (void)beginLooding
+{
+    @try {
+        NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+        [dic setObject:_m_dic[@"postId"] forKey:@"postId"];
+        [[CommonHttpRequest defaultInstance] sendNewPostRequest:GET_TOPIC_BY_DETAIL values:dic requestKey:GET_TOPIC_BY_DETAIL delegate:self controller:self actiViewFlag:1 title:nil];
+    }
+    @catch (NSException *exception) {
+        
+    }
+    @finally {
+        
+    }
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dic = [responseString KXjSONValueObject];
+    
+    if ([[dic[@"head"] objectForKey:@"state"] intValue]) {
+        [Common TipDialog2:[dic[@"head"] objectForKey:@"msg"]];
+        return;
+    }
+    if ([loader.username isEqualToString:GET_TOPIC_BY_DETAIL]) {
+        //获取详情
+            NSDictionary* dit = [dic objectForKey:@"body"][@"data"];
+//            comments = [[dit objectForKey:@"comments"] intValue];
+//            praiseCount = [[dit objectForKey:@"praiseCount"] intValue];
+        [dataDic addEntriesFromDictionary:dit];
+        NSLog(@"%@", dic);
+//      [self creatTopView];
+        [self createRight:self.m_isHideNavBar];
+
+    } else if ([loader.username isEqualToString:kAddGroupPostComments]) {
+        //评论
+            MBProgressHUD* progress_ = [[MBProgressHUD alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, self.view.frame.size.height)];
+            progress_.labelText = @"评论成功";
+            progress_.mode = MBProgressHUDModeText;
+            progress_.userInteractionEnabled = NO;
+            [[[UIApplication sharedApplication].windows lastObject] addSubview:progress_];
+            [progress_ show:YES];
+            [progress_ showAnimated:YES whileExecutingBlock:^{
+                sleep(1);
+            } completionBlock:^{
+                [progress_ release];
+                [progress_ removeFromSuperview];
+            }];
+//       int data = [dataDic[@"discussCount"] intValue]+1;
+//       float  comments = ;
+            [self addNumber];
+    } else if ([loader.username isEqualToString:COLLECT_ADD_API]) {
+        //收藏
+            MBProgressHUD* progress_ = [[MBProgressHUD alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, self.view.frame.size.height)];
+            progress_.labelText = @"收藏成功";
+            progress_.mode = MBProgressHUDModeText;
+            progress_.userInteractionEnabled = NO;
+            [[[UIApplication sharedApplication].windows lastObject] addSubview:progress_];
+            [progress_ show:YES];
+            [progress_ showAnimated:YES whileExecutingBlock:^{
+                sleep(1);
+            } completionBlock:^{
+                [progress_ release];
+                [progress_ removeFromSuperview];
+            }];
+            //收藏数量加一
+    } else if ([loader.username isEqualToString:COLLECT_REMOVE_API]) {
+        //取消收藏
+            MBProgressHUD* progress_ = [[MBProgressHUD alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, self.view.frame.size.height)];
+            progress_.labelText = @"取消收藏";
+            progress_.mode = MBProgressHUDModeText;
+            progress_.userInteractionEnabled = NO;
+            [[[UIApplication sharedApplication].windows lastObject] addSubview:progress_];
+            [progress_ show:YES];
+            [progress_ showAnimated:YES whileExecutingBlock:^{
+                sleep(1);
+            } completionBlock:^{
+                [progress_ release];
+                [progress_ removeFromSuperview];
+            }];
+            //收藏数量减一
+    }
+    else if ([loader.username isEqualToString:kAddPostPraise])
+    {
+        UIView *headView =  [self.view viewWithTag:1110];
+        if (headView)
+        {
+            UIButton *praiseCount = (UIButton *)[headView viewWithTag:1002];
+            [self praiseButtonTapWithButton:praiseCount];
+//            [CommunityDetailCell actionWithViewLayer:praiseCount.imageView.layer];
+        }
+    }
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+- (void)showStatusBar
+{
+    [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:NO];
+}
+
+- (void)hideStatusBar
+{
+  [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:NO];
+}
+
+#pragma mark -set-getUi
+- (void)btnClick:(UIButton *)button
+{
+    NSLog(@"++++%@",button);
+    
+    switch (button.tag) {
+        case 1000:
+        {
+            [self goToShare];
+        }
+            break;
+        case 1001:
+            [self butEventShowShare];
+            break;
+        case 1002:
+        {
+            if (button.selected == YES)
+            {
+                [Common MBProgressTishi:@"已经赞过!" forHeight:kDeviceHeight];
+                return;
+            }
+            [self praiseButtonTapWithButton:button];
+            [self topicPraiseWithDict:dataDic isTopic:YES];
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+//赞 跟帖 0 帖子 1
+-(void)topicPraiseWithDict:(NSDictionary *)cellDict isTopic:(BOOL)isTopic
+{
+    NSMutableDictionary *sendDic  = nil;
+    sendDic = [NSMutableDictionary dictionary];
+    [sendDic setObject:_m_dic[@"postId"] forKey:@"belongId"];
+    [sendDic setObject:@"0" forKey:@"praiseType"];//0 点赞 1取消
+    [sendDic setObject:isTopic? @"1":@"0" forKey:@"belongType"];//0 跟帖 1 帖子
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:kAddPostPraise values:sendDic requestKey:kAddPostPraise delegate:self controller:self actiViewFlag:0 title:nil];
+}
+
+-(void)praiseButtonTapWithButton:(UIButton *)button
+{
+    [button setTitle:@"" forState:UIControlStateNormal];
+    [button setImage:[UIImage imageNamed:@"common.bundle/community/floorPraise_p.png"] forState:UIControlStateSelected];
+     button.selected = YES;
+}
+@end

@@ -1,0 +1,580 @@
+//
+//  AccountInformationViewController.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-8-4.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "AccountInformationViewController.h"
+#import "ModifyViewController.h"
+#import "EditPwdViewController.h"
+#import "AppDelegate.h"
+#import "ASIFormDataRequest.h"
+#import "LoginViewController.h"
+#import "BindingPhoneNumberViewController.h"
+#import "PickerView.h"
+#import "NSObject+KXJson.h"
+#import "FamilyHistoryViewController.h"
+#import "DeviceViewController.h"
+#import "ImagePicker.h"
+#import <ShareSDK/ShareSDK.h>
+#import "SFHFKeychainUtils.h"
+#import "WebViewController.h"
+#import "MyQrcode.h"
+#import "AddBuddy.h"
+#import "GetToken.h"
+#import "AccountCell.h"
+#import "SDImageCache.h"
+
+@interface AccountInformationViewController () <UITableViewDataSource, UITableViewDelegate, UINavigationControllerDelegate,
+                                                UIImagePickerControllerDelegate, UIActionSheetDelegate> {
+    UITableView* myTable;
+    NSMutableArray* dataArray;
+}
+
+@end
+
+@implementation AccountInformationViewController
+
+- (id)initWithNibName:(NSString*)nibNameOrNil bundle:(NSBundle*)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        self.title = @"帐号信息";
+    }
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    dataArray = [[NSMutableArray alloc]
+                 initWithObjects:@[@"头像"],
+                 @[@"姓名",@"性别",@"生日",@"身高",@"体重"],
+                 @[@"糖尿病类型",@"既往病史",@"并发症"],
+                 @[@"手机号"],
+                 @[@"密码修改",@"我的二维码"],
+                 @[@"绑定设备"],nil];
+    myTable =
+        [[UITableView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight)
+                                     style:UITableViewStyleGrouped];
+    myTable.delegate = self;
+    myTable.dataSource = self;
+    myTable.backgroundColor = [UIColor clearColor];
+    UIView *view = [[UIView alloc] initWithFrame:CGRectZero];
+    view.backgroundColor = [UIColor clearColor];
+    myTable.backgroundView = view;
+    [view release];
+    //分割线颜色
+    myTable.separatorColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_QIAN];
+    //    myTable.backgroundColor = [UIColor clearColor];
+    [self.view addSubview:myTable];
+    myTable.tableFooterView = [self withdrawFromAccount];
+
+    // Do any additional setup after loading the view.
+}
+
+-(void)viewWillAppear:(BOOL)animated
+{
+    [myTable reloadData];
+    [super viewWillAppear:animated];
+}
+
+- (CGFloat)tableView:(UITableView*)tableView
+    heightForRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    if (!indexPath.section) {
+        return 86;
+    }
+    return 46;
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView*)tableView
+{
+    return [dataArray count];
+}
+
+- (NSInteger)tableView:(UITableView*)tableView
+    numberOfRowsInSection:(NSInteger)section
+{
+    return [dataArray[section] count];
+}
+
+- (CGFloat)tableView:(UITableView*)tableView
+    heightForHeaderInSection:(NSInteger)section
+{
+    float height = 0.1;
+    return height;
+}
+
+- (CGFloat)tableView:(UITableView*)tableView
+    heightForFooterInSection:(NSInteger)section
+{
+    if (section == dataArray.count - 1) {
+        return 0.1;
+    }
+    return 10;
+}
+
+- (UITableViewCell*)tableView:(UITableView*)tableView
+        cellForRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    static NSString* cellF = @"cell";
+    if (!indexPath.section) {
+        cellF = @"cell1";
+    }
+    AccountCell* cell = [tableView dequeueReusableCellWithIdentifier:cellF];
+    if (!cell) {
+        cell = [[[AccountCell alloc] initWithStyle:UITableViewCellStyleValue1
+                                       reuseIdentifier:cellF] autorelease];
+        cell.textLabel.font = [UIFont systemFontOfSize:17];
+        cell.textLabel.textColor = [CommonImage colorWithHexString:@"333333"];
+        cell.detailTextLabel.textColor = [CommonImage colorWithHexString:@"666666"];
+        
+        cell.selectedBackgroundView = [Common creatCellBackView];
+        __block typeof(self) weak = self;
+        [cell setP_block:^(NSDictionary *dic) {
+            if ([dic[@"title"] isEqualToString:@"请输入身高"]) {
+                if (g_nowUserInfo.height == [dic[@"text"] floatValue]) {
+                }else if ([dic[@"text"] length]>0) {
+                    [weak RequestSeverWith:@"身高" data:dic[@"text"]];
+                }
+            }else{
+                if (g_nowUserInfo.weight == [dic[@"text"] floatValue]) {
+                }else if ([dic[@"text"] length]>0) {
+                   [weak RequestSeverWith:@"体重" data:dic[@"text"]];
+                }
+            }
+            NSLog(@"%@",dic);
+        }];
+    }
+    [cell setInfoWithDic:[[dataArray objectAtIndex:indexPath.section] objectAtIndex:indexPath.row] object:self];
+    return cell;
+}
+
+- (void)tableView:(UITableView*)tableView
+    didSelectRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    NSString * titleT = dataArray[indexPath.section][indexPath.row];
+    AccountCell * cell = [myTable cellForRowAtIndexPath:indexPath];
+    if ([titleT isEqualToString:@"头像"]) {
+        ImagePicker *picker = [[ImagePicker alloc] initWithId:self];
+        [picker setPickerViewBlock:^(UIImage *image) {
+            cell.headerImage.image = image;
+            [self showLoadingActiview];
+            NSData *data = UIImageJPEGRepresentation(image, Define_picScale);
+            [GetToken submitData:data withBlock:^(BOOL isOK,NSString*st) {
+                [self stopLoadingActiView];
+                if (!isOK) {
+                    [Common TipDialog2:@"图片上传失败，请检查网络是否正常!"];
+                }else
+                {
+                    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+                    [dic setObject:st forKey:@"filePath"];
+                    [[CommonHttpRequest defaultInstance] sendNewPostRequest:UPDATAField_API_URL values:dic requestKey:UPDATAField_API_URL delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"修改中...", nil)];
+                    [picker release];
+                }
+            } withName:nil];
+            
+        }];
+    }else if ([titleT isEqualToString:@"姓名"]){
+        NSMutableDictionary* dic =
+        [NSMutableDictionary dictionary];
+        [dic setObject:g_nowUserInfo.nickName forKey:@"value"];
+        ModifyViewController* modify = [[ModifyViewController alloc] init];
+        modify.title = @"姓名";
+        [modify setM_infoDic:dic];
+        [modify setM_strUrl:UPDATE_USER_INFO];
+        [self.navigationController pushViewController:modify animated:YES];
+        [modify release];
+    }else if ([titleT isEqualToString:@"性别"]){
+    }else if ([titleT isEqualToString:@"生日"]){
+        [self setTimePickerWithString:titleT];
+    }else if ([titleT isEqualToString:@"身高"] || [titleT isEqualToString:@"体重"]){
+        return;
+    }else if ([titleT isEqualToString:@"糖尿病类型"]){
+        [self setPickerWithType:titleT];
+    }else if ([titleT isEqualToString:@"既往病史"]){
+        NSMutableDictionary* dic =
+        [[NSMutableDictionary alloc]init];
+        [dic setObject:@"" forKey:@"history"];
+        if ([g_nowUserInfo.medical_history length]) {
+            [dic setObject:g_nowUserInfo.medical_history forKey:@"history"];
+        }
+        FamilyHistoryViewController* medical = [[FamilyHistoryViewController alloc] init];
+        medical.m_infoDic = dic;
+        [self.navigationController pushViewController:medical animated:YES];
+        [medical release];
+    }else if ([titleT isEqualToString:@"并发症"]){
+        [self setPickerWithType:titleT];
+    }else if ([titleT isEqualToString:@"手机号"]){
+        if (![g_nowUserInfo.mobilePhone length]) {
+            NSMutableDictionary* dic = [[dataArray objectAtIndex:indexPath.section]
+                                        objectAtIndex:indexPath.row];
+            BindingPhoneNumberViewController* banding =
+            [[BindingPhoneNumberViewController alloc] init];
+            [banding setM_infoDic:dic];
+            [self.navigationController pushViewController:banding animated:YES];
+            [banding release];
+        }
+    }else if ([titleT isEqualToString:@"密码修改"]){
+        EditPwdViewController* edit = [[EditPwdViewController alloc] init];
+        edit.log_pageID = 82;
+        [self.navigationController pushViewController:edit animated:YES];
+        [edit release];
+    }else if ([titleT isEqualToString:@"我的二维码"]){
+        MyQrcode* code = [[MyQrcode alloc] init];
+        code.title = @"我的二维码";
+        [self.navigationController pushViewController:code animated:YES];
+        [code release];
+    }else if ([titleT isEqualToString:@"绑定设备"]){
+        
+    }
+    [self textResignFirstResponder];
+}
+
+/**
+ *  section背景
+ *
+ *  @param tableView mytable
+ *  @param section   section
+ *
+ *  @return section背景
+ */
+- (UIView*)tableView:(UITableView*)tableView
+    viewForHeaderInSection:(NSInteger)section
+{
+    UIView* cleanView = [[[UIView alloc] init] autorelease];
+    cleanView.backgroundColor = [UIColor clearColor];
+    return cleanView;
+}
+
+- (void)switchValueChanged:(UISwitch*)s
+{
+    NSString * sex = nil;
+    if (s.on) {
+        sex = @"男";
+    }else{
+        sex = @"女";
+    }
+    [self RequestSeverWith:@"性别" data:sex];
+}
+
+- (void)RequestSeverWith:(NSString*)name data:(NSString*)data
+{
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    if ([name isEqualToString:@"性别"]) {
+        [dic setObject:[data isEqualToString:@"男"] ? @"1" : @"2" forKey:@"sex"];
+        g_nowUserInfo.sex = dic[@"sex"];
+    }else if ([name isEqualToString:@"生日"]){
+        [dic setObject:data forKey:@"birthday"];
+        g_nowUserInfo.birthday = dic[@"birthday"];
+    }else if ([name isEqualToString:@"身高"]){
+        [dic setObject:data forKey:@"height"];
+        g_nowUserInfo.height = [data floatValue];
+    }else if ([name isEqualToString:@"体重"]){
+        [dic setObject:data forKey:@"weight"];
+        g_nowUserInfo.weight = [data floatValue];
+    }else if ([name isEqualToString:@"糖尿病类型"]){
+        [dic setObject:[CommonUser getBloodSugarDic2][data] forKey:@"diabetic_type"];
+        g_nowUserInfo.diabetesType = dic[@"diabetic_type"];
+    }else if ([name isEqualToString:@"并发症"]){
+        [dic setObject:[self setComplication:data] forKey:@"is_complication"];
+        g_nowUserInfo.complications = dic[@"is_complication"];
+    }
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:UPDATAField_API_URL values:dic requestKey:UPDATAField_API_URL delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"修改中...", nil)];
+    [myTable reloadData];
+}
+/**
+ *  退出按钮
+ *
+ *  @return 退出按钮
+ */
+- (UIView*)withdrawFromAccount
+{
+    UIView* cleanView =
+        [[[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 84)] autorelease];
+    cleanView.backgroundColor = [UIColor clearColor];
+    UIButton* withBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    withBtn.frame = CGRectMake(17.5, 20, kDeviceWidth-35, 44);
+    UIImage* image =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:COLOR_FF5351]];
+    [withBtn setBackgroundImage:image forState:UIControlStateNormal];
+    [withBtn setTitle:NSLocalizedString(@"退出登录", nil)
+             forState:UIControlStateNormal];
+    withBtn.layer.cornerRadius = 4;
+    withBtn.clipsToBounds = YES;
+    withBtn.layer.masksToBounds = YES;
+    [withBtn addTarget:self
+                  action:@selector(withdraw)
+        forControlEvents:UIControlEventTouchUpInside];
+    [cleanView addSubview:withBtn];
+    return cleanView;
+}
+
+- (void)withdraw
+{
+    UIAlertView* av = [[UIAlertView alloc]
+            initWithTitle:NSLocalizedString(@"提示", nil)
+                  message:NSLocalizedString(@"您确定要退出应用吗？",
+                                            nil)
+                 delegate:self
+        cancelButtonTitle:NSLocalizedString(@"取消", nil)
+        otherButtonTitles:NSLocalizedString(@"确定", nil), nil];
+    [av show];
+    [av release];
+}
+
+- (void)alertView:(UIAlertView*)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (buttonIndex) {
+        g_longTime = 0;
+        //切换用户，重新上传push信息
+        [self cancelload];
+        AppDelegate* myDelegate = [Common getAppDelegate];
+        myDelegate.stepCounterObj.notShowFailView = YES;//上传失败关闭提示
+        [myDelegate.stepCounterObj uploadDataRequest];//上传数据
+        g_nowUserInfo.userid = nil;
+        myDelegate.stepCounterObj.isLoginFlag = NO;//退出登录了
+        myDelegate.isUploadPushInfo = NO;
+        //默认关闭计步器
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"isStopCountering"];//默认关闭
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        [self performSelector:@selector(qweqwe) withObject:nil afterDelay:0.35];
+//        [self qweqwe];
+        if (g_nowUserInfo.thirdLogin)
+        {
+            [ShareSDK cancelAuthWithType:ShareTypeSinaWeibo];
+            [ShareSDK cancelAuthWithType:ShareTypeQQSpace];
+            [ShareSDK cancelAuthWithType:ShareTypeWeixiSession];
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"thirdUserInfo"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            g_nowUserInfo.thirdLogin = NO;
+        }
+//        g_nowUserInfo = nil;
+        [g_nowUserInfo removeAllKeyValue];
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"setRemoveFloatView" object:self];
+    }
+}
+
+//退出登录取消自动登录和秘密保存
+- (void)cancelload
+{
+    [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"checkstatus"];
+    NSString* name = [self getUserName];
+    [SFHFKeychainUtils deleteItemForUsername:name andServiceName:BUNDLE_IDENTIFIER error:NULL];
+    [[NSUserDefaults standardUserDefaults] setObject:name forKey:@"username"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+
+}
+
+- (NSString*)getUserName
+{
+    NSUserDefaults* userDefault = [NSUserDefaults standardUserDefaults];
+    NSString* username = [userDefault objectForKey:@"username"];
+    return username;
+}
+
+#pragma mark - NetWork Function
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dic = [responseString KXjSONValueObject];
+    NSDictionary * dict = dic[@"head"];
+    if (![[dict objectForKey:@"state"] intValue]) {
+        if ([loader.username isEqualToString:UPDATAField_API_URL]) {
+            if ([[dic objectForKey:@"body"][@"data"] length]) {
+                @try {
+                    NSString *str = [[dic objectForKey:@"body"][@"data"] stringByAppendingString:@"?imageView2/1/w/80/h/80"];
+                    
+                    NSString *strPath = [SDImageCache cachedFileNameForKey:str];
+//                    NSString *str1 = [str stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
+                    //缩略图
+                    AccountCell * cell = (AccountCell*)[myTable cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+                    UIImage *imageIcon = [CommonImage zoomImage:cell.headerImage.image toScale:CGSizeMake(80, 80)];
+                    NSData *data = UIImagePNGRepresentation(imageIcon);
+                    [data writeToFile:[[Common getImagePath] stringByAppendingFormat:@"/%@", strPath] atomically:YES];
+                    g_nowUserInfo.filePath = [dic objectForKey:@"body"][@"data"];
+                    
+                    [[NSUserDefaults standardUserDefaults] setObject:g_nowUserInfo.filePath forKey:[NSString stringWithFormat:@"%@_loadingImage",g_nowUserInfo.mobilePhone]];//头像缓存
+                    [[NSUserDefaults standardUserDefaults] synchronize];
+                    
+                    if (g_familyList) {
+                        [g_familyList[0] setObject:[dic objectForKey:@"body"][@"data"] forKey:@"filePath"];
+                    }
+                }
+                @catch (NSException *exception) {
+                }
+                @finally {
+                }
+            }
+            MBProgressHUD* progress_ = [[MBProgressHUD alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, self.view.frame.size.height)];
+            progress_.labelText = @"修改成功";
+            progress_.mode = MBProgressHUDModeText;
+            progress_.userInteractionEnabled = NO;
+            [[[UIApplication sharedApplication].windows lastObject] addSubview:progress_];
+            [progress_ show:YES];
+            [progress_ showAnimated:YES whileExecutingBlock:^{
+                sleep(1);
+            } completionBlock:^{
+                [progress_ release];
+                [progress_ removeFromSuperview];
+            }];
+            [self stopLoadingActiView];
+        }
+        
+    } else {
+        [Common TipDialog:[dict objectForKey:@"msg"]];
+    }
+}
+
+/**
+ *  返回登录界面
+ */
+- (void)qweqwe
+{
+    [g_familyList release];
+    g_familyList = nil;
+    
+    LoginViewController* LoginViewCon = [[LoginViewController alloc] init];
+    UIImage* loginViewImage = [CommonImage imageWithView:LoginViewCon.view];
+    UIImageView* loginView = [[UIImageView alloc] initWithImage:loginViewImage];
+    loginView.frame = CGRectMake(0, kDeviceHeight + 64, kDeviceWidth, kDeviceHeight + 64);
+    [self.navigationController.view addSubview:loginView];
+    [loginView release];
+
+    [UIView animateWithDuration:0.35
+        animations:^{
+          CGRect rect = loginView.frame;
+          rect.origin.y = 0;
+          loginView.frame = rect;
+        }
+        completion:^(BOOL finished) {
+            [loginView removeFromSuperview];
+          //      LoginViewController *view1 = [[LoginViewController alloc]
+          //      init];
+          CommonNavViewController* view1 = [[CommonNavViewController alloc]
+              initWithRootViewController:LoginViewCon];
+          [LoginViewCon release];
+          APP_DELEGATE.rootViewController = view1;
+          [view1 release];
+        }];
+}
+
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
+{
+    [self textResignFirstResponder];
+}
+
+- (void)textResignFirstResponder
+{
+    AccountCell *cell;
+    for (int i = 3; i<5; i++) {
+        cell = (AccountCell*)[myTable cellForRowAtIndexPath:[NSIndexPath indexPathForRow:i inSection:1]];
+        [cell setResignFirstResponder];
+    }
+}
+
+
+- (NSString*)setComplication:(NSString*)complication
+{
+    if ([complication isEqualToString:@"有"]) {
+        return @"1";
+    }else{
+        return @"0";
+    }
+}
+
+- (void)setPickerWithType:(NSString*)title
+{
+    NSMutableArray* fiisrtArray;
+    NSString* defualt, *titl;
+    if ([title isEqualToString:@"并发症"]) {
+        titl = @"是否存在并发症";
+        fiisrtArray = [NSMutableArray arrayWithObjects:@"有", @"无", nil];
+        defualt = [g_nowUserInfo.complications intValue]?@"有":@"无";
+        
+    } else if ([title isEqualToString:@"糖尿病类型"]) {
+        titl = @"糖尿病类型";
+        fiisrtArray = [CommonUser getBloodSugar];
+        defualt = [CommonUser getBloodSugarDic1][g_nowUserInfo.diabetesType];
+    }
+    
+    PickerView* myPicker = [[PickerView alloc] init];
+    [myPicker createPickViewWithArray:[NSArray arrayWithObject:fiisrtArray] andWithSelectString:defualt setTitle:titl isShow:NO];
+    [myPicker setPickerViewBlock:^(NSString* content) {
+        if ([title isEqualToString:@"并发症"]) {
+            if (![[Common isNULLString2:g_nowUserInfo.complications] isEqualToString:content]) {
+                [self RequestSeverWith:title data:content];
+            }
+        } else if ([title isEqualToString:@"糖尿病类型"]) {
+            if (![defualt isEqualToString:content]) {
+                [self RequestSeverWith:title data:content];
+            }
+        }
+    }];
+}
+
+- (void)setTimePickerWithString:(NSString *)timeString
+{
+    if (!timeString.length)
+    {
+        timeString = @"1975-06-15";
+    }
+    //时间日期选择器
+    InputDueDatePicker* inputDueDateView = [[InputDueDatePicker alloc] initWithTitle:@"请选择出生年月日"];
+    
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+    NSDate* dateTime = [dateFormatter dateFromString:g_nowUserInfo.birthday];
+    inputDueDateView.inputDueDatePicker.date = dateTime;
+    [dateFormatter release];
+    
+    [self.view addSubview:inputDueDateView];
+    [inputDueDateView setInputDueDatePickerBlock:^(NSDate* date) {
+        NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+        [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+        NSString * datestr = [dateFormatter stringFromDate:date];
+        [dateFormatter release];
+        if (![g_nowUserInfo.birthday isEqualToString:datestr]) {
+            [self RequestSeverWith:@"生日" data:datestr];
+        }
+    }];
+    [inputDueDateView release];
+}
+
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+- (void)dealloc
+{
+    [dataArray release];
+    [myTable release];
+    [super dealloc];
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little
+preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+{
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

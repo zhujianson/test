@@ -1,0 +1,20 @@
+//
+//  FeedbackViewController.h
+//  bulkBuy1.0
+//
+//  Created by 徐国洪 on 13-10-22.
+//  Copyright (c) 2013年 徐国洪. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "KXTextView.h"
+#import "Common.h"
+
+@interface FeedbackViewController : CommonViewController <UITextViewDelegate>
+{
+	KXTextView *m_textView;
+	
+	UIButton *m_butSubmit;
+}
+
+@end

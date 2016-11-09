@@ -1,0 +1,45 @@
+//
+//  FDCaptionGraphView.h
+//  SampleProj
+//
+//  Created by wangmin on 14-4-14.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "FDGraphView.h"
+
+@class FDGraphScrollView;
+
+@protocol FDCaptionGraphViewDataSource <NSObject,ReportFrameDelegate>
+
+@optional
+- (NSString *)FDGraphScrollView:(FDGraphScrollView *)graphView titleForItemAtIndex:(NSInteger)index;
+- (NSString *)FDGraphScrollView:(FDGraphScrollView *)graphView subtitleForItemAtIndex:(NSInteger)index;
+
+@end
+
+@interface FDGraphScrollView : UIScrollView <ReportFrameDelegate>
+
+
+@property (nonatomic,assign) TimeType currentTimeType;//时间类型
+@property (nonatomic,assign) BOOL  isYClipTo5;//y轴是否切成5段
+
+//最大最小值
+@property (nonatomic, strong) NSNumber *maxDataPoint;
+@property (nonatomic, strong) NSNumber *minDataPoint;
+
+@property (nonatomic, strong) FDGraphView *graphView;
+
+@property (nonatomic,assign) BOOL  isNewSugarTrend;//新加 血糖趋势图
+@property (nonatomic,assign) BOOL  isThin;//新加 享瘦派
+
+
+//- (void)setDataPoints:(NSArray *)dataPoints;
+//第一个第二个以及折线的x坐标
+- (void)setDataPoints:(NSArray *)dataPoints dataPoints2:(NSArray *)dataPoint2 timeArray:(NSArray *)timeArray;
+
+- (void)setLineDataArray:(NSArray *)multiDataArray andTimeArray:(NSArray *)timeArray normalValueArray:(NSArray *)normalValuesArray lineMeansArray:(NSArray *)lineMeansArray aboutMultiLocaInOriginalArray:(NSArray *)multiLocalArray;
+
+
+@end

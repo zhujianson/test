@@ -1,0 +1,30 @@
+//
+//  ComHeaderView.h
+//  jiuhaohealth3.0
+//
+//  Created by wangmin on 15-3-10.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+
+typedef void (^RightBtnClickBlock) (void);
+
+@interface ComHeaderView : UIView
+
+@property (nonatomic,retain) UIImageView *myPhotoImageView;
+
+@property (nonatomic,retain) UIImageView *levelImageView;
+
+@property (nonatomic,retain) UILabel *firstLabel;
+
+@property (nonatomic,retain) UILabel *secondLabel;
+@property (nonatomic,retain) UILabel *thirdLabel;
+
+
+@property (nonatomic,retain) UIButton *rightBtn;
+
+@property (nonatomic,copy) RightBtnClickBlock rightBtnBlock;
+
+@end

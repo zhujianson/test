@@ -1,0 +1,17 @@
+//
+//  FamilyListViewCell.h
+//  jiuhaohealth3.0
+//
+//  Created by jiuhao-yangshuo on 15-1-13.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface FamilyListViewCell : UITableViewCell
+
+@property(nonatomic,retain) UIView *m_backView;
+
+-(void)setfamilyCellDict:(NSDictionary *)dictInfo;
+
+@end

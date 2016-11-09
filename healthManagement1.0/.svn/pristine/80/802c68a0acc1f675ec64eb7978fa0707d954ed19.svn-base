@@ -1,0 +1,237 @@
+//
+//  ImproveDataViewController.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-8-20.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "ImproveDataViewController.h"
+#import "ImproveSubscribeViewController.h"
+#import "DBOperate.h"
+#import "CommonHttpRequest.h"
+//#import "UIImageView+WebCache.h"
+
+@interface ImproveDataViewController () {
+}
+
+@end
+
+@implementation ImproveDataViewController
+{
+    BOOL isImprove;
+}
+- (id)initWithNibName:(NSString*)nibNameOrNil bundle:(NSBundle*)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        _dataArr = [[NSMutableDictionary alloc] init];
+        self.title = @"介绍";
+        self.log_pageID = 21;
+
+    }
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+//    NSLog(@"%@",_dataArr[0]);
+    [self creatScrollView];
+    // Do any additional setup after loading the view.
+}
+
+- (UIView*)creatHeaderView
+{
+    UIView* headerView = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 160)]autorelease];
+    headerView.backgroundColor = [UIColor whiteColor];
+    headerView.layer.borderWidth = 0.5;
+    headerView.layer.borderColor = [[CommonImage colorWithHexString:@"e2e2e2"] CGColor];
+//    [self.view addSubview:headerView];
+    //头像
+    UIImageView* headerImage = [[UIImageView alloc] initWithFrame:CGRectMake(16, 20, 65, 65)];
+    headerImage.layer.cornerRadius = 65 / 2; //圆形
+    headerImage.clipsToBounds = YES;
+//    [CommonImage setPicImageQiniu:_dataArr[@"ct_img"] View:headerImage Type:2 Delegate:nil];
+    [CommonImage setImageFromServer:_dataArr[@"ct_img"] View:headerImage Type:2];
+
+    [headerView addSubview:headerImage];
+    [headerImage release];
+    //姓名
+    UILabel* nameLable = [Common createLabel:CGRectMake(16, headerImage.frame.size.height + headerImage.frame.origin.y, 65, 40) TextColor:@"3f3f3f" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentCenter labTitle:_dataArr[@"ct"]];
+    [headerView addSubview:nameLable];
+    //医院名称
+    CGFloat h =[Common heightForString:_dataArr[@"ct_title"]
+                                 Width:(kDeviceWidth-120)
+                                  Font:[UIFont systemFontOfSize:16]].height + 10;
+    UILabel* hospitolLable = [Common createLabel:CGRectMake(100, headerImage.frame.origin.y, kDeviceWidth-120, h) TextColor:@"333333" Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentLeft labTitle:_dataArr[@"ct_title"]];
+    hospitolLable.numberOfLines = 0;
+    [headerView addSubview:hospitolLable];
+    //职位 f
+    UILabel* positionLable = [Common createLabel:CGRectMake(100, hospitolLable.bottom, kDeviceWidth-120, 25) TextColor:@"666666" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:_dataArr[@"ct_level"]];
+    [headerView addSubview:positionLable];
+    //擅长
+    h =[Common heightForString:_dataArr[@"ct_desc"]
+                         Width:kDeviceWidth-120
+                          Font:[UIFont systemFontOfSize:15]].height + 10;
+    
+    UILabel* goodLable = [Common createLabel:CGRectMake(100, positionLable.bottom, kDeviceWidth-120, h) TextColor:@"a1a1a1" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:[NSString stringWithFormat:@"擅长：%@",_dataArr[@"ct_desc"]]];
+    goodLable.numberOfLines = 0;
+    [headerView addSubview:goodLable];
+    //icon_me1
+    UIImageView* smallImage = [[UIImageView alloc] initWithFrame:CGRectMake(100, goodLable.bottom+7, 15, 15)];
+    smallImage.image = [UIImage imageNamed:@"common.bundle/common/user-group_icon.png"];
+    [headerView addSubview:smallImage];
+    [smallImage release];
+    //订阅人数
+    UILabel* numLable = [Common createLabel:CGRectMake(125, goodLable.bottom, 110, 30) TextColor:@"666666" Font:[UIFont systemFontOfSize:13] textAlignment:NSTextAlignmentLeft labTitle:[NSString stringWithFormat:@"%@人成功订阅", _userDic[@"pcount"]]];
+    numLable.tag = 110;
+    [headerView addSubview:numLable];
+    if ([self.userDic[@"issub"] intValue] != 1) {
+        //订阅按钮
+        UIButton* btn = [UIButton buttonWithType:UIButtonTypeCustom];
+        btn.tag = 99;
+        btn.frame = CGRectMake(kDeviceWidth-90, goodLable.bottom, 70, 28);
+        if ([_userDic[@"issub"] intValue] != 1) {
+            [btn setTitle:NSLocalizedString(@"订阅", nil) forState:UIControlStateNormal];
+            btn.titleLabel.font = [UIFont systemFontOfSize:15];
+            btn.layer.cornerRadius = 4;
+            btn.clipsToBounds = YES;
+            UIImage* image =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:COLOR_FF5351]];
+            [btn setBackgroundImage:image forState:UIControlStateNormal];
+        } else {
+            [btn setTitle:NSLocalizedString(@"", nil) forState:UIControlStateNormal];
+            btn.titleLabel.font = [UIFont systemFontOfSize:15];
+            NSString* imageName = @"common.bundle/common/dingyue_icon.png";
+            UIImage* image = [[UIImage imageNamed:imageName] stretchableImageWithLeftCapWidth:5 topCapHeight:5];
+            [btn setBackgroundImage:image forState:UIControlStateNormal];
+        }
+        [btn addTarget:self action:@selector(subscribe:) forControlEvents:UIControlEventTouchUpInside];
+        [headerView addSubview:btn];
+    }
+    headerView.frame = [Common rectWithSize:headerView.frame width:0 height:numLable.bottom+10];
+    return headerView;
+}
+
+- (void)subscribe:(UIButton*)btn
+{
+    if (isImprove) {
+        ImproveSubscribeViewController* sub = [[ImproveSubscribeViewController alloc] init];
+        sub.userDic = _userDic;
+//        sub.addOne = 1;
+        sub.title = _dataArr[@"title"];
+        //            [sub.headerArr addObjectsFromArray:_dataArr];
+        sub.headerArr = _dataArr;
+        [self.navigationController pushViewController:sub animated:YES];
+        [sub release];
+        return;
+    }
+    NSLog(@"订阅");
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:_dataArr[@"id"] forKey:@"planId"];
+    [self.userDic setObject:@"1" forKey:@"issub"];
+    [dic setObject:g_nowUserInfo.userid forKey:@"userId"];
+    [dic setObject:@"1" forKey:@"actiontype"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:SUBSCRIBE_PLAN_BY_ID values:dic requestKey:SUBSCRIBE_PLAN_BY_ID delegate:self controller:self actiViewFlag:1 title:nil];
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    if ([loader.username isEqualToString:SUBSCRIBE_PLAN_BY_ID]) {
+        NSString* responseString = [loader responseString];
+        NSDictionary* dic = [responseString KXjSONValueObject];
+        NSLog(@"%@", dic);
+        if (![[dic objectForKey:@"state"] intValue]) {
+            ImproveSubscribeViewController* sub = [[ImproveSubscribeViewController alloc] init];
+            sub.userDic = _userDic;
+            sub.addOne = 1;
+            sub.title = _dataArr[@"title"];
+            sub.headerArr = _dataArr;
+            [self.navigationController pushViewController:sub animated:YES];
+            [sub release];
+            isImprove = YES;
+            //增加一人订阅
+            UILabel* lab = (UILabel*)[self.view viewWithTag:110];
+            lab.text = [NSString stringWithFormat:@"%d人成功订阅", [_userDic[@"pcount"] intValue] + 1];
+            //把订阅按钮变成已订阅
+            UIButton* btn = (UIButton*)[self.view viewWithTag:99];
+            [btn setTitle:NSLocalizedString(@"", nil) forState:UIControlStateNormal];
+            btn.titleLabel.font = [UIFont systemFontOfSize:15];
+            NSString* imageName = @"common.bundle/common/dingyue_icon.png";
+            UIImage* image = [[UIImage imageNamed:imageName] stretchableImageWithLeftCapWidth:5 topCapHeight:5];
+            [btn setBackgroundImage:image forState:UIControlStateNormal];
+        } else {
+            [Common TipDialog:[dic objectForKey:@"msg"]];
+        }
+    }
+}
+
+- (void)creatScrollView
+{
+    NSString* dataStr = _dataArr[@"information"];
+    CGFloat floats = [Common heightForString:dataStr Width:(kDeviceWidth-40) Font:[UIFont systemFontOfSize:15]].height + 30;
+    NSLog(@"%f", floats);
+    UIScrollView* scroll = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight)];
+    scroll.backgroundColor = [UIColor clearColor];
+    [self.view addSubview:scroll];
+    UIView * headerView = [self creatHeaderView];
+    [scroll addSubview:headerView];
+    
+    //白色边框
+    UIView* backView = [[UIView alloc] initWithFrame:CGRectMake(10, headerView.bottom+10, kDeviceWidth-20, 210 + floats+156*kDeviceWidth/320-156)];
+    backView.backgroundColor = [UIColor whiteColor];
+    backView.layer.borderWidth = 0.5;
+    backView.layer.borderColor = [[CommonImage colorWithHexString:@"e2e2e2"] CGColor];
+    backView.layer.cornerRadius = 4;
+    backView.layer.masksToBounds = YES;
+    [scroll addSubview:backView];
+    [backView release];
+
+    UILabel* nameLab = [Common createLabel:CGRectMake(10, 0, kDeviceWidth-20, 40) TextColor:@"333333" Font:[UIFont systemFontOfSize:18] textAlignment:NSTextAlignmentLeft labTitle:_dataArr[@"title"]];
+    [backView addSubview:nameLab];
+    //线
+    UIView* lineView = [[UIView alloc] initWithFrame:CGRectMake(0, 40, backView.frame.size.width, 1)];
+    lineView.backgroundColor = [CommonImage colorWithHexString:@"f4f4f4"];
+    [backView addSubview:lineView];
+    [lineView release];
+    // 图片
+    UIImageView* backImage = [[UIImageView alloc] initWithFrame:CGRectMake(10, 54, backView.frame.size.width-20, 156*kDeviceWidth/320)];
+//    [CommonImage setPicImageQiniu:_dataArr[@"img"] View:backImage Type:2 Delegate:nil];
+    [CommonImage setImageFromServer:_dataArr[@"img"] View:backImage Type:2];
+
+    [backView addSubview:backImage];
+    [backImage release];
+    //详情
+    UILabel* textLab = [Common createLabel:CGRectMake(10, backImage.frame.origin.y + backImage.frame.size.height, kDeviceWidth-40, floats) TextColor:@"676767" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:dataStr];
+    textLab.numberOfLines = 0;
+    [backView addSubview:textLab];
+
+    scroll.contentSize = CGSizeMake(0, backView.bottom+10);
+    [scroll release];
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+{
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

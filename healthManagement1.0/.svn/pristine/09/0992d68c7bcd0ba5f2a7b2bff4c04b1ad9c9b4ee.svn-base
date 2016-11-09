@@ -1,0 +1,274 @@
+//
+//  CommunityPickerView.m
+//  jiuhaohealth4.0
+//
+//  Created by jiuhao-yangshuo on 15-5-20.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "CommunityPickerView.h"
+#import <AssetsLibrary/AssetsLibrary.h>
+#import "MJPhotoBrowser.h"
+#import "CommunityPickerViewCell.h"
+#import "ImagePicker.h"
+
+static NSString * const itemCell = @"ItemCell";
+static NSString * const itemAddCell = @"ItemAddCell";
+
+@interface CommunityPickerView () <UICollectionViewDataSource,UICollectionViewDelegate,MJPhotoBrowserDelegate>
+
+@end
+
+@implementation CommunityPickerView
+{
+    PickerHeaderCollectionReusableView *m_headView;
+    UICollectionView *m_collectionView;
+}
+@synthesize maxCount,rowCount,dataArray;
+
+- (id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self)
+    {
+        dataArray = [[NSMutableArray alloc]init];
+        rowCount = 4;
+//        maxCount = 4;
+        [self createSubViews];
+        self.backgroundColor = [CommonImage colorWithHexString:@"eeeeee"];
+    }
+    return self;
+}
+
+-(void)dealloc
+{
+    [m_collectionView release];
+    [dataArray release];
+    [super dealloc];
+}
+
+-(void)createSubViews
+{
+    int  CELL_ROW = 4;
+    int  CELL_MARGIN = 15;
+    int  CELL_LINE_MARGIN = 15;
+    
+    CGFloat height = 30;
+    
+    CGFloat cellW = (kDeviceWidth- CELL_MARGIN * (CELL_ROW + 1)) / CELL_ROW;
+    UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
+    
+    layout.itemSize = CGSizeMake(cellW, cellW);// 定义cell的size
+    layout.minimumInteritemSpacing = CELL_MARGIN;// 定义左右cell的最小间距
+    layout.minimumLineSpacing = CELL_LINE_MARGIN;// 定义上下cell的最小间距
+    layout.headerReferenceSize = CGSizeMake(self.width, height);// 定义headview的size
+    layout.sectionInset = UIEdgeInsetsMake(5, 15, 5, 15);
+    
+    m_collectionView = [[UICollectionView alloc] initWithFrame:CGRectMake(0, 0, self.width, self.height) collectionViewLayout:layout];
+    m_collectionView.backgroundColor = [UIColor whiteColor];
+    [m_collectionView registerClass:[CommunityPickerViewCell class] forCellWithReuseIdentifier:itemCell];
+    [m_collectionView registerClass:[CommunityPickerAddViewCell class] forCellWithReuseIdentifier:itemAddCell];
+    [m_collectionView registerClass:[PickerHeaderCollectionReusableView class] forSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"HeaderView"];
+    m_collectionView.delegate = self;
+    m_collectionView.dataSource = self;
+    [self addSubview:m_collectionView];
+    [layout release];
+
+}
+
+#pragma mark <UICollectionViewDataSource>
+- (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView {
+    return 1;
+}
+
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section {
+    if (dataArray.count >= maxCount)
+    {
+        return dataArray.count;//不显示+
+    }
+    return dataArray.count+1;
+}
+
+- (UICollectionViewCell *) collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    
+    NSString *type = itemCell;
+    UICollectionViewCell *cell;
+    if (indexPath.row == dataArray.count) {
+        type = itemAddCell;
+        cell = (CommunityPickerAddViewCell*)[collectionView dequeueReusableCellWithReuseIdentifier:type forIndexPath:indexPath];
+    }
+    else {
+        cell = (CommunityPickerViewCell*)[collectionView dequeueReusableCellWithReuseIdentifier:type forIndexPath:indexPath];
+        UIImage *image = [dataArray objectAtIndex:indexPath.row];
+        [((CommunityPickerViewCell*)cell) setIconImage:image];
+    }
+    return cell;
+}
+
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.row == dataArray.count) {
+        ImagePicker *picker = [[ImagePicker alloc] initWithId:(CommonViewController *)[self.superview nextResponder]];
+        picker.selectHeadPhoto = NO;
+        picker.maxCount = maxCount - dataArray.count;
+        [picker setPickerViewBlock:^(id content) {
+            
+            if (![self decidePictureCountWithNewCount:content])
+            {
+                return;
+            }
+            if ([content isKindOfClass:[NSArray class]])
+            {
+                [self senPickerImgeGroupAsstes:content];
+            }
+            else
+            {
+                [self addImageToArrayWithImage:content];
+            }
+            [m_collectionView reloadData];
+            [picker release];
+        }];
+    }
+    else
+    {
+        [self showPictureAtIndex:indexPath.row];
+    }
+}
+
+-(UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath
+{
+    UICollectionReusableView *reusableView = nil;
+    if (kind == UICollectionElementKindSectionHeader) {
+        PickerHeaderCollectionReusableView *headView = [collectionView dequeueReusableSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"HeaderView" forIndexPath:indexPath];
+        headView.maxCount = maxCount;
+        headView.count = self.dataArray.count;
+        reusableView = headView;
+         m_headView = headView;
+    }else{
+        
+    }
+    return reusableView;
+}
+#pragma mark -event response
+- (void)routerEventWithName:(NSString *)eventName userInfo:(id)userInfo
+{
+    if (eventName == stringPicCellLongP) {
+//        [self showPicture];
+    }
+    else if (eventName == stringPicCellDel) {
+        NSIndexPath *index  = [m_collectionView indexPathForCell:userInfo];
+//        UIImageView *imageView = ((CommunityPickerViewCell *)userInfo).m_imageView;
+        [dataArray removeObjectAtIndex:index.row];
+//        [m_collectionView deleteItemsAtIndexPaths:@[index]];
+        [m_collectionView reloadData];
+         m_headView.count = dataArray.count;
+    }
+    else if (eventName == stringPicCellAdd) {
+
+    }
+}
+
+-(BOOL)decidePictureCountWithNewCount:(id)content
+{
+    int count = 0;
+    if ([content isKindOfClass:[NSArray class]])
+    {
+        count = (int)[(NSArray *)content count];
+    }
+    else
+    {
+        count = 1;
+    }
+    int newCountAll = (int)(count + dataArray.count);
+    if ([self showAlertWithCount:newCountAll])
+    {
+        return NO;
+    }
+    return YES;
+}
+
+- (void)senPickerImgeGroupAsstes:(NSArray *)assets
+{
+    for (ALAsset *asset in assets)
+    {
+        if ([asset isKindOfClass:[ALAsset class]]) {
+            CGImageRef ref = [[asset  defaultRepresentation]fullScreenImage];
+            UIImage *image = [UIImage imageWithCGImage:ref];
+            
+            if (image) {
+                [self addImageToArrayWithImage:image];
+            }
+        }
+    }
+}
+
+-(void)addImageToArrayWithImage:(UIImage *)image
+{
+    NSData *imageData = UIImageJPEGRepresentation(image, Define_picScale);
+    UIImage * m_selectImage = [UIImage imageWithData:imageData];
+    [dataArray addObject:m_selectImage];
+}
+
+- (void)showPictureAtIndex:(NSUInteger)currentPhotoIndex
+{
+    NSLog(@"%ld",(long)currentPhotoIndex);
+    // 1.封装图片数据
+    int imageCount= (int)dataArray.count;
+    NSMutableArray *photos = [[NSMutableArray alloc]init];
+    for (int i= 0;i<imageCount;i++)
+    {
+        NSIndexPath *indexpath = [NSIndexPath indexPathForItem:i inSection:0];
+        CommunityPickerViewCell *cell = (CommunityPickerViewCell*)[m_collectionView cellForItemAtIndexPath:indexpath];
+        
+//        NSMutableDictionary *photo = [[NSMutableDictionary alloc] init];
+//        UIView *imgeView = cell.m_imageView;
+//        [photo setObject:imgeView forKey:@"srcImageView"];
+//        [photos addObject:photo];
+//        [photo release];
+        MJPhoto *photo = [[MJPhoto alloc] init];
+//        photo.url = [NSURL URLWithString:imagePath]; // 图片路径
+        photo.srcView = cell.m_imageView; // 来源于哪个UIImageView
+        [photos addObject:photo];
+        [photo release];
+    }
+    // 2.显示相册
+    MJPhotoBrowser *browser = [[MJPhotoBrowser alloc] init];
+    browser.delegate = self;
+    browser.currentPhotoIndex = currentPhotoIndex; // 弹出相册时显示的第一张图片是？
+    browser.photos = photos; // 设置所有的图片
+    [browser show];
+    [browser release];
+    [photos release];
+}
+
+-(void)reloadCommunityPickerViewData
+{
+    if (m_collectionView)
+    {
+        NSInteger newCountAll =  dataArray.count;
+        if ([self showAlertWithCount:newCountAll])
+        {
+            if (dataArray.count)
+            {
+                [dataArray removeAllObjects];
+            }
+            return;
+        }
+        [m_collectionView reloadData];
+    }
+}
+
+//提示
+-(BOOL)showAlertWithCount:(NSInteger )count
+{
+    int newCountAll = (int)(count);
+    if (newCountAll > maxCount)
+    {
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"提醒" message:[NSString stringWithFormat:@"最多能选择%d张图片",(int)maxCount] delegate:self cancelButtonTitle:nil otherButtonTitles:@"好的", nil];
+        [alertView show];
+        return YES;
+    }
+    return NO;
+}
+
+@end

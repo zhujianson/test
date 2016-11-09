@@ -1,0 +1,778 @@
+//
+//  DinnerTimeViewController.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-9-10.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "DinnerTimeViewController.h"
+#import "PickerView.h"
+#import "InputDueDatePicker.h"
+#import "Mealtime.h"
+#import "WebViewController.h"
+
+@interface DinnerTimeViewController ()<UIScrollViewDelegate>
+{
+    NSArray * timeArr;
+    NSMutableDictionary * timeDic;
+    NSMutableArray * hoursArr;
+    UISegmentedControl *segmentedControl;
+    UIScrollView *m_scroll;
+//    NSMutableArray * timePeriodArr;//时间段
+//    NSMutableArray * holidayPeriodArr;//节假日时间段
+
+    NSArray * m_workingArr;//默认的工作日
+    NSMutableDictionary * m_workingDic;
+    NSMutableDictionary * m_holidayDic;
+    Mealtime * m_mealTime;
+    
+}
+@end
+
+@implementation DinnerTimeViewController
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        self.title = @"监测时段";
+        timeDic = [[NSMutableDictionary alloc]init];
+        hoursArr = [[NSMutableArray alloc]init];
+        m_workingDic = [[NSMutableDictionary alloc]init];
+        m_holidayDic = [[NSMutableDictionary alloc]init];
+        self.log_pageID = 306;
+
+    }
+    return self;
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    [self hiddenNavigationBarLine];
+
+}
+
+- (void)dealloc
+{
+    [timeArr release];
+    [m_workingArr release];
+//    [timePeriodArr release];
+//    [holidayPeriodArr release];
+    [m_holidayDic release];
+    [m_workingDic release];
+    [m_mealTime release];
+    
+    [super dealloc];
+    
+}
+
+- (void)instructions
+{
+    WebViewController *help = [[WebViewController alloc] init];
+    //    help.isUrl = YES;
+    help.m_url = HEALP_SERVER_BLOOD;
+    help.title = @"监测时段说明";
+    [self.navigationController pushViewController:help animated:YES];
+    [help release];
+
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    UIBarButtonItem *right = [[UIBarButtonItem alloc] initWithTitle:@"说明 " style:UIBarButtonItemStylePlain target:self action:@selector(instructions)];
+    self.navigationItem.rightBarButtonItem = right;
+    [right release];
+
+//    UIBarButtonItem *right = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"common.bundle/nav/m_help.png"] style:UIBarButtonItemStylePlain target:self action:@selector(instructions)];
+//    self.navigationItem.rightBarButtonItem = right;
+//    [right release];
+
+    timeArr = [@[@"凌晨",@"早餐前",@"早餐后",@"午餐前",@"午餐后",@"晚餐前",@"晚餐后",@"睡前"] retain];
+    m_workingArr = [@[@"00:00-05:00",@"05:00-07:00",@"07:00-10:00",@"10:00-12:00",@"12:00-15:00",@"15:00-18:00",@"18:00-21:00",@"21:00-00:00"] retain];
+    
+    m_mealTime = [[[Mealtime alloc]initWithBlock:^(NSArray* dic) {
+        
+        for (NSDictionary * d in dic) {
+            if ([d[@"type"] intValue]==1000) {
+                [m_workingDic addEntriesFromDictionary:d];
+            }else{
+                [m_holidayDic addEntriesFromDictionary:d];
+            }
+        }
+        [self createTime];
+
+    } withType:allMealtime withView:self.view] retain];
+    
+    
+//    [self getTime];
+    // Do any additional setup after loading the view.
+}
+
+- (void)getTime
+{
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GET_TIME_CONF values:dic requestKey:GET_TIME_CONF delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"加载中...", nil)];
+
+}
+
+- (void)createTime
+{
+    
+    UIView * whiteView = [[[UIView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, 0)]autorelease];
+    whiteView.backgroundColor = [CommonImage colorWithHexString:Color_fafafa];
+    [self.view addSubview:whiteView];
+    UIView * lineView;
+
+//    lineView = [[UIView alloc]initWithFrame:CGRectMake(0, whiteView.bottom-0.5, whiteView.width, 0.5)];
+//    lineView.backgroundColor = [CommonImage colorWithHexString:LINE_COLOR];
+//    [whiteView addSubview:lineView];
+//    [lineView release];
+    
+//    NSArray *segmentedArray = [NSArray arrayWithObjects:@"工作日方案",@"节假日方案",nil];
+    //初始化UISegmentedControl
+    segmentedControl = [[[UISegmentedControl alloc]init]autorelease];
+//    segmentedControl.frame = CGRectMake((kDeviceWidth-185)/2, 0, 185, 29);
+    segmentedControl.selectedSegmentIndex = 0;//设置默认选择项索引
+    segmentedControl.tintColor = [CommonImage colorWithHexString:VERSION_TEXT_COLOR];
+    segmentedControl.segmentedControlStyle = UISegmentedControlStylePlain;//设置样式
+    [segmentedControl addTarget:self action:@selector(segmented:) forControlEvents:UIControlEventValueChanged];
+    [whiteView addSubview:segmentedControl];
+    
+    UIScrollView*scrollView = [[[UIScrollView alloc]initWithFrame:CGRectMake(0, whiteView.bottom, kDeviceWidth, kDeviceHeight-whiteView.bottom)]autorelease];
+    scrollView.delegate = self;
+    scrollView.backgroundColor = [UIColor clearColor];
+    scrollView.showsVerticalScrollIndicator = NO;
+    [self.view addSubview:scrollView];
+    
+    m_scroll = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 20, kDeviceWidth, 45*8)];
+    m_scroll.backgroundColor = [UIColor clearColor];
+    m_scroll.pagingEnabled = YES;
+    m_scroll.delegate = self;
+    m_scroll.showsHorizontalScrollIndicator = NO;
+    [scrollView addSubview:m_scroll];
+    m_scroll.scrollEnabled = NO;
+    m_scroll.contentSize = CGSizeMake(kDeviceWidth*2, 0);
+    
+    UIView * backView = [[[UIView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, m_scroll.height)]autorelease];
+    backView.backgroundColor = [UIColor whiteColor];
+    backView.layer.borderWidth = 0.5;
+    backView.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+    [m_scroll addSubview:backView];
+
+    UILabel * textLab;
+    UIImageView * rightView;
+    for (int i = 0; i<timeArr.count; i++) {
+
+        textLab = [Common createLabel:CGRectMake(15, 45*i, 200, 45) TextColor:@"666666" Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentLeft labTitle:timeArr[i]];
+        [backView addSubview:textLab];
+        
+        rightView = [[[UIImageView alloc]initWithFrame:CGRectMake(kDeviceWidth-22,textLab.origin.y+33/2, 13/2, 21/2)]autorelease];
+        rightView.image = [UIImage imageNamed:@"common.bundle/common/right-arrow_pre.png"];
+        [backView addSubview:rightView];
+
+        lineView  = [[UIView alloc] initWithFrame:CGRectMake(15, textLab.bottom-0.25,kDeviceWidth-15, 0.5)];
+        lineView.backgroundColor =  [CommonImage colorWithHexString:LINE_COLOR];
+        [backView addSubview:lineView];
+        [lineView release];
+        
+        textLab = [Common createLabel:CGRectMake(0, 45*i, kDeviceWidth-35, 45) TextColor:COLOR_333333 Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentRight labTitle:m_workingDic[[self setDicWithArr:i]]];
+        textLab.tag = 100+i;
+        textLab.userInteractionEnabled = YES;
+        [backView addSubview:textLab];
+        UITapGestureRecognizer * tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(choosePicker:)];
+        [textLab addGestureRecognizer:tap];
+        [tap release];
+    }
+    
+    backView = [[[UIView alloc]initWithFrame:CGRectMake(kDeviceWidth, 0, kDeviceWidth, m_scroll.height)]autorelease];
+    backView.backgroundColor = [UIColor whiteColor];
+    backView.layer.borderWidth = 0.5;
+    backView.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+    [m_scroll addSubview:backView];
+    for (int i = 0; i<timeArr.count; i++) {
+        textLab = [Common createLabel:CGRectMake(15, 45*i, 200, 45) TextColor:@"666666" Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentLeft labTitle:timeArr[i]];
+        [backView addSubview:textLab];
+        rightView = [[[UIImageView alloc]initWithFrame:CGRectMake(kDeviceWidth-22,textLab.origin.y+33/2, 13/2, 21/2)]autorelease];
+        rightView.image = [UIImage imageNamed:@"common.bundle/common/right-arrow_pre.png"];
+        [backView addSubview:rightView];
+
+        lineView  = [[UIView alloc] initWithFrame:CGRectMake(15, textLab.bottom-0.25,kDeviceWidth-15, 0.5)];
+        lineView.backgroundColor =  [CommonImage colorWithHexString:LINE_COLOR];
+        [backView addSubview:lineView];
+        [lineView release];
+        
+        textLab = [Common createLabel:CGRectMake(0, 45*i, kDeviceWidth-35, 45) TextColor:COLOR_333333 Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentRight labTitle:m_holidayDic[[self setDicWithArr:i]]];
+        textLab.tag = 200+i;
+        textLab.userInteractionEnabled = YES;
+        [backView addSubview:textLab];
+
+        UITapGestureRecognizer * tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(choosePicker:)];
+        [textLab addGestureRecognizer:tap];
+        [tap release];
+
+    }
+
+    [self createSaveAndDelete:m_scroll.bottom :scrollView];
+}
+
+- (void)choosePicker:(UITapGestureRecognizer*)tap
+{
+    NSLog(@"%ld",(long)tap.view.tag);
+    __block UILabel * lab = (UILabel*)[self.view viewWithTag:tap.view.tag];
+
+    PickerView * period = [[PickerView alloc]init];
+    int x =(int)tap.view.tag/100;
+
+    NSArray * hourArr =@[@"00",@"01",@"02",@"03",@"04",@"05",@"06",@"07",@"08",@"09",@"10",@"11",@"12",@"13",@"14",@"15",@"16",@"17",@"18",@"19",@"20",@"21",@"22",@"23"];
+    NSArray * timeArr2 = @[@"00",@"15",@"30",@"45"];
+    NSMutableArray * arr = [[NSMutableArray alloc]initWithObjects:hourArr,timeArr2,hourArr,timeArr2, nil];
+    NSString * str = [lab.text stringByReplacingOccurrencesOfString:@":" withString:@"."];
+    str = [str stringByReplacingOccurrencesOfString:@"-" withString:@"."];
+    [period createPickViewWithArray:arr andWithSelectString:str setTitle:nil isShow:YES];
+    [period setPickerViewBlock:^(NSString *content) {
+        NSArray * conArr = [content componentsSeparatedByString:@"."];
+        NSArray * arr = @[[NSString stringWithFormat:@"%@:%@",conArr[0],conArr[1]],[NSString stringWithFormat:@"%@:%@",conArr[2],conArr[3]]];
+        content = [NSString stringWithFormat:@"%@-%@",arr[0],arr[1]];
+        if ([arr[0] isEqualToString:arr[1]]) {
+            content = [self setFirst:content end:content isLast:YES];
+        }
+        NSLog(@"%@",content);
+    
+        BOOL is_last = YES;
+
+        if (tap.view.tag == 100*x || tap.view.tag == x*100+m_workingArr.count-1) {
+            is_last = NO;
+            
+            if (tap.view.tag == 100*x) {
+                //第一个时间段
+                UILabel * lab2 = (UILabel*)[self.view viewWithTag:tap.view.tag+m_workingArr.count-1];
+                if (![self isInTime:content end:lab2.text Time:[content componentsSeparatedByString:@"-"][0]]) {
+                    [Common TipDialog2:@"时间段不符合正常规律哦！"];
+                    return;
+                }
+            }
+            if (tap.view.tag == x*100+m_workingArr.count-1) {
+                //最后一个时间段
+                UILabel * lab2 = (UILabel*)[self.view viewWithTag:x*100];
+                if (![self isInTime:lab2.text end:content Time:[content componentsSeparatedByString:@"-"][1]]) {
+                    [Common TipDialog2:@"时间段不符合正常规律哦！"];
+                    return;
+                }
+
+            }
+        }
+        if (![self setMoreTime:content isLast:is_last]) {
+            [Common TipDialog2:@"结束时间不能小于开始时间！"];
+        }
+        else{
+        lab.text = content;
+        int temp;
+        NSString * str = content,*str1 = content;
+        NSString * labStr;
+        temp = (int)tap.view.tag-100*x;
+        //上到下
+        for (int i = temp+1; i<m_workingArr.count; i++) {
+            lab = (UILabel*)[self.view viewWithTag:i+100*x];
+            labStr = lab.text;
+            lab.text = [self setFirst:str end:labStr isLast:i==m_workingArr.count-1?NO:YES];
+            
+            lab.text = [lab.text stringByReplacingOccurrencesOfString:@"24" withString:@"00"];
+            lab.text = [lab.text stringByReplacingOccurrencesOfString:@"25" withString:@"01"];
+            str = lab.text;
+        }
+        //下到上
+        for (int i = temp-1; i>-1; i--) {
+            if ([[str1 componentsSeparatedByString:@"-"][0] isEqualToString:@"00:00"]) {
+                str1 = [NSString stringWithFormat:@"24:00-%@",[str1 componentsSeparatedByString:@"-"][1]];
+            }
+            lab = (UILabel*)[self.view viewWithTag:i+100*x];
+            labStr = lab.text;
+            lab.text = [self setend:str1 end:labStr isFirst:i==0?NO:YES];
+            lab.text = [lab.text stringByReplacingOccurrencesOfString:@"24" withString:@"00"];
+            lab.text = [lab.text stringByReplacingOccurrencesOfString:@"25" withString:@"01"];
+
+            str1 = lab.text;
+        }
+
+            if (temp == 0) {
+                lab = (UILabel*)[self.view viewWithTag:m_workingArr.count-1+100*x];
+                labStr = lab.text;
+                lab.text = [self setend:content end:labStr isFirst:NO];
+            }
+            if (temp == m_workingArr.count-1) {
+                lab = (UILabel*)[self.view viewWithTag:100*x];
+                labStr = lab.text;
+                lab.text = [self setFirst:content end:labStr isLast:NO];
+            }
+            lab.text = [lab.text stringByReplacingOccurrencesOfString:@"24" withString:@"00"];
+            lab.text = [lab.text stringByReplacingOccurrencesOfString:@"25" withString:@"01"];
+
+//            UILabel* lab2;
+//            for (int i = 0; i < temp+2; i++) {
+//                
+//                if (i == 0) {
+//                    lab2 = (UILabel*)[self.view viewWithTag:m_workingArr.count-2+100*x];
+//                    lab = (UILabel*)[self.view viewWithTag:m_workingArr.count-1+100*x];
+//                }else{
+//                    if (i-1 ==  0) {
+//                        lab2 = (UILabel*)[self.view viewWithTag:m_workingArr.count-1+100*x];
+//                    }else{
+//                    lab2 = (UILabel*)[self.view viewWithTag:i-2+100*x];
+//                    }
+//                    lab = (UILabel*)[self.view viewWithTag:i-1+100*x];
+//                }
+//                labStr = lab.text;
+//                lab.text = [self setFirst:content end:labStr isLast:NO];
+//
+//            }
+
+        }
+    }];
+    
+}
+
+- (BOOL)setMoreTime:(NSString*)time isLast:(BOOL)is_last
+{
+    if (!is_last) {
+        return YES;
+    }
+    NSArray* array = [time componentsSeparatedByString:@"-"];
+    NSString * begin = array[0];
+    NSString * end = array[1];
+    NSArray* array2 = [begin componentsSeparatedByString:@":"];
+    NSArray* array3 = [end componentsSeparatedByString:@":"];
+    int A1 = [array2[0] intValue],A2 = [array2[1] intValue],B1 = [array3[0] intValue],B2 = [array3[1] intValue];
+    
+    if (B1>A1) {
+        return YES;
+    }else if (B1<A1) {
+        return NO;
+    }else{
+        if (A1 + A2 <= B1 +B2) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
+//从上往下排序
+- (NSString*)setFirst:(NSString*)first end:(NSString*)end isLast:(BOOL)is_last
+{
+
+    NSString * str;
+    NSArray* array = [first componentsSeparatedByString:@"-"];
+    NSArray* array1 = [end componentsSeparatedByString:@"-"];
+
+    if ([[array[1] componentsSeparatedByString:@":"][0] intValue] == 0) {
+        str = [NSString stringWithFormat:@"%@-%@",[NSString stringWithFormat:@"24:%@",[array[1] componentsSeparatedByString:@":"][1]],array1[1]];
+    }else{
+        str = [NSString stringWithFormat:@"%@-%@",array[1],array1[1]];
+    }
+    
+    if (is_last) {
+        if (![self setMoreTime:str isLast:YES]) {
+            str = [NSString stringWithFormat:@"%@-%@",array[1],array[1]];
+        }
+    }
+    
+    NSArray* array2 = [str componentsSeparatedByString:@"-"];
+
+    if ([array2[0] isEqualToString:array2[1]]) {
+        str = [self firstTime:array2[0] end:array2[1]];
+    }
+
+    return str;
+}
+
+- (NSString*)firstTime:(NSString*)first end:(NSString*)end
+{
+    NSString * str = nil;
+    NSArray* array = [end componentsSeparatedByString:@":"];
+    NSString * temp = [NSString stringWithFormat:@"%d",[array[1] intValue] + 15],*num = [NSString stringWithFormat:@"%d",[array[0] intValue]];
+    
+    if ([temp intValue] == 60) {
+        num = [NSString stringWithFormat:@"%d",[array[0] intValue] +1];
+        temp = 0;
+    }
+    if ([temp intValue] == 0 || [temp intValue] == 24) {
+        temp = @"00";
+    }
+    if ([num intValue] < 10) {
+        num = [NSString stringWithFormat:@"0%@",num];
+    }
+    str = [NSString stringWithFormat:@"%@-%@",first,[NSString stringWithFormat:@"%@:%@",num,temp]];
+    return str;
+}
+
+//从下往上排序
+- (NSString*)setend:(NSString*)end end:(NSString*)first isFirst:(BOOL)is_first
+{
+    NSString * str = nil;
+    NSArray* array = [first componentsSeparatedByString:@"-"];
+    NSArray* array1 = [end componentsSeparatedByString:@"-"];
+    
+    str = [NSString stringWithFormat:@"%@-%@",array[0],array1[0]];
+    if (is_first) {
+        if (![self setMoreTime:str isLast:YES]) {
+            str = [NSString stringWithFormat:@"%@-%@",array1[0],array1[0]];
+        }
+    }
+    NSArray* array3 = [str componentsSeparatedByString:@"-"];
+    if ([array3[0] isEqualToString:array3[1]]) {
+        str = [self endTime:array3[0] end:array3[1]];
+    }
+    
+    return str;
+}
+
+- (NSString*)endTime:(NSString*)first end:(NSString*)end
+{
+    NSString * str = nil;
+    NSArray* array = [first componentsSeparatedByString:@":"];
+    NSString * temp = [NSString stringWithFormat:@"%d",[array[1] intValue] - 15],*num = [NSString stringWithFormat:@"%d",[array[0] intValue]];
+    
+    if ([temp intValue] == -15) {
+        num = [NSString stringWithFormat:@"%d",[array[0] intValue] -1];
+        temp = @"45";
+    }
+    if ([temp intValue] == 0 || [temp intValue] == 24) {
+        temp = @"00";
+    }
+    if ([num intValue] < 10) {
+        num = [NSString stringWithFormat:@"0%@",num];
+    }
+    str = [NSString stringWithFormat:@"%@-%@",[NSString stringWithFormat:@"%@:%@",num,temp],end];
+    return str;
+}
+
+- (BOOL)isInTime:(NSString*)first end:(NSString*)end Time:(NSString*)time
+{
+    NSArray* array = [first componentsSeparatedByString:@"-"];
+    NSArray* array1 = [end componentsSeparatedByString:@"-"];
+
+    CGFloat f1 = [[array[1] stringByReplacingOccurrencesOfString:@":" withString:@"."] floatValue];
+    CGFloat f2 = [[array1[0] stringByReplacingOccurrencesOfString:@":" withString:@"."] floatValue];
+    CGFloat f = [[time stringByReplacingOccurrencesOfString:@":" withString:@"."] floatValue];
+    if (f >= f1 && f < f2) {
+        return NO;
+    }
+    
+    return YES;
+}
+
+
+- (void)segmented:(UISegmentedControl*)segmented
+{
+    NSLog(@"%ld",(long)segmented.selectedSegmentIndex);
+    [UIView animateWithDuration:0.30 animations:^{
+        [m_scroll setContentOffset:CGPointMake(segmented.selectedSegmentIndex*kDeviceWidth, 0)];
+    }];
+//    [self scrollViewWillBeginDragging:nil];
+}
+
+- (void)createSaveAndDelete:(CGFloat)y :(UIScrollView*)object
+{
+    UIImage* backImage =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:@"ff5232"]];
+    UIImage* whiteImage =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:@"ffffff"]];
+    
+    UIButton * determine = nil;
+    for (int i =0; i<2; i++) {
+        determine = [UIButton buttonWithType:UIButtonTypeCustom];
+        determine.frame = CGRectMake(15+((kDeviceWidth-45)/2+15)*i, y+20, (kDeviceWidth-45)/2, 45);
+        if (i) {
+            [determine addTarget:self action:@selector(savebtn) forControlEvents:UIControlEventTouchUpInside];
+            [determine setTitle:@"保存" forState:UIControlStateNormal];
+            [determine setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+            [determine setBackgroundImage:backImage forState:UIControlStateNormal];
+        }else{
+            [determine addTarget:self action:@selector(delete) forControlEvents:UIControlEventTouchUpInside];
+            [determine setTitle:@"重置" forState:UIControlStateNormal];
+            [determine setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+            [determine setBackgroundImage:whiteImage forState:UIControlStateNormal];
+            determine.layer.borderWidth = 0.5;
+            determine.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+        }
+        determine.layer.cornerRadius = 4;
+        determine.clipsToBounds = YES;
+        [object addSubview:determine];
+    }
+    object.contentSize = CGSizeMake(0, determine.bottom+20);
+
+}
+
+- (void)savebtn{
+    UILabel * lab;
+    for (int i = 0; i<m_workingArr.count; i++) {
+        lab = (UILabel*)[self.view viewWithTag:i+100];
+        [m_workingDic setObject:lab.text forKey:[self setDicWithArr:i]];
+        lab = (UILabel*)[self.view viewWithTag:i+200];
+        [m_holidayDic setObject:lab.text forKey:[self setDicWithArr:i]];
+    }
+
+    
+    BOOL is_Time = NO;
+    NSString *str = nil,*str2;
+    NSArray* array,*array2;
+
+    NSLog(@"%@",m_workingDic);
+    
+    CGFloat f1=0,f2=0,f3,f4;
+    
+    
+    for (int i = 0; i<m_workingArr.count; i++) {
+        
+        
+        array = [m_workingDic[[self setDicWithArr:i]] componentsSeparatedByString:@"-"];
+        
+        if (i==m_workingArr.count-1) {
+        array2 = [m_workingDic[[self setDicWithArr:0]] componentsSeparatedByString:@"-"];
+        }else{
+        array2 = [m_workingDic[[self setDicWithArr:i+1]] componentsSeparatedByString:@"-"];
+        }
+        f3 = [[array[0] stringByReplacingOccurrencesOfString:@":" withString:@"."] floatValue];
+        f4 = [[array[1] stringByReplacingOccurrencesOfString:@":" withString:@"."] floatValue];
+        if (f4<f3) {
+            f4+=24;
+        }
+        f1 = f4-f3+f1;
+        
+        
+        str =[array[1] stringByReplacingOccurrencesOfString:@" " withString:@""];
+        str2 =[array2[0] stringByReplacingOccurrencesOfString:@" " withString:@""];
+
+        if (![str isEqualToString:str2]) {
+            is_Time = YES;
+            str = @"工作日";
+            break;
+        }
+        
+        array = [m_holidayDic[[self setDicWithArr:i]] componentsSeparatedByString:@"-"];
+        
+        if (i==m_workingArr.count-1) {
+            array2 = [m_holidayDic[[self setDicWithArr:0]] componentsSeparatedByString:@"-"];
+        }else{
+            array2 = [m_holidayDic[[self setDicWithArr:i+1]] componentsSeparatedByString:@"-"];
+        }
+        str =[array[1] stringByReplacingOccurrencesOfString:@" " withString:@""];
+        str2 =[array2[0] stringByReplacingOccurrencesOfString:@" " withString:@""];
+        
+        if (![str isEqualToString:str2]) {
+            is_Time = YES;
+            str = @"节假日";
+            break;
+        }
+
+        f3 = [[array[0] stringByReplacingOccurrencesOfString:@":" withString:@"."] floatValue];
+        f4 = [[array[1] stringByReplacingOccurrencesOfString:@":" withString:@"."] floatValue];
+        if (f4<f3) {
+            f4+=24;
+        }
+        f2 = f4-f3+f2;
+
+    }
+    
+    NSLog(@"%.2f--%f.2",f1,f2);
+    if (f1 != 24 ) {
+        [Common TipDialog2:[NSString stringWithFormat:@"工作日选择时间段错误，请重新选择!"]];
+        return;
+    }
+    if (f2 != 24) {
+        [Common TipDialog2:[NSString stringWithFormat:@"节假日选择时间段错误，请重新选择!"]];
+        return;
+    }
+    
+    if (is_Time) {
+        [Common TipDialog2:[NSString stringWithFormat:@"%@时间段之间不能有间隔!",str]];
+        return;
+    }
+    
+    
+    NSMutableDictionary * dic = [NSMutableDictionary dictionary];
+    [dic setObject:m_workingDic forKey:@"work_day"];
+    [dic setObject:m_holidayDic forKey:@"rest_day"];
+    
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:UPDATE_TIME_CONF values:dic requestKey:UPDATE_TIME_CONF delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"加载中...", nil)];
+
+}
+
+- (void)delete
+{
+    int num;
+//    if (!segmentedControl.selectedSegmentIndex) {
+        num = 100;
+        for (int i=0; i<m_workingArr.count; i++) {
+            [m_workingDic setObject:m_workingArr[i] forKey:[self setDicWithArr:i]];
+        }
+//    }else{
+//        num = 200;
+//        for (int i=0; i< m_workingArr.count; i++) {
+//        [m_holidayDic setObject:m_workingArr[i] forKey:[self setDicWithArr:i]];
+//        }
+//    }
+    UILabel * lab;
+    for (int i = num; i<num+m_workingArr.count; i++) {
+        lab = (UILabel*)[self.view viewWithTag:i];
+        lab.text = m_workingArr[i-num];
+    }
+    
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+{
+    if (scrollView == m_scroll) {
+        segmentedControl.selectedSegmentIndex = (int)m_scroll.contentOffset.x/kDeviceWidth;
+    }
+}
+
+/**
+ *  获取进餐时段
+ */
+- (void)beginLoading
+{
+//    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+//    [dic setObject:g_nowUserInfo.userid forKey:@"userid"];
+//    [[CommonHttpRequest defaultInstance] sendNewPostRequest:Get_DINNERTIME_List_Count values:dic requestKey:Get_DINNERTIME_List_Count delegate:self controller:self actiViewFlag:1 title:nil];
+}
+
+//- (void)didFinishSuccess:(ASIHTTPRequest *)loader
+//{
+//    NSString *responseString = [loader responseString];
+//    NSDictionary *dic = [responseString KXjSONValueObject];
+//    if (![[dic[@"head"] objectForKey:@"state"] intValue])
+//    {
+//        NSLog(@"%@",dic);
+//        if([loader.username isEqualToString:Get_DINNERTIME_List_Count]){
+//            timeDic = dic[@"rs"];
+////            [self creatTable];
+//        }else if ([loader.username isEqualToString:ADDEARIME_List_Count] | [loader.username isEqualToString:UPDATEEATIME_List_Count] ) {
+//            MBProgressHUD *progress_ = [[MBProgressHUD alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, self.view.frame.size.height)];
+//            progress_.labelText = @"修改成功";
+//            progress_.mode = MBProgressHUDModeText;
+//            progress_.userInteractionEnabled = NO;
+//            [[[UIApplication sharedApplication].windows lastObject] addSubview:progress_];
+//            [progress_ show:YES];
+//            [progress_ showAnimated:YES whileExecutingBlock:^{
+//                sleep(1);
+//            } completionBlock:^{
+//                [progress_ release];
+//                [progress_ removeFromSuperview];
+//            }];
+//        }
+//    }
+//    else {
+//        [Common TipDialog:[dic[@"head"] objectForKey:@"msg"]];
+//    }
+//}
+
+- (void)didFinishFail:(ASIHTTPRequest*)loader
+{
+    [Common TipDialog:NSLocalizedString(@"网络异常", nil)];
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dict = [responseString KXjSONValueObject];
+    NSDictionary * dic = dict[@"head"];
+    
+    if ([[dic objectForKey:@"state"] intValue] != 0) {
+        [Common TipDialog:[dic objectForKey:@"msg"]];
+    }
+    else {
+        
+        if([loader.username isEqualToString:GET_TIME_CONF]){
+            for (NSDictionary * d in dict[@"body"][@"result_set"]) {
+                if ([d[@"type"] intValue]==1000) {
+                    [m_workingDic addEntriesFromDictionary:d];
+                }else{
+                    [m_holidayDic addEntriesFromDictionary:d];
+                }
+            }
+            [self createTime];
+            
+        }else if([loader.username isEqualToString:UPDATE_TIME_CONF]){
+//            [m_mealTime retain];
+            [m_mealTime writerMealtime:[NSMutableArray arrayWithArray:@[m_workingDic,m_holidayDic]]];
+            
+            MBProgressHUD *progress_ = [[MBProgressHUD alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, self.view.frame.size.height)];
+            progress_.labelText = @"修改成功";
+            progress_.mode = MBProgressHUDModeText;
+            progress_.userInteractionEnabled = NO;
+            [[[UIApplication sharedApplication].windows lastObject] addSubview:progress_];
+            [progress_ show:YES];
+            [progress_ showAnimated:YES whileExecutingBlock:^{
+                sleep(1);
+            } completionBlock:^{
+                [progress_ release];
+                [progress_ removeFromSuperview];
+            }];
+
+            [self.navigationController popViewControllerAnimated:YES];
+        }
+    }
+}
+
+- (NSString*)setDicWithArr:(int)s
+{
+    NSString* str = nil;
+    switch (s) {
+        case 0:
+            str = @"one";
+            break;
+        case 1:
+            str = @"two";
+
+            break;
+        case 2:
+            str = @"three";
+
+            break;
+        case 3:
+            str = @"four";
+
+            break;
+        case 4:
+            str = @"five";
+
+            break;
+        case 5:
+            str = @"six";
+
+            break;
+        case 6:
+            str = @"seven";
+
+            break;
+        case 7:
+            str = @"eight";
+
+            break;
+
+        default:
+            break;
+    }
+    return str;
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+{
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

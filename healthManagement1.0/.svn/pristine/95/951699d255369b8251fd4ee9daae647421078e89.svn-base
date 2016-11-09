@@ -1,0 +1,117 @@
+//
+//  HomeIndexCollectionViewCell.m
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 16/1/18.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "HomeIndexCollectionViewCell.h"
+
+@implementation HomeIndexCollectionViewCell
+{
+    UIView *m_backView;
+    UIImageView *m_imageView;
+    UIButton *m_butDel;
+    UILabel *m_labTitle;
+}
+- (id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        
+        m_backView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, frame.size.width, frame.size.height)];
+        m_backView.backgroundColor = [UIColor whiteColor];
+        [self addSubview:m_backView];
+
+        m_imageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 40, 40)];
+        m_imageView.backgroundColor = [UIColor clearColor];
+        m_imageView.contentMode = UIViewContentModeScaleAspectFill;
+        m_imageView.clipsToBounds = YES;
+        [m_backView addSubview:m_imageView];
+        m_imageView.centerX = m_backView.centerX;
+        m_imageView.centerY = m_backView.centerY-10;
+        
+        m_labTitle = [Common createLabel];
+        m_labTitle.frame = CGRectMake(0, m_imageView.bottom+5, m_backView.width, 30);
+        m_labTitle.font = [UIFont systemFontOfSize:15];
+        m_labTitle.textColor = [CommonImage colorWithHexString:@"666666"];
+        m_labTitle.textAlignment = NSTextAlignmentCenter;
+        [m_backView addSubview:m_labTitle];
+        
+//        m_butDel = [UIButton buttonWithType:UIButtonTypeCustom];
+//        UIImage *deleteImage = [UIImage imageNamed:@"common.bundle/diary/dairy_content_icon_delete.png"];
+//        m_butDel.frame = CGRectMake(m_imageView.right-deleteImage.size.width, 0, deleteImage.size.width, deleteImage.size.height);
+//        [m_butDel addTarget:self action:@selector(butEventDel) forControlEvents:UIControlEventTouchUpInside];
+//        [m_butDel setImage:deleteImage forState:UIControlStateNormal];
+//        [m_backView addSubview:m_butDel];
+        //        m_butDel.center = CGPointMake(m_imageView.right, 0);
+    }
+    return self;
+}
+
+-(void)setM_infoDict:(NSDictionary *)m_infoDict
+{
+    m_labTitle.text = m_infoDict[@"iconName"];
+    [CommonImage setImageFromServer:m_infoDict[@"imgUrl"] View:m_imageView Type:2];
+}
+
+- (void)butEventDel
+{
+//    [self routerEventWithName:stringPicCellDel userInfo:self];
+}
+@end
+
+
+@implementation HomeIndexCollectionReusableView
+@synthesize m_footerLabel;
+
+- (id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        m_footerLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth,40)];
+        m_footerLabel.text = @"点击进入,长按拖放顺序";
+        m_footerLabel.backgroundColor = [CommonImage colorWithHexString:VERSION_BACKGROUD_COLOR2];;
+        m_footerLabel.textColor = [CommonImage colorWithHexString:@"999999"];
+        m_footerLabel.textAlignment = NSTextAlignmentCenter;
+        m_footerLabel.font = [UIFont systemFontOfSize:M_FRONT_FOURTEEN];
+        [self addSubview:m_footerLabel];
+    }
+    return self;
+}
+
+-(void)showText:(BOOL)show
+{
+    if (show)
+    {
+        m_footerLabel.text = @"点击进入,长按拖放顺序";
+        m_footerLabel.frameHeight = 40;
+    }
+    else
+    {
+        m_footerLabel.text = @"";
+        m_footerLabel.frameHeight = 7;
+    }
+}
+
+@end
+
+
+@implementation HomeIndexCollectionAddViewCell
+
+- (id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self)
+    {
+        
+       UILabel*lastTipLabel = [Common createLabel:CGRectMake(0, 0, frame.size.width, frame.size.height) TextColor:@"999999" Font:[UIFont systemFontOfSize:14] textAlignment:NSTextAlignmentCenter labTitle:@"以上服务\n会出现在首页"];
+        lastTipLabel.backgroundColor = [UIColor whiteColor];
+        lastTipLabel.numberOfLines = 0;
+        [self addSubview:lastTipLabel];
+    }
+    return self;
+}
+
+@end

@@ -1,0 +1,110 @@
+//
+//  ThinPlanViewCell.m
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 16/6/3.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "ThinPlanViewCell.h"
+
+@interface ThinPlanViewCell()
+
+@property (nonatomic,strong) UIView *m_showContentView;
+@property (nonatomic,strong) UILabel *m_nameLabel;
+@property (nonatomic,strong) UIImageView *m_picImage;
+@property (nonatomic,strong) UIImageView *m_iconImage;
+@end
+
+
+@implementation ThinPlanViewCell
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self)
+    {
+         [self createContentView];
+    }
+    return self;
+}
+
+-(void)setInfoDict:(NSDictionary *)infoDict
+{
+    _infoDict = infoDict;
+    _m_nameLabel.text = infoDict[@"title"];
+    [CommonImage setBackImageFromServer:infoDict[@"url"] View:_m_picImage Type:2];
+    [CommonImage setBackImageFromServer:infoDict[@"icon"] View:_m_iconImage Type:2];
+    
+     _m_picImage.backgroundColor = [UIColor redColor];
+}
+
+-(void)createContentView
+{
+    self.m_showContentView.top = 0;
+    [_m_showContentView addSubview: self.m_picImage];
+    [_m_showContentView addSubview: self.m_nameLabel];
+    [_m_showContentView addSubview: self.m_iconImage];
+    
+    self.m_nameLabel.top = _m_picImage.bottom;
+    _m_iconImage.centerY = _m_nameLabel.centerY;
+    _m_nameLabel.left = _m_iconImage.right +10;
+}
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    // Initialization code
+}
+
+#pragma mark - Set-getUi
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+-(UIView *)m_showContentView
+{
+    if (_m_showContentView) {
+        return _m_showContentView;
+    }
+    _m_showContentView = [[UIView alloc] initWithFrame:CGRectMake(15, 0, kDeviceWidth-15.0*2,kThinPlanViewCellH - kThinPlanViewCellSpaceH)];
+    _m_showContentView.layer.cornerRadius = 4.0;
+    _m_showContentView.layer.masksToBounds = YES;
+    _m_showContentView.layer.borderWidth = 0.5;
+    _m_showContentView.backgroundColor = [CommonImage colorWithHexString:@"fafafa"];
+    _m_showContentView.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+    [self.contentView addSubview:self.m_showContentView];
+    return _m_showContentView;
+}
+
+-(UIImageView *)m_iconImage
+{
+    if (_m_iconImage) {
+        return _m_iconImage;
+    }
+    _m_iconImage = [[UIImageView alloc] initWithFrame:CGRectMake(10, 0, 20, 20)];
+    _m_iconImage.layer.cornerRadius = _m_iconImage.width/2.0;
+    _m_iconImage.layer.masksToBounds = YES;
+    return _m_iconImage;
+}
+
+-(UIImageView *)m_picImage
+{
+    if (_m_picImage) {
+        return _m_picImage;
+    }
+    _m_picImage = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth-15.0*2,150.0)];
+    return _m_picImage;
+}
+
+-(UILabel *)m_nameLabel
+{
+    if (_m_nameLabel) {
+        return _m_nameLabel;
+    }
+    _m_nameLabel = [Common createLabel:CGRectMake(15, 0, 200, 40) TextColor:@"333333" Font:[UIFont systemFontOfSize:16.0] textAlignment:NSTextAlignmentLeft labTitle:@"享瘦计划"];
+    return _m_nameLabel;
+}
+
+@end

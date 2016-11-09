@@ -1,0 +1,23 @@
+//
+//  SelectPostView.h
+//  jiuhaohealth4.0
+//
+//  Created by jiuhao-yangshuo on 15-4-20.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+typedef void (^SelectPostViewBlock)(id selectContent);
+
+@interface SelectPostView : UIView
+
+@property(nonatomic,retain) UIView* m_view;
+
+-(void)setSelectPostViewBlock:(SelectPostViewBlock )handler andWithSelectConent:(NSString *)content;
+
+-(void)removeView;;
+
++(UIImage*)createImageWithFillColor:(UIColor*)fillColor andWithStrokeColor:(UIColor*)strokeColor withWeigt:(float)weight andWithHeight:(float)height andWithStrokeWeight:(float)strokeWeight;
+
+@end

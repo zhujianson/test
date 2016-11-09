@@ -1,0 +1,387 @@
+//
+//  ScanningViewController.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-10-10.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "ScanningViewController.h"
+#import "ActivateSuccessViewController.h"
+#import "ZBarReaderViewController.h"
+
+#import "InvitationDoctorViewController.h"
+
+#define WIDTH (kDeviceWidth-(250*kDeviceWidth/375))/2
+
+@interface ScanningViewController ()
+{
+    BOOL _isScanning;
+}
+@end
+
+@implementation ScanningViewController
+{
+    NSString * develoStr;
+}
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        self.title = @"扫一扫";
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    [_line release];
+    readerView.readerDelegate = nil;
+    [readerView release];
+    [super dealloc];
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    if (timer) {
+        [timer setFireDate:[NSDate date]];
+        _isScanning = NO;
+        //    [_session startRunning];
+        [readerView start];
+    }
+}
+
+- (void)viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
+//    if (!readerView) {
+//    [self createView];
+//    }
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.view.backgroundColor = [UIColor colorWithWhite:0 alpha:1];
+    [self showLoadingActiview];
+
+    if (![CommonImage isMedia]) {
+        [Common TipDialog2:@"请在iphone的“设置－隐私－相机”选项中，允许康迅360访问你的相机。"];
+    }else{
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void) {
+            
+            readerView = [[ZBarReaderView alloc]init];
+            dispatch_async( dispatch_get_main_queue(), ^(void){
+                @try {
+                    [self createView];
+                }
+                @catch (NSException *exception) {
+                }
+            });
+        });
+    timer = [NSTimer scheduledTimerWithTimeInterval:0.01 target:self selector:@selector(animation1) userInfo:nil repeats:YES];
+    }
+}
+
+- (void)createView
+{
+    readerView.frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
+    readerView.readerDelegate = self;
+    //关闭闪光灯
+    readerView.torchMode = 0;
+    //关闭自动适配框
+    readerView.tracksSymbols = YES;
+    [self.view addSubview:readerView];
+    
+    UIImage * iamge = [UIImage imageNamed:@"common.bundle/personnal/device/my-device_scan-code.png"];
+    UIImageView * imageView = [[UIImageView alloc]initWithFrame:CGRectMake(0,0,kDeviceWidth,iamge.size.height/375*kDeviceWidth)];
+    imageView.tag = 908;
+    imageView.image = iamge;
+    [readerView addSubview:imageView];
+    [imageView release];
+    
+    UIView * alpView = [[UIView alloc]initWithFrame:CGRectMake(0, imageView.bottom, kDeviceWidth, kDeviceHeight-imageView.bottom+10)];
+    alpView.backgroundColor = [UIColor blackColor];
+    alpView.alpha = 0.6f;
+    [self.view addSubview:alpView];
+    [alpView release];
+    NSLog(@"444");
+    
+    [readerView start];
+
+    _isScanning = NO;
+    upOrdown = NO;
+    num =0;
+    _line = [[UIImageView alloc] initWithFrame:CGRectMake(WIDTH, 90*kDeviceWidth/375, 250*kDeviceWidth/375, 2)];
+    _line.image = [UIImage imageNamed:@"common.bundle/personnal/device/line.png"];
+    [self.view addSubview:_line];
+    //    [self beginAnimation];
+    
+    UILabel * labIntroudction= [[UILabel alloc] initWithFrame:CGRectMake(0, imageView.bottom-40, kDeviceWidth, 30)];
+    labIntroudction.backgroundColor = [UIColor clearColor];
+    labIntroudction.textColor=[UIColor whiteColor];
+    labIntroudction.textAlignment = NSTextAlignmentCenter;
+    switch (self.sao_type) {
+        case typeSaoDevice:
+            labIntroudction.text = @"将设备背面的二维码放入扫描框内";
+            break;
+        case typeSaoDoctor:
+            labIntroudction.text = @"将医生的二维码放入扫描框内";
+            break;
+        case typeSaoBuddy:
+            labIntroudction.text = @"将二维码放入扫描框内";
+            break;
+        case typeSaoIdentity:
+            labIntroudction.text = @"将二维码放入扫描框内";
+        {
+            UIButton * withBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+            withBtn.frame = CGRectMake(60, labIntroudction.bottom+10, kDeviceWidth-120, 45);
+            UIImage* image =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:@"66675b"]];
+            [withBtn setBackgroundImage:image forState:UIControlStateNormal];
+            withBtn.layer.cornerRadius = 4;
+            withBtn.alpha = 0.4;
+            withBtn.clipsToBounds = YES;
+            [withBtn addTarget:self
+                        action:@selector(withdraw)
+              forControlEvents:UIControlEventTouchUpInside];
+            [self.view addSubview:withBtn];
+            
+            UILabel * lab= [[UILabel alloc] initWithFrame:withBtn.frame];
+            lab.backgroundColor = [UIColor clearColor];
+            lab.font = [UIFont systemFontOfSize:18];
+            lab.text = @"手动输入识别码";
+            lab.textColor=[UIColor whiteColor];
+            lab.textAlignment = NSTextAlignmentCenter;
+            [self.view addSubview:lab];
+            [lab release];
+        }
+            break;
+            
+    }
+    [self.view addSubview:labIntroudction];
+    [labIntroudction release];
+    [self stopLoadingActiView];
+}
+
+- (void)withdraw
+{
+    [readerView stop];
+    [timer setFireDate:[NSDate distantFuture]];
+
+//    ActivationViewController * activation = [[ActivationViewController alloc]init];
+//    [self.navigationController pushViewController:activation animated:YES];
+//    [activation release];
+}
+
+- (void)beginAnimation
+{
+    [UIView animateWithDuration:2.5 animations:^{
+        [_line setTransform:(CGAffineTransformMakeTranslation(0,250*kDeviceHeight/480))];
+
+    } completion:^(BOOL finished) {
+        [UIView animateWithDuration:2.5 animations:^{
+            [_line setTransform:(CGAffineTransformMakeTranslation(0,0))];
+        } completion:^(BOOL finished) {
+            [self beginAnimation];
+        }];
+    }];
+}
+
+-(CGRect)getScanCrop:(CGRect)rect readerViewBounds:(CGRect)readerViewBounds
+{
+    CGFloat x,y,width,height;
+    x = rect.origin.x / readerViewBounds.size.width;
+    y = rect.origin.y / readerViewBounds.size.height;
+    width = rect.size.width / readerViewBounds.size.width;
+    height = rect.size.height / readerViewBounds.size.height;
+    return CGRectMake(x, y, width, height);
+}
+
+- (void) readerView: (ZBarReaderView*) readerViews
+     didReadSymbols: (ZBarSymbolSet*) symbols
+          fromImage: (UIImage*) image
+{
+    // 得到扫描的条码内容
+//    const zbar_symbol_t *symbol = zbar_symbol_set_first_symbol(symbols.zbarSymbolSet);
+//    NSString *symbolStr = [NSString stringWithUTF8String: zbar_symbol_get_data(symbol)];
+//    if (zbar_symbol_get_type(symbol) == ZBAR_QRCODE) {
+//        NSLog(@"11111");
+//    }else{
+//        NSLog(@"22222");
+//    }
+    for (ZBarSymbol *symbol in symbols) {
+        NSLog(@"%@", symbol.data);
+        if (!_isScanning) {
+            if (symbol.data) {
+                _isScanning = YES;
+                [readerView stop];
+                [timer setFireDate:[NSDate distantFuture]];
+                NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+                develoStr = [symbol.data stringByReplacingOccurrencesOfString:@" " withString:@""];
+                switch (self.sao_type) {
+                    case typeSaoDevice:
+                        //扫描设备
+                        [dic setObject:develoStr forKey:@"code"];
+                        if (_m_userId) {
+                            [dic setObject:_m_userId forKey:@"id"];
+                        }
+                        [[CommonHttpRequest defaultInstance] sendNewPostRequest:REGISTER_APIFIVE_URL values:dic requestKey:REGISTER_APIFIVE_URL delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"加载中...", nil)];
+                        break;
+                    case typeSaoBuddy:
+                        //扫描好友二维码
+                    {
+                        InvitationDoctorViewController * inviration = [[InvitationDoctorViewController alloc]init];
+                        inviration.m_invite =develoStr;
+                        [inviration setInviteView];
+                        [inviration getFriendData];
+                        [self.navigationController pushViewController:inviration animated:YES];
+                        [inviration release];
+                    }
+                        break;
+                    case typeSaoIdentity:
+                        //扫描好友二维码
+                    {
+                        //扫描设备
+                        [dic setObject:develoStr forKey:@"code"];
+                        if (_m_userId) {
+                            [dic setObject:_m_userId forKey:@"id"];
+                        }
+                        [[CommonHttpRequest defaultInstance] sendNewPostRequest:REGISTER_APIFIVE_URL values:dic requestKey:REGISTER_APIFIVE_URL delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"加载中...", nil)];
+                    }
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+        }
+        break;
+    }
+}
+
+- (void)animation1
+{
+        num ++;
+        if (num >= _line.width) {
+            num = -1;
+        }
+    _line.transform = CGAffineTransformMakeTranslation(0, num);
+}
+//
+- (BOOL)closeNowView
+{
+    [super closeNowView];
+    
+    if (timer) {
+        [timer invalidate];
+        timer = nil;
+    }
+    return YES;
+}
+
+#pragma mark - NetWork Function
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest *)loader
+{
+    NSString *responseString = [loader responseString];
+    NSDictionary *dic = [responseString KXjSONValueObject];
+    
+    NSDictionary * dict = dic[@"head"];
+    if (![[dict objectForKey:@"state"] intValue])
+    {
+        _isScanning = NO;
+        if ([loader.username isEqualToString:REGISTER_APIFIVE_URL])
+        {
+            [timer invalidate];
+            ActivateSuccessViewController* activate = [[ActivateSuccessViewController alloc] init];
+            activate.deveDic = dic[@"body"];
+            activate.acticateNum = develoStr;
+            activate.isAddDeve = _isFirst;
+            [self.navigationController pushViewController:activate animated:YES];
+            [activate release];
+
+        }
+    }
+    else {
+        UIAlertView* alert = [[UIAlertView alloc] initWithTitle:@"提示"
+                                                        message:[self TipDialogStr:[dic[@"head"] objectForKey:@"msg"]]
+                                                       delegate:self
+                                              cancelButtonTitle:NSLocalizedString(@"继续扫描", nil)
+                                              otherButtonTitles:nil];
+        [alert show];
+        [alert release];
+    }
+}
+
+- (NSString *)getStringValue:(NSString *)aString
+{
+    if(aString.length){
+        return aString;
+    }else{
+        
+        return @"";
+    }
+    
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    [timer setFireDate:[NSDate date]];
+    _isScanning = NO;
+//    [_session startRunning];
+    [readerView start];
+}
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+- (NSString*)TipDialogStr:(NSString*)aInfo
+{
+    if ([aInfo isEqualToString:@"0"]) {
+         return @"参数错误!";
+    } else if ([aInfo isEqualToString:@"1"]) {
+        return @"出现异常!";
+    } else if ([aInfo isEqualToString:@"2"]) {
+        return @"用户不存在!";
+    } else if ([aInfo isEqualToString:@"3"]) {
+        return @"其他异常!";
+    } else if ([aInfo isEqualToString:@"4"]) {
+        return @"信息修改失败!";
+    } else if ([aInfo isEqualToString:@"5"]) {
+        return @"没有数据!";
+    } else if ([aInfo isEqualToString:@"6"]) {
+        return @"查询失败，请稍后再试!";
+    } else if ([aInfo isEqualToString:@"126"]) {
+        return @"您输入的设备号有误，请重新输入。";
+    } else if ([aInfo isEqualToString:@"127"]) {
+        return @"该设备已经被激活了";
+    } else if ([aInfo isEqualToString:@"134"]) {
+        return @"您已申请绑定医生,不能重复申请!";
+    } else if ([aInfo isEqualToString:@"135"]) {
+        return @"您输入的医生编号有误,不存在此医生!";
+    } else {
+        return aInfo;
+    }
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

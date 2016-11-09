@@ -1,0 +1,326 @@
+//
+//  NewUserDetailViewController.m
+//  jiuhaohealth3.0
+//
+//  Created by wangmin on 15-4-2.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "NewUserDetailViewController.h"
+#import "ComHeaderView.h"
+#import "ModifyViewController.h"
+#import "MyKeyValueView.h"
+#import "FriendListViewController.h"
+#import "MsgDBOperate.h"
+
+@interface NewUserDetailViewController ()
+{
+    ComHeaderView *headerView;
+    MyKeyValueView *cicleView;
+    MyKeyValueView *view1;
+    MyKeyValueView *view2;
+    
+    NSString *third_codeString;
+    UIButton * determineButton;
+}
+@end
+
+@implementation NewUserDetailViewController
+
+@synthesize m_dicInfo,isFromPost;
+
+- (void)dealloc
+{
+    if (m_dicInfo)
+    {
+        [m_dicInfo release];
+    }
+    [headerView release];
+
+    [super dealloc];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    
+    self.title = @"详细信息";
+    [self loadUserInfo];
+}
+
+- (void)createContentView
+{
+    headerView = [[ComHeaderView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 100)];
+    headerView.backgroundColor = [UIColor whiteColor];
+    
+//    headerView.firstLabel.text = [m_dicInfo[@"nickName1"] length]? m_dicInfo[@"nickName1"]:m_dicInfo[@"nickName"];
+//    __block NSMutableDictionary *infoDict = m_dicInfo;
+    WS(weakSelf);
+    headerView.rightBtnBlock = ^(void){
+        ModifyViewController * detail = [[ModifyViewController alloc]init];
+        detail.title = @"备注信息";
+        detail.m_infoDic = weakSelf.m_dicInfo;
+        detail.m_isModify = YES;
+        detail.remarkBlock = ^(NSString *newName){
+            
+            headerView.firstLabel.text = newName.length ? newName : weakSelf.m_dicInfo[@"nickName"];
+            if (newName.length) {//修改备注名
+                NSString *sql = [NSString stringWithFormat:@"UPDATE friendList SET nickName = '%@' WHERE id = '%@'", newName, weakSelf.m_dicInfo[@"id"]];
+                [[MsgDBOperate shareInstance] updateFriendInfoRow:sql];
+            }
+            [m_dicInfo setObject:newName forKey:@"nickName1"];
+        };
+        [weakSelf.navigationController pushViewController:detail animated:YES];
+        [detail release];
+    };
+    [self.view addSubview:headerView];
+    
+    UIView *lineView  = [[UIView alloc] initWithFrame:CGRectMake(0, headerView.bottom-0.5,kDeviceWidth, 0.5)];
+    lineView.backgroundColor =  [CommonImage colorWithHexString:@"e5e5e5"];
+    [headerView addSubview:lineView];
+    [lineView release];
+    
+    //累计计步
+    view1 = [[MyKeyValueView alloc] initWithFrame:CGRectMake(0, headerView.bottom + 10, kDeviceWidth, 45)];
+    view1.tag = 998;
+    view1.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:view1];
+    [view1 release];
+    
+    //累计计步
+    view2 = [[MyKeyValueView alloc] initWithFrame:CGRectMake(0, view1.bottom, kDeviceWidth, 45)];
+    view2.tag = 999;
+    view2.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:view2];
+    [view2 release];
+    
+    //邀请号
+    cicleView = [[MyKeyValueView alloc] initWithFrame:CGRectMake(0, view2.bottom, kDeviceWidth, 45)];
+    cicleView.tag = 1000;
+    cicleView.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:cicleView];
+    [cicleView release];
+    
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+    button.frame = CGRectMake(0, 0, kDeviceWidth, 44);
+    button.backgroundColor = [UIColor clearColor];
+    button.tag = 1000;
+    [cicleView addSubview:button];
+    
+    UIImage* image =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:COLOR_FF5351]];
+    determineButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    determineButton.frame = CGRectMake(20, cicleView.bottom+20, kDeviceWidth-40, 44);
+    [determineButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [determineButton setBackgroundImage:image forState:UIControlStateNormal];
+    determineButton.layer.cornerRadius = 4;
+    determineButton.clipsToBounds = YES;
+    [self.view addSubview:determineButton];
+    determineButton.hidden = YES;
+}
+
+//解除绑定
+- (void)removeBtnClicked
+{
+    NSString *message = @"确定删除好友么？";
+    NSString *okMes = @"确定";
+    NSString *cancelMes = @"取消";
+    //提示是否更换
+    UIAlertView* av = [[UIAlertView alloc]
+                       initWithTitle:NSLocalizedString(@"提示", nil)
+                       message:NSLocalizedString(message, nil)
+                       delegate:self
+                       cancelButtonTitle:NSLocalizedString(cancelMes, nil)
+                       otherButtonTitles:NSLocalizedString(okMes, nil), nil];
+    av.tag = 2123;
+    [av show];
+    [av release];
+}
+
+//添加好友
+- (void)addFriend
+{
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [dic setObject:m_dicInfo[@"friendId"] forKey:@"friendId"];
+    [dic setObject:[NSString stringWithFormat:@"我是%@",g_nowUserInfo.nickName] forKey:@"remark"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:ADD_FRIEND_URL values:dic requestKey:ADD_FRIEND_URL delegate:self controller:self actiViewFlag:1 title:nil];
+    determineButton.userInteractionEnabled = NO;
+}
+
+- (void)beSureToRemove
+{
+    [[MsgDBOperate shareInstance] deleteRowForFriendId:[NSArray arrayWithObject:m_dicInfo[@"friendId"]]];
+    
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:m_dicInfo[@"friendId"] forKey:@"friendId"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:kRemoveFriend values:dic requestKey:kRemoveFriend delegate:self controller:self actiViewFlag:1 title:@""];
+    determineButton.userInteractionEnabled = NO;
+}
+
+- (void)alertView:(UIAlertView*)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if(alertView.tag == 2123 ){
+        if( buttonIndex == 1 ){
+            [self beSureToRemove];
+        }
+        return;
+    }
+}
+
+- (void)loadUserInfo
+{
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:m_dicInfo[@"friendId"] forKey:@"id"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:kGET_PedometerInfoHasActivity values:dic requestKey:kGET_PedometerInfoHasActivity delegate:self controller:self actiViewFlag:1 title:@""];
+}
+
+
+#pragma mark - NetWork Delegate
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest *)loader
+{
+    NSString *responseString = [loader responseString];
+    NSDictionary *dic = [responseString KXjSONValueObject];
+    
+    if (![[dic[@"head"] objectForKey:@"state"] intValue])
+    {
+        if ([loader.username isEqualToString:kGET_PedometerInfoHasActivity])
+        {
+            [self createContentView];
+            NSDictionary *re = dic[@"body"][@"info"];
+            
+            [CommonImage setImageFromServer:re[@"head_img"] View:headerView.myPhotoImageView Type:0];
+
+//            headerView.firstLabel.text = re[@"nick_name"];
+            //添加备注元素
+            NSString *remarkName = [self getStringValue:re[@"remarkname"] defalult:@""];
+            NSString *nickName = re[@"nick_name"];
+            
+            [m_dicInfo setObject:nickName forKey:@"nickName"];
+            
+            if (remarkName.length) {
+                headerView.firstLabel.text = remarkName;
+                [m_dicInfo setObject:remarkName forKey:@"nickName1"];
+            } else {
+                headerView.firstLabel.text = nickName;
+            }
+            
+            if([re[@"vip_level"] intValue] == 0){
+                headerView.levelImageView.hidden = YES;
+            }else{
+                headerView.levelImageView.hidden = NO;
+                NSString * imageLevelString = [NSString stringWithFormat:@"common.bundle/personnal/VIPlevel%d.png",[re[@"vip_level"] intValue]];
+                UIImage *imageLevel = [UIImage imageNamed:imageLevelString];
+                headerView.levelImageView.image = imageLevel;
+            }
+            headerView.secondLabel.text = [NSString stringWithFormat:@"性别：%@",[CommonUser getSex:[NSString stringWithFormat:@"%@",re[@"sex"]]]];
+            headerView.thirdLabel.text = [NSString stringWithFormat:@"年龄：%@",[self getStringValue:re[@"age"] defalult:@"暂无"] ];
+            [view1 getCellViewWithKey:@"参与走团" ValueString:[NSString stringWithFormat:@"%@",[self getStringValue:re[@"activityName"] defalult:@"暂无"]] index:0 hasAccessView:NO];
+            //距离
+            NSString* totalDistanceStr = re[@"totalDistance"];
+            if (totalDistanceStr.length)
+            {
+                float totalDistance = [totalDistanceStr floatValue]/1000;
+                totalDistanceStr = [NSString stringWithFormat:@"%.2f公里",totalDistance];
+            }
+            [view2 getCellViewWithKey:@"最近里程" ValueString:[NSString stringWithFormat:@"%@",[self getStringValue:totalDistanceStr defalult:@"暂无"]] index:1 hasAccessView:NO];
+            
+            third_codeString = re[@"user_no"];
+            NSAttributedString *value = [cicleView replaceWithNSString:re[@"user_no"] andUseKeyWord:re[@"user_no"] andWithFontSize:15.0 keywordColor:nil];
+            [cicleView getCellViewWithKey:@"用户编号" Value:value index:0  hasAccessView:NO];
+            
+            if (![re[@"isFriend"] boolValue])//0 不是朋友 1是朋友
+            {
+                 [m_dicInfo setObject:@"0" forKey:@"m_isFriend"];
+                 [determineButton setTitle:@"添加好友" forState:UIControlStateNormal];
+                 [determineButton addTarget:self action:@selector(addFriend) forControlEvents:UIControlEventTouchUpInside];
+            }
+            else
+            {
+                [m_dicInfo setObject:@"1" forKey:@"m_isFriend"];
+                [determineButton addTarget:self action:@selector(removeBtnClicked) forControlEvents:UIControlEventTouchUpInside];
+                [determineButton setTitle:@"删除好友" forState:UIControlStateNormal];
+            }
+            if ([re[@"isMe"] boolValue])//isMe  1自己 0不是自己
+            {
+                determineButton.hidden = YES;
+                headerView.hidden = YES;
+            }
+            determineButton.hidden = NO;
+        }
+        else if ([loader.username isEqualToString:kRemoveFriend]) {
+            NSLog(@"解除成功");
+            determineButton.userInteractionEnabled = YES;
+            
+            [[MsgDBOperate shareInstance] deleteRowForFriendId:[NSArray arrayWithObject:m_dicInfo[@"friendId"]]];
+            if (isFromPost)
+            {
+                [self.navigationController popViewControllerAnimated:YES];
+            }
+            else
+            {
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"removeFriend" object:m_dicInfo];
+                [self.navigationController popToViewController:[self.navigationController.viewControllers objectAtIndex:1] animated:YES];
+            }
+        }
+        else if ([loader.username isEqualToString:ADD_FRIEND_URL]) {
+            NSLog(@"添加成功");
+              determineButton.userInteractionEnabled = YES;
+             [self.navigationController popViewControllerAnimated:YES];
+        }
+    }
+    else {
+        [Common TipDialog2:dic[@"head"][@"msg"]];
+    }
+}
+
+- (NSString *)getStringValue:(NSString *)aString defalult:(NSString *)def
+{
+    if(aString.length){
+        return aString;
+    }else{
+        return def;
+    }
+}
+
+- (void)touchDown:(UIButton *)btn
+{
+//    UIView *cicleView = [self.view viewWithTag:1000];
+    cicleView.backgroundColor = [CommonImage colorWithHexString:@"e5e5e5"];
+}
+
+- (void)tapViewOutSide:(UIButton *)btn
+{
+    //    UIView *cicleView = [self.view viewWithTag:1000];
+    [UIView animateWithDuration:0.5 animations:^{
+        cicleView.backgroundColor = [UIColor whiteColor];
+    }];
+}
+
+- (void)tapView:(UIButton *)btn
+{
+    [UIView animateWithDuration:0.5 animations:^{
+        cicleView.backgroundColor = [UIColor whiteColor];
+    }];
+    
+    for (CommonViewController *commonVC in self.navigationController.viewControllers)
+    {
+        if ([commonVC isKindOfClass:[FriendListViewController class]])
+        {
+            ((FriendListViewController *)commonVC).FoodImageDic = [NSMutableDictionary dictionaryWithDictionary:@{@"text":third_codeString}];
+             [self.navigationController popToViewController:commonVC animated:YES];
+             return;
+        }
+    }
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+@end

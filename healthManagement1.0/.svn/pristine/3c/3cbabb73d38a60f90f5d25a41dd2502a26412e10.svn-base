@@ -1,0 +1,181 @@
+//
+//  KXPayManageView.m
+//  jiuhaohealth4.2
+//
+//  Created by jiuhao-yangshuo on 15/12/21.
+//  Copyright © 2015年 xuGuohong. All rights reserved.
+//
+
+#import "KXPayManageView.h"
+
+static float const kHeaderViewH = 55;
+static NSString *const KseparatorColor = @"ebebeb";
+@interface KXPayManageView ()<UITableViewDataSource, UITableViewDelegate>
+{
+     NSMutableArray *m_dataArray;
+     UITableView *m_tableView;
+     KXPayManageViewBlock _inBlock;
+     UIView* m_view;
+}
+@end
+
+@implementation KXPayManageView
+
+-(id)initWithKXPayManageViewBlock:(KXPayManageViewBlock)block
+{
+    CGRect frame = [UIScreen mainScreen].bounds;
+    self = [super initWithFrame:frame];
+    if (self)
+    {
+        m_dataArray = [[NSMutableArray alloc] initWithObjects:
+                       @{kImageTitle:@"支付宝客户端",kImagePath:@"common.bundle/wallet/aliicon.png",kPayType:@(KXPayManageTypeAli)},
+                       @{kImageTitle:@"微信支付",kImagePath:@"common.bundle/wallet/wxIcon.png",kPayType:@(KXPayManageTypeWX)},
+                       nil];
+        [self addSubview:self.tableView];
+//        self.backgroundColor = [UIColor colorWithWhite:0 alpha:0.6];
+        _inBlock = [block copy];
+        
+        m_view = [[UIView alloc] initWithFrame:frame];
+        m_view.backgroundColor = [UIColor clearColor];
+        [self addSubview:m_view];
+        [self bringSubviewToFront:m_tableView];
+    }
+    return self;
+}
+
+-(UITableView *)tableView
+{
+    if (m_tableView != nil) {
+        return m_tableView;
+    }
+    
+    CGRect rect = self.frame;
+    rect.origin.x = 0;
+    rect.origin.y = 0;
+    rect.size.width = kDeviceWidth-25*2;
+    rect.size.height = kHeaderViewH+m_dataArray.count*kKXPayManageViewCellH;
+    
+    m_tableView = [[UITableView alloc] initWithFrame:rect style:UITableViewStylePlain];
+    m_tableView.delegate = self;
+    m_tableView.rowHeight = kKXPayManageViewCellH;
+    m_tableView.separatorColor = [CommonImage colorWithHexString:KseparatorColor];
+    m_tableView.dataSource = self;
+    m_tableView.alwaysBounceHorizontal = NO;
+    m_tableView.alwaysBounceVertical = NO;
+    m_tableView.showsHorizontalScrollIndicator = NO;
+    m_tableView.showsVerticalScrollIndicator = NO;
+    m_tableView.scrollEnabled = NO;
+    m_tableView.backgroundColor = [UIColor whiteColor];
+    m_tableView.layer.cornerRadius = 4.0;
+    m_tableView.tableHeaderView = [self createHeaderView];
+    
+    [self adjustSeparatorInsetWithView:m_tableView];
+    m_tableView.center = self.center;
+    return m_tableView;
+}
+
+-(UIView *)createHeaderView
+{
+    UIView * headerView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, m_tableView.width, kHeaderViewH)];
+    headerView.backgroundColor = [UIColor whiteColor];
+    
+    UILabel *m_titleLabel = [Common createLabel:CGRectMake(0,0, headerView.width, headerView.height) TextColor:COLOR_666666 Font:[UIFont boldSystemFontOfSize:M_FRONT_SIXTEEN] textAlignment:NSTextAlignmentCenter labTitle:@""];
+    m_titleLabel.text = @"请选择支付方式";
+    [headerView addSubview:m_titleLabel];
+    
+    UILabel* lineLable = [[UILabel alloc] initWithFrame:CGRectMake(15, headerView.height - 0.5, headerView.width-30, 0.5)] ;
+    lineLable.backgroundColor = [CommonImage colorWithHexString:KseparatorColor];
+    [headerView addSubview:lineLable];
+    return headerView;
+}
+
+#pragma mark - UITableView DataSource
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return [m_dataArray count];
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *identifier = @"cell";
+    KXPayManageViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
+    if (cell == nil) {
+        cell = [[KXPayManageViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
+    }
+    if (indexPath.row < m_dataArray.count)
+    {
+        cell.m_dict = m_dataArray[indexPath.row];
+    }
+//    if (IS_OS_8_OR_LATER)//分割线到头
+//    {
+//        cell.preservesSuperviewLayoutMargins = NO;
+//    }
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    [self adjustSeparatorInsetWithView:cell];
+}
+
+-(void)adjustSeparatorInsetWithView:(UITableViewCell *)view
+{
+    UIEdgeInsets insetSep = UIEdgeInsetsMake(0, 15, 0, 15);
+    if ([view respondsToSelector:@selector(setSeparatorInset:)]) {
+        [view setSeparatorInset:insetSep];
+    }
+    if ([view respondsToSelector:@selector(setLayoutMargins:)]) {
+        [view setLayoutMargins:insetSep];
+    }
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSDictionary *dict = m_dataArray[indexPath.row];
+    if (_inBlock)
+    {
+          _inBlock(dict);
+    }
+    [self dismiss:YES];
+}
+
+-(void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    [self dismiss:YES];
+}
+
+-(void)dismiss:(BOOL)animate
+{
+    [UIView animateWithDuration:0.3 animations:^{
+        m_tableView.transform = CGAffineTransformMakeScale(0.1f, 0.1f);
+        self.alpha = 0.f;
+    } completion:^(BOOL finished) {
+         m_view.backgroundColor = [UIColor clearColor];
+        [self removeFromSuperview];
+    }];
+}
+
+-(void)show
+{
+    self.alpha = 0.f;
+    self.transform = CGAffineTransformMakeScale(0.1f, 0.1f);
+    [UIView animateWithDuration:0.2f delay:0.f options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        self.transform = CGAffineTransformMakeScale(1.05f, 1.05f);
+        self.alpha = 1.f;
+    } completion:^(BOOL finished) {
+        [UIView animateWithDuration:0.08f delay:0.f options:UIViewAnimationOptionCurveEaseInOut animations:^{
+            self.transform = CGAffineTransformIdentity;
+             m_view.backgroundColor = [UIColor colorWithWhite:0 alpha:0.6];
+        } completion:nil];
+    }];
+}
+
++(void)showKXPayManageViewWithBlock:(KXPayManageViewBlock)block
+{
+    KXPayManageView *payView = [[KXPayManageView alloc] initWithKXPayManageViewBlock:block];
+    [APP_DELEGATE addSubview:payView];
+    [payView show];
+}
+
+@end

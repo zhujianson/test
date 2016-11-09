@@ -1,0 +1,117 @@
+//
+//  ComHeaderView.m
+//  jiuhaohealth3.0
+//
+//  Created by wangmin on 15-3-10.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "ComHeaderView.h"
+
+@interface ComHeaderView ()
+
+@end
+
+@implementation ComHeaderView
+
+- (void)dealloc
+{
+    self.rightBtn = nil;
+    self.myPhotoImageView = nil;
+    self.firstLabel = nil;
+    self.secondLabel = nil;
+    self.thirdLabel = nil;
+    self.rightBtnBlock = nil;
+    self.levelImageView = nil;
+    [super dealloc];
+}
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if(self){
+        
+        [self getSubViews];
+        
+    }
+    return self;
+}
+
+- (void)getSubViews
+{
+    //头像
+    self.myPhotoImageView = [[UIImageView alloc] initWithFrame:CGRectMake(15, 15, 70 , 70)];
+    self.myPhotoImageView.layer.cornerRadius = 35;
+    self.myPhotoImageView.layer.masksToBounds = YES;
+    [self  addSubview:self.myPhotoImageView];
+    [self.myPhotoImageView release];
+    [CommonImage setImageFromServer:nil View:self.myPhotoImageView Type:0];
+
+    self.levelImageView = [[UIImageView alloc] initWithFrame:CGRectMake(_myPhotoImageView.width+_myPhotoImageView.origin.x-23, _myPhotoImageView.bottom-23, 23, 23)];
+    self.levelImageView.layer.cornerRadius = 23/2;
+    self.levelImageView.clipsToBounds = YES;
+//    self.levelImageView.backgroundColor = [UIColor whiteColor];
+    [self  addSubview:self.levelImageView];
+    [self.levelImageView release];
+    self.levelImageView.hidden = YES;
+    
+    //按钮
+    self.rightBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    self.rightBtn.frame = CGRectMake(kDeviceWidth-80-15, 15, 80, 25);
+    self.rightBtn.layer.borderColor = [CommonImage colorWithHexString:@"c8c8c8"].CGColor;
+    self.rightBtn.layer.borderWidth = 0.5;
+    self.rightBtn.layer.cornerRadius = 2.5f;
+    self.rightBtn.layer.masksToBounds = YES;
+    [self.rightBtn setTitle:@"修改备注名" forState:UIControlStateNormal];
+    [self.rightBtn setTitleColor:[CommonImage colorWithHexString:@"#666666"] forState:UIControlStateNormal];
+    self.rightBtn.titleLabel.font = [UIFont systemFontOfSize:12];
+    [self.rightBtn addTarget:self action:@selector(rightBtnClicked) forControlEvents:UIControlEventTouchUpInside];
+    [self addSubview:self.rightBtn];
+
+    //第一个元素
+    CGFloat beginX = self.myPhotoImageView.right + 15;
+    CGFloat rightMargin = 80+ 15 + 20;
+    CGFloat width = kDeviceWidth-beginX-rightMargin;
+    self.firstLabel = [[UILabel alloc] initWithFrame:CGRectMake(beginX,20, width, 16)];
+    self.firstLabel.backgroundColor = [UIColor clearColor];
+    self.firstLabel.textColor = [CommonImage colorWithHexString:@"333333"];
+    self.firstLabel.font = [UIFont boldSystemFontOfSize:16];
+//    self.firstLabel.text = @"我是第一个元素";
+    [self addSubview:self.firstLabel];
+    [self.firstLabel release];
+    //第二个
+    self.secondLabel = [[UILabel alloc] initWithFrame:CGRectMake(beginX,self.firstLabel.bottom+10, width+80+ 15, 16)];
+    self.secondLabel.backgroundColor = [UIColor clearColor];
+    self.secondLabel.textColor = [CommonImage colorWithHexString:@"999999"];
+    self.secondLabel.font = [UIFont systemFontOfSize:13];
+//    self.secondLabel.text = @"我是第二个元素是第二个元素是第二个元素";
+    [self addSubview:self.secondLabel];
+    [self.secondLabel release];
+    //第三个
+    self.thirdLabel = [[UILabel alloc] initWithFrame:CGRectMake(beginX,self.secondLabel.bottom+5, width+80+ 15, 16)];
+    self.thirdLabel.backgroundColor = [UIColor clearColor];
+    self.thirdLabel.textColor = [CommonImage colorWithHexString:@"999999"];
+    self.thirdLabel.font = [UIFont systemFontOfSize:13];
+//    self.thirdLabel.text = @"我是第三个元素";
+    [self addSubview:self.thirdLabel];
+    [self.thirdLabel release];
+    
+    UIView *lineView = [[UIView alloc] initWithFrame:CGRectMake(0, self.frame.size.height, kDeviceWidth, 0.5)];
+    lineView.backgroundColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_QIAN];
+    [self addSubview:lineView];
+    [lineView release];
+    
+
+}
+
+//按钮点击事件
+- (void)rightBtnClicked
+{
+
+    self.rightBtnBlock();
+
+}
+
+
+
+@end

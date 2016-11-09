@@ -1,0 +1,247 @@
+//
+//  KXShareManager.m
+//  jiuhaohealth4.0
+//
+//  Created by wangmin on 15/9/11.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "AppDelegate.h"
+#import "KXShareManager.h"
+#import <ShareSDKExtension/SSEShareHelper.h>
+#import <ShareSDKConnector/ShareSDKConnector.h>
+#import <ShareSDKUI/ShareSDK+SSUI.h>
+#import <ShareSDKUI/SSUIShareActionSheetStyle.h>
+#import <ShareSDKUI/SSUIShareActionSheetCustomItem.h>
+#import <ShareSDK/ShareSDK+Base.h>
+
+//腾讯开放平台（对应QQ和QQ空间）SDK头文件
+#import <TencentOpenAPI/TencentOAuth.h>
+#import <TencentOpenAPI/QQApiInterface.h>
+//以下是腾讯SDK的依赖库：
+//libsqlite3.dylib
+
+//微信SDK头文件
+#import "WXApi.h"
+//以下是微信SDK的依赖库：
+//libsqlite3.dylib
+
+//新浪微博SDK头文件
+#import "WeiboSDK.h"
+
+@implementation KXShareManager
+{
+    __block MBProgressHUD *_m_Progress;
+}
+
++ (KXShareManager *)sharedManager
+{
+    static KXShareManager *class;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        class = [[KXShareManager alloc] init];
+        [ShareSDK registerApp:@"332d6a53e11a"
+              activePlatforms:@[
+                                @(SSDKPlatformTypeSinaWeibo),
+                                @(SSDKPlatformTypeWechat),
+                                @(SSDKPlatformTypeQQ)
+                                ]
+                     onImport:^(SSDKPlatformType platformType) {
+                         
+                         switch (platformType)
+                         {
+                             case SSDKPlatformTypeWechat:
+                                 //                             [ShareSDKConnector connectWeChat:[WXApi class]];
+                                 [ShareSDKConnector connectWeChat:[WXApi class] delegate:self];
+                                 break;
+                             case SSDKPlatformTypeQQ:
+                                 [ShareSDKConnector connectQQ:[QQApiInterface class] tencentOAuthClass:[TencentOAuth class]];
+                                 break;
+                             case SSDKPlatformTypeSinaWeibo:
+                                 [ShareSDKConnector connectWeibo:[WeiboSDK class]];
+                                 break;
+                             default:
+                                 break;
+                         }
+                         
+                     }
+              onConfiguration:^(SSDKPlatformType platformType, NSMutableDictionary *appInfo) {
+                  
+                  switch (platformType)
+                  {
+                      case SSDKPlatformTypeSinaWeibo:
+                          //设置新浪微博应用信息,其中authType设置为使用SSO＋Web形式授权
+                          [appInfo SSDKSetupSinaWeiboByAppKey:@"1353282292"
+                                                    appSecret:@"dfb35df87edd339d96ada48bd77dee91"
+                                                  redirectUri:@"http://www.kangxun360.com"
+                                                     authType:SSDKAuthTypeBoth];
+                          break;
+                      case SSDKPlatformTypeWechat:
+                          [appInfo SSDKSetupWeChatByAppId:@"wx3c38c18729e3387d"
+                                                appSecret:@"7c2f6a508c20729e0e22100c4aa3a310"];
+                          break;
+                      case SSDKPlatformTypeQQ:
+                          [appInfo SSDKSetupQQByAppId:@"1103145508"
+                                               appKey:@"q4dprWxam8Yrj7K3"
+                                             authType:SSDKAuthTypeBoth];
+                          break;
+                        
+                      default:
+                          break;
+                  }
+              }];
+    });
+    
+    return class;
+}
+
+
+- (void)noneUIShareAllButtonClickHandler:(id)sender
+                                 Content:(NSString *)contentStrings
+                               ImagePath:(UIImage *)imagePath
+                                AndTitle:(NSString *)titleString
+                                     Url:(NSString *)url
+                          haveCustomItem:(BOOL)haveCutomItem
+{
+    //    NSString *imagePath = [[NSBundle mainBundle] pathForResource:IMAGE_NAME ofType:IMAGE_EXT];
+    //    NSString *imagePath = [[NSBundle mainBundle] pathForResource:@"sharesdk_img" ofType:@"jpg"];
+    //    imagePath = nil
+    
+//    if(!url){
+//        
+//        url = @"http://www.kangxun360.com";
+//    }
+//    if (contentStrings.length > 80)
+//    {
+//        contentStrings = [contentStrings substringToIndex:80];
+//    }
+//    //    titleString = [titleString stringByAppendingFormat:@"[详情]:%@", url];
+//    
+//    //    UIImage *shareImage = [UIImage imageNamed:@"common.bundle/common/news_logo.png"];
+//    //    NSString * iconUrl = ;
+//    
+//    NSString *defaultContent = @"";
+//    NSString *sinaTitle = titleString;
+//    NSString *WXFirendCircleTitle = titleString;
+//    
+//    id imageIcon = [ShareSDK imageWithUrl:@"http://kangxun.qiniudn.com/%E5%9B%BE%E6%A0%87.jpg"];
+//    id sinaImage = imageIcon;//[ShareSDK imageWithUrl:((NSString*)imagePath)];
+    
+    /**
+     * 在简单分享中，只要设置共有分享参数即可分享到任意的社交平台
+     **/
+//    __weak ViewController *theController = self;
+    
+    //1、创建分享参数（必要）
+    NSMutableDictionary *shareParams = [NSMutableDictionary dictionary];
+    NSArray* imageArray = @[[UIImage imageNamed:@"shareImg.png"]];
+    [shareParams SSDKSetupShareParamsByText:@"分享内容"
+                                     images:imageArray
+                                        url:[NSURL URLWithString:@"http://www.kangxun360.com"]
+                                      title:@"分享标题"
+                                       type:SSDKContentTypeAuto];
+    
+    //1.2、自定义分享平台（非必要）
+    NSMutableArray *activePlatforms = [NSMutableArray arrayWithArray:@[@(SSDKPlatformTypeSinaWeibo),
+                                                                       @(SSDKPlatformTypeWechat),
+                                                                       @(SSDKPlatformTypeQQ)]];
+    
+    //2、分享
+    [ShareSDK showShareActionSheet:nil
+                             items:activePlatforms
+                       shareParams:shareParams
+               onShareStateChanged:^(SSDKResponseState state, SSDKPlatformType platformType, NSDictionary *userData, SSDKContentEntity *contentEntity, NSError *error, BOOL end) {
+                   
+                   switch (state) {
+                           
+                       case SSDKResponseStateBegin:
+                       {
+//                           [theController showLoadingView:YES];
+                           break;
+                       }
+                       case SSDKResponseStateSuccess:
+                       {
+                           UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"分享成功"
+                                                                               message:nil
+                                                                              delegate:nil
+                                                                     cancelButtonTitle:@"确定"
+                                                                     otherButtonTitles:nil];
+                           [alertView show];
+                           break;
+                       }
+                       case SSDKResponseStateFail:
+                       {
+                           if (platformType == SSDKPlatformTypeSMS && [error code] == 201)
+                           {
+                               UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"分享失败"
+                                                                               message:@"失败原因可能是：1、短信应用没有设置帐号；2、设备不支持短信应用；3、短信应用在iOS 7以上才能发送带附件的短信。"
+                                                                              delegate:nil
+                                                                     cancelButtonTitle:@"OK"
+                                                                     otherButtonTitles:nil, nil];
+                               [alert show];
+                               break;
+                           }
+                           else if(platformType == SSDKPlatformTypeMail && [error code] == 201)
+                           {
+                               UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"分享失败"
+                                                                               message:@"失败原因可能是：1、邮件应用没有设置帐号；2、设备不支持邮件应用；"
+                                                                              delegate:nil
+                                                                     cancelButtonTitle:@"OK"
+                                                                     otherButtonTitles:nil, nil];
+                               [alert show];
+                               break;
+                           }
+                           else
+                           {
+                               UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"分享失败"
+                                                                               message:[NSString stringWithFormat:@"%@",error]
+                                                                              delegate:nil
+                                                                     cancelButtonTitle:@"OK"
+                                                                     otherButtonTitles:nil, nil];
+                               [alert show];
+                               break;
+                           }
+                           break;
+                       }
+                       case SSDKResponseStateCancel:
+                       {
+                           UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"分享已取消"
+                                                                               message:nil
+                                                                              delegate:nil
+                                                                     cancelButtonTitle:@"确定"
+                                                                     otherButtonTitles:nil];
+                           [alertView show];
+                           break;
+                       }
+                       default:
+                           break;
+                   }
+                   
+//                   if (state != SSDKResponseStateBegin)
+//                   {
+//                       [theController showLoadingView:NO];
+//                       [theController.tableView reloadData];
+//                   }
+                   
+               }];
+
+}
+
+- (void)sendShare
+{
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:URL_grouppointForForwardPost values:dic requestKey:URL_grouppointForForwardPost delegate:self controller:nil actiViewFlag:0 title:0];
+}
+
+
+
+- (void)hiddenProgressView
+{
+    if (_m_Progress)
+    {
+        [_m_Progress removeFromSuperview];
+        _m_Progress  = nil;
+    }
+}
+
+@end

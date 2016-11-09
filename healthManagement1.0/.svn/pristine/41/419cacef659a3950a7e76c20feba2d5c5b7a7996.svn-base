@@ -1,0 +1,193 @@
+//
+//  CycleViewController.m
+//  healthManagement1.0
+//
+//  Created by xjs on 16/6/2.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "CycleViewController.h"
+#import "CycleTableViewCell.h"
+#import "ThinPersonalViewController.h"
+#import "ThinViewPlanViewController.h"
+
+@interface CycleViewController ()<UITableViewDelegate,UITableViewDataSource>
+
+@end
+
+@implementation CycleViewController
+{
+    NSMutableArray * m_arr;
+    UITableView *m_tabeleView;
+
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"享瘦派";
+    m_arr = [[NSMutableArray alloc]init];
+    [self getServer];
+    
+    m_tabeleView = [[UITableView alloc]initWithFrame:CGRectMake(0,0, kDeviceWidth,kDeviceHeight) style:UITableViewStyleGrouped];
+    m_tabeleView.delegate = self;
+    m_tabeleView.dataSource = self;
+    m_tabeleView.showsVerticalScrollIndicator = NO;
+    m_tabeleView.backgroundColor = [UIColor clearColor];
+    m_tabeleView.separatorStyle = UITableViewCellSeparatorStyleSingleLine;
+    m_tabeleView.separatorColor = [CommonImage colorWithHexString:LINE_COLOR];
+    m_tabeleView.rowHeight = 50;
+//    if (IOS_7) {
+//        m_tabeleView.separatorInset = UIEdgeInsetsMake(0, 48, 0, -48);
+//    }
+    [self.view addSubview:m_tabeleView];
+
+    // Do any additional setup after loading the view.
+}
+
+- (void)getServer
+{
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:URL_GETCYCLEDATA values:dic requestKey:URL_GETCYCLEDATA delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"加载中...", nil)];
+
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dic = [responseString KXjSONValueObject];
+    
+    NSDictionary *head = dic[@"head"];
+    if (![head[@"state"] intValue]) {
+        NSDictionary *body = dic[@"body"];
+        if ([loader.username isEqualToString:URL_GETCYCLEDATA])
+        {
+            NSMutableArray * arr = [NSMutableArray array];
+            NSMutableArray * arr2 = [NSMutableArray array];
+            NSMutableArray * arr3 = [NSMutableArray array];
+
+            if ([body[@"preparation_list"] count]) {
+                [arr addObject:@"准备期"];
+                for (NSString * s in body[@"preparation_list"]) {
+                    [arr addObject:s];
+                }
+                [m_arr addObject:arr];
+            }
+            if ([body[@"strengthening_list"] count]) {
+                [arr2 addObject:@"强化期"];
+                for (NSString * s in body[@"strengthening_list"]) {
+                    [arr2 addObject:s];
+                }
+                [m_arr addObject:arr2];
+
+            }
+            if ([body[@"consolidation_list"] count]) {
+                [arr3 addObject:@"巩固期"];
+                for (NSString * s in body[@"consolidation_list"]) {
+                    [arr3 addObject:s];
+                }
+                [m_arr addObject:arr3];
+            }
+
+            [m_tabeleView reloadData];
+        }
+    }
+    else
+    {
+        [Common TipDialog2:dic[@"msg"]];
+    }
+}
+
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+}
+
+
+#pragma mark tableviewcellDelegate
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return [m_arr[section] count];
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return m_arr.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section
+{
+    return 8;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section
+{
+    return 0.01;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *cellName = @"cell";
+    CycleTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellName];
+    if (cell == nil)
+    {
+        cell = [[CycleTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellName];
+    }
+    
+    NSString *  dic = [m_arr[indexPath.section] objectAtIndex:indexPath.row];
+    [cell setCellInfo:dic];
+    if (!indexPath.row) {
+//        cell点击背景颜色
+        cell.selectedBackgroundView = nil;
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    }else{
+//        cell点击背景颜色
+        cell.selectedBackgroundView = [Common creatCellBackView];
+        cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+
+    }
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    if (!indexPath.row) {
+        return;
+    }
+//    NSInteger week = indexPath.row;
+    NSString *  dic = [m_arr[indexPath.section] objectAtIndex:indexPath.row];
+    NSArray * arr = [dic componentsSeparatedByString:@","];
+    if (![arr[1] intValue]) {
+        return;
+    }
+    
+    ThinViewPlanViewController * thin = [[ThinViewPlanViewController alloc]init];
+    thin.m_week = [arr[0] intValue];
+    
+    [self.navigationController pushViewController:thin animated:YES];
+    
+}
+//
+- (UIView*)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section
+{
+    UIView *view = [[UIView alloc]init];
+    view.backgroundColor = self.view.backgroundColor;
+    return view;
+}
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

@@ -1,0 +1,205 @@
+//
+//  DeviceWeightHelpViewController.m
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 16/2/23.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "DeviceWeightHelpViewController.h"
+#import "BluetoothManager.h"
+
+@interface DeviceWeightHelpViewController ()<BluetoothManagerDelegate>
+{
+    UIImageView *m_bubblePlay;
+    UIImageView *m_checkImage;
+    UILabel *labelTitle;
+}
+@end
+
+@implementation DeviceWeightHelpViewController
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        self.m_isHideNavBar = 64;
+        _m_scanOrLink = YES;
+        
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    [self createContentView];
+    [self createNavBar];
+    [self setupBlueTooth];
+}
+
+-(void)viewDidDisappear:(BOOL)animated
+{
+    [BluetoothManager sharedInstance].showDeviceListView = NO;
+    [BluetoothManager sharedInstance].bluetoothManagerDelegate = nil;
+//    [[BluetoothManager sharedInstance] closeScanDevice];
+    [super viewDidAppear:animated];
+}
+
+-(void)setupBlueTooth
+{
+    if (_m_scanOrLink)
+    {
+        [[BluetoothManager sharedInstance] startScanDevice];
+    }
+    else
+    {
+        NSDictionary *dict = [BluetoothManager fetchSaveDeviceModel];
+        NSDictionary *device = @{dict[@"serialNO"]:dict[@"advertiseName"]};
+        [[BluetoothManager sharedInstance] connectWithSerialNO:device];
+
+    }
+    [BluetoothManager sharedInstance].showDeviceListView = _m_scanOrLink;
+    [BluetoothManager sharedInstance].bluetoothManagerDelegate = self;
+    [self changeConnectState:NO];
+}
+
+-(void)changeConnectState:(BOOL)state
+{
+    if (!state) {
+        m_bubblePlay.hidden = NO;
+        m_checkImage.hidden = YES;
+        [m_bubblePlay startAnimating];
+        labelTitle.text = @"等待连接";
+    }
+    else {
+        m_bubblePlay.hidden = YES;
+        [m_bubblePlay stopAnimating];
+        labelTitle.text = @"已连接";
+        m_checkImage.hidden = NO;
+    }
+}
+
+-(void)createContentView
+{
+    float kFooterH = 150.0*kRelativity6DeviceWidth;
+    UIView *topView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight+64-kFooterH)];
+    topView.backgroundColor = [CommonImage colorWithHexString:@"00c6ff"];
+    [self.view addSubview:topView];
+    
+    float kCircleViewW = kDeviceWidth-180*kRelativity6DeviceWidth - (IS_Small_INCH_SCREEN?35:0);
+//    UIView *circleView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kCircleViewW, kCircleViewW)];
+//    circleView.backgroundColor = [CommonImage colorWithHexString:@"ffd800"];
+//    circleView.layer.cornerRadius = circleView.width/2.0;
+//    circleView.clipsToBounds = YES;
+//    [self.view addSubview:circleView];
+//    circleView.center = CGPointMake(topView.width/2.0 , topView.height/2.0+10);
+    
+    UIImage *weigthDevice = [UIImage imageNamed:@"common.bundle/personnal/device/weigthDevice.png"];
+//    float weigthDeviceW =  weigthDevice.size.width*kRelativity6DeviceWidth-(IS_Small_INCH_SCREEN?20:0);
+    UIImageView *headerImage = [[UIImageView alloc]initWithFrame:CGRectMake(0, 0, kCircleViewW,kCircleViewW)];
+    headerImage.image = weigthDevice;
+    [topView addSubview:headerImage];
+    headerImage.center = CGPointMake(topView.width/2.0, topView.frameHeight/2.0+10);
+    
+    NSArray *titleArray = @[@"开启手机蓝牙",@"开启体重秤蓝牙(脚踏后数字亮起来即打开蓝牙)"];
+    
+    float titleHight = headerImage.bottom+ (topView.height-headerImage.bottom)/2.0 - 20;
+    for (int i = 0 ; i<titleArray.count; i++)
+    {
+        UIImage *blueDevice = [UIImage imageNamed:@"common.bundle/personnal/device/bluetoothIcon.png"];
+        UIImageView *blueDeviceImage = [[UIImageView alloc]initWithFrame:CGRectMake(38*kRelativity6DeviceWidth, titleHight,15.0, 15)];
+        blueDeviceImage.image = blueDevice;
+        [topView addSubview:blueDeviceImage];
+        
+//        UILabel *indexLable = [Common createLabel:CGRectMake(38, titleHight,15.0, 15) TextColor:COLOR_999999 Font:[UIFont systemFontOfSize:M_FRONT_FOURTEEN] textAlignment:NSTextAlignmentCenter labTitle:[NSString stringWithFormat:@"%d",i+1]];
+//        indexLable.layer.cornerRadius = indexLable.width/2.0;
+//        indexLable.layer.backgroundColor = [CommonImage colorWithHexString:@"ffffff"].CGColor;
+//        indexLable.layer.masksToBounds = YES;
+//        [topView addSubview:indexLable];
+        
+        UILabel *nameLable = [Common createLabel:CGRectMake(blueDeviceImage.right+5, blueDeviceImage.top,kDeviceWidth-blueDeviceImage.right-5, blueDeviceImage.frameHeight) TextColor:@"ffffff" Font:[UIFont systemFontOfSize:M_FRONT_FOURTEEN] textAlignment:NSTextAlignmentLeft labTitle:titleArray[i]];
+        [topView addSubview:nameLable];
+        nameLable.numberOfLines = 0;
+        [nameLable sizeToFit];
+        
+        titleHight+= 5+ nameLable.frameHeight;
+    }
+    
+    UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, topView.bottom, kDeviceWidth, kFooterH)];
+    [self.view addSubview:footerView];
+    
+    UILabel *labelPic = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 100, 100)];
+    labelPic.backgroundColor = [CommonImage colorWithHexString:@"ffe222"];
+    labelPic.layer.cornerRadius = labelPic.width/2.0;
+    labelPic.layer.borderColor = [CommonImage colorWithHexString:@"fff4a8"].CGColor;
+    labelPic.layer.masksToBounds = YES;
+    labelPic.layer.borderWidth = 8.0;
+    [footerView addSubview:labelPic];
+    labelPic.center = CGPointMake(footerView.width/2.0, footerView.height/2.0);
+    
+    NSString *image = @"common.bundle/personnal/device/point1.png";
+    UIImage *imagePoint = [UIImage imageNamed:image];
+    m_bubblePlay = [[UIImageView alloc] init];
+    m_bubblePlay.hidden = YES;
+    m_bubblePlay.frame = CGRectMake(0, 0, imagePoint.size.width, imagePoint.size.height);
+    m_bubblePlay.contentMode = UIViewContentModeRight;
+    m_bubblePlay.animationDuration = 1.0;
+    m_bubblePlay.animationRepeatCount = 0;
+    [labelPic addSubview:m_bubblePlay];
+    m_bubblePlay.center = CGPointMake(labelPic.width/2.0 , labelPic.frameHeight/2.0-15);
+    
+    NSArray *array = [NSArray arrayWithObjects:[UIImage imageNamed:@"common.bundle/personnal/device/point1.png"], [UIImage imageNamed:@"common.bundle/personnal/device/point2.png"], [UIImage imageNamed:@"common.bundle/personnal/device/point3.png"], nil];
+    m_bubblePlay.animationImages = array;
+    m_bubblePlay.image = imagePoint;
+    
+    labelTitle = [[UILabel alloc] initWithFrame:CGRectMake(0, m_bubblePlay.bottom+5, labelPic.width, 30)];
+    labelTitle.backgroundColor = [UIColor clearColor];
+    labelTitle.textAlignment = NSTextAlignmentCenter;
+    labelTitle.font = [UIFont systemFontOfSize:M_FRONT_SIXTEEN];
+    labelTitle.textColor = [CommonImage colorWithHexString:@"ffffff"];
+    [labelPic addSubview:labelTitle];
+    labelTitle.centerX = m_bubblePlay.center.x;
+    
+    UIImage *imagePointCheck = [UIImage imageNamed:@"common.bundle/personnal/device/checkOk.png"];
+    m_checkImage = [[UIImageView alloc] init];
+    m_checkImage.hidden = YES;
+    m_checkImage.frame = CGRectMake(0, 0, imagePointCheck.size.width, imagePointCheck.size.height);
+    [labelPic addSubview:m_checkImage];
+    m_checkImage.image = imagePointCheck;
+    m_checkImage.center = m_bubblePlay.center;
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+- (void)createNavBar
+{
+    UIView *m_nav = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 64)];
+//    m_nav.backgroundColor = [CommonImage colorWithHexString:@"ff733e"];
+    m_nav.backgroundColor = [UIColor clearColor];
+    [self.view addSubview:m_nav];
+//    m_nav.alpha = 1;
+
+    NSDictionary *dic = [UINavigationBar appearance].titleTextAttributes;
+    UIButton *butback = [UIButton buttonWithType:UIButtonTypeCustom];
+    butback.frame = CGRectMake(5, 20, 50, 44);
+    [butback setImage:[UIImage imageNamed:@"common.bundle/nav/nav_back_white.png"] forState:UIControlStateNormal];
+    [butback setTitle:@"返回" forState:UIControlStateNormal];
+    butback.titleLabel.font = dic[@"NSFontAttributeName"];
+    [butback addTarget:self action:@selector(backViewCon) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:butback];
+    
+    UILabel *nameLable = [Common createLabel:CGRectMake(butback.right+15, butback.top,kDeviceWidth-(butback.right+15)*2, 44) TextColor:@"ffffff" Font:[UIFont systemFontOfSize:M_FRONT_TWENTY] textAlignment:NSTextAlignmentCenter labTitle:@"添加设备说明"];
+    [m_nav addSubview:nameLable];
+}
+
+- (void)backViewCon
+{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+@end

@@ -1,0 +1,196 @@
+//
+//  VideoDetailViewController.m
+//  healthManagement1.0
+//
+//  Created by xuguohong on 16/7/11.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "VideoDetailViewController.h"
+#import "RightCollectionViewCell.h"
+#import "HeaderCollectionReusableView.h"
+
+@interface VideoDetailViewController ()<UICollectionViewDataSource,UICollectionViewDelegate,UICollectionViewDelegateFlowLayout>
+
+@end
+
+@implementation VideoDetailViewController
+{
+    UICollectionView *_rightCollectionView;
+
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+}
+
+-(void)CreatRightCollectionView
+{
+    UICollectionViewFlowLayout *flowayout = [[UICollectionViewFlowLayout alloc]init];
+    flowayout.minimumInteritemSpacing = 0.f;
+    flowayout.minimumLineSpacing = 0.5f;
+    flowayout.itemSize = CGSizeMake((kDeviceWidth-40)/2, 55+190/2*kDeviceWidth/375);
+    flowayout.headerReferenceSize = CGSizeMake(kDeviceWidth, 60);
+    UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, -400, kDeviceWidth, 400)];
+    headerView.backgroundColor = [CommonImage colorWithHexString:VERSION_BACKGROUD_COLOR2];
+    
+    _rightCollectionView = [[UICollectionView alloc]initWithFrame:CGRectMake(0, 0, self.view.width, self.view.height-49-45-64) collectionViewLayout:flowayout];
+    [_rightCollectionView registerClass:[HeaderCollectionReusableView class] forSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"hxwHeader"];
+//    [_rightCollectionView registerClass:[FooterCollectionReusableView class] forSupplementaryViewOfKind:UICollectionElementKindSectionFooter withReuseIdentifier:@"hxwFooter"];
+    
+    [_rightCollectionView addSubview:headerView];
+    
+    [_rightCollectionView registerClass:[RightCollectionViewCell class] forCellWithReuseIdentifier:@"RightCollectionViewCell"];
+    
+    [_rightCollectionView setBackgroundColor:[CommonImage colorWithHexString:@"ffffff"]];
+    
+    //    _rightCollectionView.dele
+    _rightCollectionView.delegate = self;
+    _rightCollectionView.dataSource = self;
+    
+    [self.view addSubview:_rightCollectionView];
+    
+}
+
+#pragma mark------CollectionView的代理方法
+-(NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section
+{
+    
+    return 2;
+    
+}
+
+-(UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    RightCollectionViewCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"RightCollectionViewCell" forIndexPath:indexPath];
+    //    cell.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+    //    cell.layer.borderWidth = 0.5;
+    //    cell.backgroundColor = [UIColor whiteColor];
+    //根据左边点击的indepath更新右边内容;
+    //    if (indexPath.row%2) {
+    //        cell.imageview.frame = [Common rectWithOrigin:cell.imageview.frame x:5 y:0];
+    //    }else{
+    //        cell.imageview.frame = [Common rectWithOrigin:cell.imageview.frame x:15 y:0];
+    //    }
+    //    cell.titleLabel.frame = [Common rectWithOrigin:cell.titleLabel.frame x:cell.imageview.left y:0];
+    //    cell.sparkImage.frame = [Common rectWithOrigin:cell.sparkImage.frame x:cell.imageview.left y:0];
+    //    cell.readingLab.frame = [Common rectWithOrigin:cell.readingLab.frame x:cell.imageview.left+15 y:0];
+    
+//    cell.titleLabel.text = m_allData[indexPath.row][@"courseTitle"];
+//    cell.readingLab.text = [NSString stringWithFormat:@"%@",m_allData[indexPath.row][@"browseNum"]];
+//    
+//    [CommonImage setImageFromServer:[NSString stringWithFormat:@"%@",m_allData[indexPath.row][@"iconUrl"]] View:cell.imageview Type:2];
+//    cell.viedoType.image = [self setImageTypeWithStr:[NSString stringWithFormat:@"%@",m_allData[indexPath.row][@"isFree"]]];
+    
+    return cell;
+}
+
+- (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView
+{
+    return 1;
+}
+
+- (UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath
+{
+    
+    UICollectionReusableView *headView =[collectionView dequeueReusableSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"hxwHeader" forIndexPath:indexPath];;
+    headView.backgroundColor = [UIColor whiteColor];
+    
+    UIView * view = (UIView*)[headView viewWithTag:100];
+    if (!view) {
+        view = [[UIView alloc]initWithFrame:CGRectMake(15, 10, kDeviceWidth-30, 40)];
+        view.backgroundColor = [CommonImage colorWithHexString:VERSION_BACKGROUD_COLOR2];
+        view.tag = 100;
+        [headView addSubview:view];
+        
+        UIView * v2 = [[UIView alloc]init];
+        [view addSubview:v2];
+        
+        UIImage * image = [UIImage imageNamed:@"common.bundle/classroom/gossip"];
+        UIImageView * imageV= [[UIImageView alloc]initWithFrame:CGRectMake(0, 0, image.size.width, 40)];
+        imageV.contentMode  = UIViewContentModeCenter;
+        imageV.image = image;
+        [v2 addSubview:imageV];
+        //        [CommonImage setImageFromServer:[NSString stringWithFormat:@"%@",_m_dic[@"icon_url"]] View:imageV Type:2];
+        
+//        NSString * text = _m_dic[@"explain"];
+//        CGSize size = [Common sizeForString:text andFont:15];
+//        UILabel * lab = [Common createLabel:CGRectMake(imageV.right+10, 0, size.width, 40) TextColor:@"666666" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentCenter labTitle:text];
+//        [v2 addSubview:lab];
+//        v2.frame  = CGRectMake((view.width - lab.right)/2, 0, lab.right, 40);
+    }
+    //    UIViewController * contro = self.view.superview.viewController;
+    
+    return headView;
+}
+
+
+- (UIImage*)setImageTypeWithStr:(NSString*)str
+{
+    UIImage * image;
+    switch ([str intValue]) {
+        case 0:
+            image = [UIImage imageNamed:@"common.bundle/home/free"];
+            break;
+        case 1:
+            image = [UIImage imageNamed:@"common.bundle/home/charge"];
+            break;
+        case 2:
+            image = [UIImage imageNamed:@"common.bundle/home/unlock"];
+            
+            break;
+            
+        default:
+            break;
+    }
+    return image;
+}
+
+
+-(UIEdgeInsets)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout insetForSectionAtIndex:(NSInteger)section
+{
+    return UIEdgeInsetsMake(0, 15, 0, 15);
+}
+//
+//-(CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath
+//{
+//    return CGSizeMake(kDeviceWidth/2, 55+190/2*kDeviceWidth/375);
+//}
+
+//返回头footerView的大小
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout referenceSizeForFooterInSection:(NSInteger)section
+{
+    CGSize size = {kDeviceWidth, 0};
+    //    if (m_allData.count-1 == section) {
+    size = CGSizeMake(kDeviceWidth, 10);
+    //    }
+    return size;
+}
+
+//UICollectionView被选中时调用的方法
+-(void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    //    UICollectionViewCell * cell = (UICollectionViewCell *)[collectionView cellForItemAtIndexPath:indexPath];
+    //    cell.backgroundColor = [UIColor whiteColor];
+    
+    NSLog(@"%ld",(long)indexPath.row);
+    
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

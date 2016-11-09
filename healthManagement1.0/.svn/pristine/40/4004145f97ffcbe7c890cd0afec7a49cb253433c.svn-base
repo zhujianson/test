@@ -1,0 +1,46 @@
+//
+//  NewDrugUseCell.m
+//  jiuhaohealth4.0
+//
+//  Created by jiuhao-yangshuo on 15-5-21.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "NewDrugUseCell.h"
+
+@implementation NewDrugUseCell
+
+@synthesize m_infoDic,m_callDrugUseView;
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self)
+    {
+        m_callDrugUseView = [[CallDrugUseView alloc]initWithCanChange:YES];
+        [self.contentView addSubview:m_callDrugUseView];
+    }
+    return self;
+}
+
+-(void)dealloc
+{
+    if (m_callDrugUseView)
+    {
+        [m_callDrugUseView release];
+    }
+    [super dealloc];
+}
+
+- (void)setM_infoDic:(NSMutableDictionary *)infoDict
+{
+    
+}
+
++ (float)getCellHeightFromDict:(NSDictionary *)dict
+{
+    float height = 6*44;
+    return height;
+}
+
+@end

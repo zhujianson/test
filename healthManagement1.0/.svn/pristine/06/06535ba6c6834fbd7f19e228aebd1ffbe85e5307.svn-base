@@ -1,0 +1,186 @@
+//
+//  ActivateSuccessViewController.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-9-5.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "ActivateSuccessViewController.h"
+#import "HMHomeViewController.h"
+#import "DeviceViewController.h"
+
+@interface ActivateSuccessViewController ()
+{
+}
+@end
+
+@implementation ActivateSuccessViewController
+
+- (id)initWithNibName:(NSString*)nibNameOrNil bundle:(NSBundle*)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        self.title = @"绑定成功";
+    }
+    return self;
+}
+
+
+- (BOOL)closeNowView
+{
+    [super closeNowView];
+    
+    if (![g_nowUserInfo.isBindEquipment intValue]) {
+        DeviceViewController * defaule = [[DeviceViewController alloc]init];
+        CATransition* transition = [CATransition animation];
+        transition.type = kCATransitionPush;
+        transition.subtype = kCATransitionFromLeft;
+        [self.navigationController.view.layer addAnimation:transition forKey:kCATransition];
+        [self.navigationController pushViewController:defaule animated:NO];
+        [defaule release];
+        return NO;
+    }
+    [self.navigationController popToViewController:[self.navigationController.viewControllers objectAtIndex:1] animated:YES];
+    return NO;
+}
+
+- (void)dealloc
+{
+    [_acticateNum release];
+    [_acticateRs release];
+    [_deveDic release];
+    [super dealloc];
+    
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    
+//    NSLog(@"%@---%@", _acticateNum, _acticateRs);
+    g_nowUserInfo.activeNumber = _acticateNum;
+    UIScrollView * scroll = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight)];
+    scroll.backgroundColor = [UIColor clearColor];
+    [self.view addSubview:scroll];
+
+    CGFloat h =[Common heightForString:[NSString stringWithFormat:@"您已成功绑定%@！", _deveDic[@"device_name"]]
+                                 Width:kDeviceWidth-40
+                                  Font:[UIFont systemFontOfSize:18]].height + 10;
+
+    UILabel* textLab = [Common createLabel:CGRectMake(20, 25, kDeviceWidth-40, h) TextColor:@"333333" Font:[UIFont systemFontOfSize:18] textAlignment:NSTextAlignmentLeft labTitle:[NSString stringWithFormat:@"您已成功绑定%@！", _deveDic[@"device_name"]]];
+    textLab.numberOfLines = 0;
+    [scroll addSubview:textLab];
+
+    textLab = [Common createLabel:CGRectMake(20, textLab.bottom, kDeviceWidth-40, 20) TextColor:VERSION_TEXT_COLOR Font:[UIFont systemFontOfSize:14] textAlignment:NSTextAlignmentLeft labTitle:[NSString stringWithFormat:@"设备编号：%@", _acticateNum]];
+    [scroll addSubview:textLab];
+
+    textLab = [Common createLabel:CGRectMake(20, textLab.bottom-5, kDeviceWidth-40, 40) TextColor:@"e75e4d" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:_deveDic[@"device_info"]];
+    h =[Common heightForString:_deveDic[@"device_info"]
+                                 Width:kDeviceWidth-40
+                                  Font:[UIFont systemFontOfSize:15]].height + 10;
+    textLab.frame = [Common rectWithSize:textLab.frame width:0 height:h];
+    textLab.numberOfLines = 0;
+    [scroll addSubview:textLab];
+
+    UIImageView* image = [[UIImageView alloc] initWithFrame:CGRectMake(20, textLab.bottom+10, kDeviceWidth-40, 185)];
+//    [CommonImage setPicImageQiniu:_deveDic[@"device_pic"] View:image Type:2 Delegate:nil];
+    [CommonImage setImageFromServer:_deveDic[@"device_pic"] View:image Type:2];
+
+    [scroll addSubview:image];
+    [image release];
+
+    textLab = [Common createLabel:CGRectMake(20, image.bottom, kDeviceWidth-40, 50) TextColor:@"666666" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:[NSString stringWithFormat:@"客服电话：%@", HOTLINEPHONE]];
+    textLab.numberOfLines = 2;
+    [scroll addSubview:textLab];
+
+    UIBarButtonItem *left;
+    UIButton* btn_Login = [UIButton buttonWithType:UIButtonTypeCustom];
+    btn_Login.frame = CGRectMake(20, textLab.bottom+20, kDeviceWidth-40, 44);
+    [btn_Login setTitleColor:[CommonImage colorWithHexString:@"#ffffff"] forState:UIControlStateNormal];
+    btn_Login.titleLabel.font = [UIFont systemFontOfSize:20];
+    btn_Login.layer.cornerRadius = 4;
+    btn_Login.clipsToBounds = YES;
+    UIImage* image2 =  [CommonImage createImageWithColor:[CommonImage colorWithHexString:COLOR_FF5351]];
+    [btn_Login setBackgroundImage:image2 forState:UIControlStateNormal];
+    [scroll addSubview:btn_Login];
+    scroll.contentSize = CGSizeMake(0,btn_Login.bottom+20);
+
+    if (!_isAddDeve) {
+        left = [Common CreateNavBarButton:self setEvent:nil setImage:nil setTitle:nil];
+        [btn_Login addTarget:self action:@selector(goToMainViewController) forControlEvents:UIControlEventTouchUpInside];
+        [btn_Login setTitle:NSLocalizedString(@"进入首页", nil) forState:UIControlStateNormal];
+    }else{
+        left = [Common CreateNavBarButton:self setEvent:@selector(returnlist) setImage:@"common.bundle/nav/back_nor.png" setTitle:nil];
+        scroll.contentSize = CGSizeMake(0,textLab.bottom+20);
+        [btn_Login addTarget:self action:@selector(returnlist) forControlEvents:UIControlEventTouchUpInside];
+        [btn_Login setTitle:NSLocalizedString(@"确认", nil) forState:UIControlStateNormal];
+
+    }
+    self.navigationItem.leftBarButtonItem = left;
+    [scroll release];
+    // Do any additional setup after loading the view.
+}
+
+- (void)returnlist
+{
+    DeviceViewController * device;
+    for (int i = 0; i<self.navigationController.viewControllers.count; i++) {
+        device = [self.navigationController.viewControllers objectAtIndex:i];
+        if ([[device class] isSubclassOfClass:[DeviceViewController class]]) {
+            [device beginLoadIng];
+            [self.navigationController popToViewController:[self.navigationController.viewControllers objectAtIndex:i] animated:YES];
+            break;
+            return;
+        }
+    }
+    [self.navigationController popToRootViewControllerAnimated:YES];
+}
+
+//进入首页
+- (void)goToMainViewController
+{
+    HMHomeViewController* home = [[HMHomeViewController alloc] init];
+    UIImage* nowViewImage = [CommonImage imageWithView:self.view];
+    CommonNavViewController*view = [[CommonNavViewController alloc] initWithRootViewController:home];
+    APP_DELEGATE.rootViewController = view;
+    [view release];
+    
+    UIImageView* nowView = [[UIImageView alloc] initWithImage:nowViewImage];
+    nowView.frame = CGRectMake(0, 0, kDeviceWidth, kDeviceHeight + 64);
+    [APP_DELEGATE addSubview:nowView];
+    [nowView release];
+    [APP_DELEGATE bringSubviewToFront:nowView];
+    
+    [UIView animateWithDuration:0.35 animations:^{
+        nowView.transform = CGAffineTransformMakeTranslation(0, kDeviceHeight+64);
+    } completion:^(BOOL finished) {
+        [nowView removeFromSuperview];
+    }];
+    
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+{
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

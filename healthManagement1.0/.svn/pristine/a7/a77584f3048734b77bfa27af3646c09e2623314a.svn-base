@@ -1,0 +1,58 @@
+//
+//  HeaderCollectionReusableView.m
+//  healthManagement1.0
+//
+//  Created by xjs on 16/7/5.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "HeaderCollectionReusableView.h"
+
+@implementation HeaderCollectionReusableView
+
+- (id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self)
+    {
+        UIView *viewheader = [[UIView alloc] initWithFrame:CGRectMake(15, (45-16)/2, 2, 16)];
+        viewheader.backgroundColor = [CommonImage colorWithHexString:@"42dc83"];
+        [self addSubview:viewheader];
+        
+        _label = [Common createLabel:CGRectMake(viewheader.right+10, 0, 200, 45) TextColor:@"999999" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        [self addSubview:_label];
+        
+//        viewheader = [[UIView alloc] initWithFrame:CGRectMake(0, 39.5+7, kDeviceWidth, 0.5)];
+//        viewheader.backgroundColor = [CommonImage colorWithHexString:LINE_COLOR];
+//        [self addSubview:viewheader];
+        
+        _butMore = [UIButton buttonWithType:UIButtonTypeCustom];
+        _butMore.frame = CGRectMake(kDeviceWidth-85, 0, 80, 45);
+        [_butMore setTitle:@"更多" forState:UIControlStateNormal];
+        [_butMore setTitleColor:[CommonImage colorWithHexString:@"999999"] forState:UIControlStateNormal];
+        [_butMore addTarget:self.superview.viewController action:@selector(butEventMoreNews:) forControlEvents:UIControlEventTouchUpInside];
+        _butMore.titleLabel.font = [UIFont systemFontOfSize:14];
+        [self addSubview:_butMore];
+        
+        UIImageView * rightI = [[UIImageView alloc]initWithFrame:CGRectMake(_butMore.right-20, _butMore.top, 10, _butMore.height)];
+        rightI.image = [UIImage imageNamed:@"common.bundle/common/smallR.png"];
+        //        rightI.backgroundColor = [UIColor redColor];
+        rightI.contentMode =  UIViewContentModeCenter;
+        [self addSubview:rightI];
+
+        UIView * lineView = [[UIView alloc]initWithFrame:CGRectMake(0, 0.5, self.size.width, 0.5)];
+        lineView.backgroundColor = [CommonImage colorWithHexString:LINE_COLOR];
+        [self addSubview:lineView];
+
+    }
+    return self;
+}
+
+- (void)butEventMoreNews:(UIButton*)btn
+{
+    NSLog(@"%d",btn.tag);
+    _m_block((int)btn.tag);
+    
+}
+
+@end

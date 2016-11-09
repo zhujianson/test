@@ -1,0 +1,32 @@
+//
+//  CommunityDetailViewController.h
+//  jiuhaohealth4.0
+//
+//  Created by jiuhao-yangshuo on 15-4-17.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+static NSString *const kDeletePost = @"kDeletePost";
+static NSString *const kPraisePost = @"kPraisePost";
+typedef void (^CommunityDetailViewControllerBlock)(NSString *str);//
+
+@interface CommunityDetailViewController : CommonViewController
+
+@property (nonatomic,assign) BOOL isfromSearchListFlag;//搜索进来
+
+@property (nonatomic,assign) BOOL isfromTopicDataFlag;//主题进来
+
+@property (nonatomic,copy) CommunityDetailViewControllerBlock myCommunityDetailViewControllerBlock;
+
+///  计算高度
+///
+///  @param dataDict        原始数据
+///  @param keyConentString 关键字
+///  @param width           宽度
+///
+///  @return 计算高度
+-(float)getContentHeightWithDict:(NSMutableDictionary *)dataDict withKeyConentString:(NSString *)keyConentString withContentWidth:(float)width withFront:(CGFloat)titleFront withAdjustHeight:(float)adjustHeight;
+
+@end

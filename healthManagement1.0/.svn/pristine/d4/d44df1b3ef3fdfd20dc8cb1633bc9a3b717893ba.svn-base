@@ -1,0 +1,61 @@
+//
+//  ExpertTopicTableViewCell.h
+//  jiuhaohealth2.1
+//
+//  Created by wangmin on 14-8-31.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+typedef void (^ExpertPhotoClickeBlock1)(NSDictionary *doctorDic);
+
+typedef void (^ExpertPhotoClickeBlock)(NSString *doctorId);
+
+typedef void (^FuncBlock)(int tag);
+
+@interface ExpertTopicTableViewCell1 : UITableViewCell
+{
+    UIImageView *m_imagePhoto;
+    UILabel *m_labTitle;
+    UILabel *m_labCon;
+    UILabel *m_labTime;
+    UIImageView *m_icon;
+    UILabel *m_labCount;
+    UILabel *m_isNewLab;
+    
+}
+@property (nonatomic,retain) UILabel * m_labCount;
+@property (nonatomic, retain) UIImageView * backImage;
+@property (nonatomic, copy) ExpertPhotoClickeBlock expertPhotoClickBlock;
+//@property (nonatomic, copy) FuncBlock funcBlock;
+
+@property (nonatomic, retain) NSMutableDictionary *m_infoDic;
+
+- (void)setIconImage:(UIImage*)image;
+- (void)setBackImage:(UIImage*)image;
+
+@end
+
+
+@interface ExpertTopicTableViewCell : UITableViewCell
+@property (nonatomic, assign) UIView *backView;//背景
+
+@property (nonatomic, retain)UIImageView *picImageView;//图片
+@property (nonatomic, retain)UILabel *detailLabel;//文字详细
+
+@property (nonatomic,assign) BOOL isLeftRightStyle;
+
+@property (nonatomic,copy) ExpertPhotoClickeBlock expertPhotoClickBlock;
+
+@property (nonatomic,copy) FuncBlock funcBlock;//
+
+//@property (nonatomic, assign) UIImageView *picImageView;//图片
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier  isLeftRightStyle:(BOOL)yes;
+
+- (void)setIconImage:(UIImage *)image;
+- (void)setDataDic:(NSDictionary *)newDic;
+- (void)setDataListDic:(NSDictionary *)newDic;
+
+@end

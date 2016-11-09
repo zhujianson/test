@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>7B53CE38-FBEB-4C53-8495-AE0D7B4E88F2</string>
+	<key>IDESourceControlProjectName</key>
+	<string>Assistant1.0</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>14714330-DA3F-4EC9-9561-56961E222FC1</key>
+		<string>http://192.168.0.247:8090/jiuhao-app-ios2.0/trunk/2.0/Assistant1.0</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>jiuhaoHealth2.1/Assistant1.0.xcodeproj/project.xcworkspace</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>14714330-DA3F-4EC9-9561-56961E222FC1</key>
+		<string>../..</string>
+	</dict>
+	<key>IDESourceControlProjectRepositoryRootDictionary</key>
+	<dict>
+		<key>14714330-DA3F-4EC9-9561-56961E222FC1</key>
+		<string>http://192.168.0.247:8090/jiuhao-app-ios2.0</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>http://192.168.0.247:8090/jiuhao-app-ios2.0/trunk/2.0/Assistant1.0/Assistant1.0.xcodeproj</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>110</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>14714330-DA3F-4EC9-9561-56961E222FC1</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryBranchesRelativeLocationKey</key>
+			<string>branches</string>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.subversion</string>
+			<key>IDESourceControlRepositoryTagsRelativeLocationKey</key>
+			<string>tags</string>
+			<key>IDESourceControlRepositoryTrunkRelativeLocationKey</key>
+			<string>trunk</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>14714330-DA3F-4EC9-9561-56961E222FC1</string>
+			<key>IDESourceControlWCCName</key>
+			<string>Assistant1.0</string>
+		</dict>
+	</array>
+</dict>
+</plist>

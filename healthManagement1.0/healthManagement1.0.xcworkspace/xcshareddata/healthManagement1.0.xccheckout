@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>EA3DBC29-2C4E-4E2E-AE52-A743050FFE5B</string>
+	<key>IDESourceControlProjectName</key>
+	<string>healthManagement1.0</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>abdb8c0e-602b-4b51-ad46-690ae5c3609f++8677</key>
+		<string>svn://192.168.0.19:7890/KANGXUN-NEW-V100R002C06/00.Code/trunk/client_app_ios/healthManagement1.0</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>healthManagement1.0.xcworkspace</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>abdb8c0e-602b-4b51-ad46-690ae5c3609f++8677</key>
+		<string>..</string>
+	</dict>
+	<key>IDESourceControlProjectRepositoryRootDictionary</key>
+	<dict>
+		<key>abdb8c0e-602b-4b51-ad46-690ae5c3609f++8677</key>
+		<string>svn://192.168.0.19:7890/KANGXUN-NEW-V100R002C06</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>svn://192.168.0.19:7890/KANGXUN-NEW-V100R002C06/00.Code/trunk/client_app_ios/healthManagement1.0/healthManagement1.0.xcworkspace</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>abdb8c0e-602b-4b51-ad46-690ae5c3609f++8677</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.subversion</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>abdb8c0e-602b-4b51-ad46-690ae5c3609f++8677</string>
+			<key>IDESourceControlWCCName</key>
+			<string>healthManagement1.0</string>
+		</dict>
+	</array>
+</dict>
+</plist>

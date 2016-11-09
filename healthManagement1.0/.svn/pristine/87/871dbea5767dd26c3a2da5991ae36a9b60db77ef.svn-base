@@ -1,0 +1,614 @@
+//
+//  ExpertTopicTableViewCell.m
+//  jiuhaohealth2.1
+//
+//  Created by wangmin on 14-8-31.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "ExpertTopicTableViewCell.h"
+#import "TopicDetailsViewController.h"
+
+@implementation ExpertTopicTableViewCell1
+@synthesize m_infoDic;
+@synthesize m_labCount;
+@synthesize backImage;
+
+- (void)dealloc
+{
+    [m_imagePhoto release];
+    [m_labCon release];
+    [m_labCount release];
+    [m_labTime release];
+    [m_labTitle release];
+    [m_icon release];
+    [m_isNewLab release];
+    [super dealloc];
+}
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        m_imagePhoto = [[UIImageView alloc] initWithFrame:CGRectMake(10, 10, 40, 40)];
+        m_imagePhoto.contentMode = UIViewContentModeScaleAspectFill;
+        m_imagePhoto.layer.cornerRadius = m_imagePhoto.width/2.f;
+        m_imagePhoto.clipsToBounds = YES;
+        [self.contentView addSubview:m_imagePhoto];
+        
+        m_labTitle = [Common createLabel];
+        m_labTitle.frame = CGRectMake(m_imagePhoto.right + 10, m_imagePhoto.origin.y+3, kDeviceWidth-m_imagePhoto.right - 50, 19);
+        m_labTitle.font = [UIFont systemFontOfSize:16];
+        m_labTitle.textColor = [CommonImage colorWithHexString:@"000000"];
+        [self.contentView addSubview:m_labTitle];
+        
+        
+        m_isNewLab = [Common createLabel];
+        m_isNewLab.frame = CGRectMake(200, m_labTitle.origin.y, 30, 19);
+        m_isNewLab.textAlignment = NSTextAlignmentCenter;
+        m_isNewLab.layer.cornerRadius = 2;
+        m_isNewLab.clipsToBounds = YES;
+        m_isNewLab.font = [UIFont fontWithName:@"Helvetica-Bold" size:12];
+        m_isNewLab.textColor = [UIColor whiteColor];
+        [self.contentView addSubview:m_isNewLab];
+        
+        m_labTime = [Common createLabel];
+        m_labTime.frame = CGRectMake(m_labTitle.origin.x, m_labTitle.bottom, 130, 16);
+        m_labTime.font = [UIFont systemFontOfSize:12];
+        m_labTime.textColor = [CommonImage colorWithHexString:@"999999"];
+        [self.contentView addSubview:m_labTime];
+        
+//        UILabel *lab = [Common createLabel];
+//        lab.frame = CGRectMake(kDeviceWidth - 41, m_labTitle.top+8, 31, 18);
+//        lab.text = @"更多";
+//        lab.clipsToBounds = YES;
+//        lab.textAlignment = NSTextAlignmentCenter;
+//        lab.layer.borderWidth = 0.5;
+//        lab.layer.borderColor = [CommonImage colorWithHexString:COLOR_FF5351].CGColor;
+//        lab.layer.cornerRadius = 4;
+//        lab.font = [UIFont systemFontOfSize:12];
+//        lab.textColor = [CommonImage colorWithHexString:COLOR_FF5351];
+//        [self.contentView addSubview:lab];
+        
+        m_icon = [[UIImageView alloc] initWithFrame:CGRectMake(kDeviceWidth - 10-18, m_labCon.bottom + 8, 20, 20)];
+//        m_icon.image = [UIImage imageNamed:@"common.bundle/topic/conversation_icon_read.png"];
+        m_icon.contentMode = UIViewContentModeCenter;
+        [self.contentView addSubview:m_icon];
+        
+//        UIImageView * rightImage = [[UIImageView alloc]initWithFrame:CGRectMake(kDeviceWidth-17, (m_labTime.bottom+12)/2-6,7, 12)];
+//        rightImage.image = [UIImage imageNamed:@"common.bundle/common/right-arrow_pre.png"];
+//        [self.contentView addSubview:rightImage];
+//        [rightImage release];
+
+        
+        UIView * view = [[UIView alloc]initWithFrame:CGRectMake(0, m_labTime.bottom+12, kDeviceWidth, (170/320.f)*kDeviceWidth+90-m_labTime.bottom)];
+//        UITapGestureRecognizer * tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(touchViewPush)];
+//        
+//        [view addGestureRecognizer:tap];
+//        [tap release];
+        
+        view.backgroundColor = [UIColor clearColor];
+        [self.contentView addSubview:view];
+
+        backImage = [[UIImageView alloc] initWithFrame:CGRectMake(10, 0, kDeviceWidth-20, (170/320.f)*kDeviceWidth)];
+        backImage.contentMode = UIControlContentHorizontalAlignmentFill;
+//        _backImage.backgroundColor = [UIColor redColor];
+        [view addSubview:backImage];
+        
+        m_labCon = [Common createLabel];
+        m_labCon.frame = CGRectMake(m_imagePhoto.origin.x, backImage.bottom+10, kDeviceWidth-100, 16);
+        m_labCon.font = [UIFont systemFontOfSize:15];
+        m_labCon.textColor = [CommonImage colorWithHexString:@"333333"];
+        [view addSubview:m_labCon];
+        
+        m_labCount = [Common createLabel];
+        //        m_labCount.textAlignment = NSTextAlignmentRight;
+        m_labCount.frame = CGRectMake(kDeviceWidth - 80 - 10, m_labCon.origin.y,80, 18);
+        //        m_labCount.font = [UIFont systemFontOfSize:11];
+        m_labCount.textAlignment = NSTextAlignmentCenter;
+        //        _dateLabel.font = [UIFont fontWithName:@"HelveticaNeue-UltraLight" size:12];
+        m_labCount.clipsToBounds = YES;
+        m_labCount.layer.borderWidth = 0.5;
+        m_labCount.layer.borderColor = [CommonImage colorWithHexString:@"#cacaca"].CGColor;
+        m_labCount.layer.cornerRadius = 18/2;
+        m_labCount.font = [UIFont systemFontOfSize:12];
+        m_labCount.textColor = [CommonImage colorWithHexString:@"999999"];
+        m_labCount.textColor = [CommonImage colorWithHexString:@"666666"];
+        [view addSubview:m_labCount];
+    }
+    return self;
+}
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setM_infoDic:(NSMutableDictionary *)dic
+{
+//    [CommonImage setPicImageQiniu:dic[@"doctorFilePath"] View:m_imagePhoto Type:4 Delegate:nil];
+    [CommonImage setImageFromServer:dic[@"doctorFilePath"] View:m_imagePhoto Type:4];
+
+    
+    m_infoDic = [dic retain];
+    m_labTitle.text = [dic objectForKey:@"newTitle"];
+    m_labCon.text = [dic objectForKey:@"newIntroduction"];
+    m_labTime.text = [CommonDate getServerTime:(long)([[dic objectForKey:@"createTime"] longLongValue]/1000) type:11];
+    m_labCount.text = [NSString stringWithFormat:@"%@阅读",dic[@"readCount"]];
+    m_labCount.frame = [Common rectWithSize:m_labCount.frame width:[Common unicodeLengthOfString:m_labCount.text]*8 height:0];
+    m_labCount.frame = [Common rectWithOrigin:m_labCount.frame x:kDeviceWidth-m_labCount.size.width-10 y:0];
+    
+    float widht = [m_labCount.text sizeWithFont:m_labCount.font].width + 5;
+    m_icon.transform = CGAffineTransformMakeTranslation(-widht, 0);
+    if ([dic[@"themeTag"] isEqualToString:@"2"]) {
+        m_isNewLab.hidden = NO;
+        widht = [m_labTitle.text sizeWithFont:m_labTitle.font].width + 10;
+        m_isNewLab.frame = [Common rectWithOrigin:m_isNewLab.frame x:MIN(widht+m_labTitle.origin.x, m_labTitle.width+m_labTitle.origin.x) y:0];
+        m_isNewLab.text = @"NEW";
+        m_isNewLab.backgroundColor = [CommonImage colorWithHexString:@"6cd014"];
+    }else if ([dic[@"themeTag"] isEqualToString:@"1"]) {
+        m_isNewLab.hidden = NO;
+        widht = [m_labTitle.text sizeWithFont:m_labTitle.font].width + 10;
+        m_isNewLab.frame = [Common rectWithOrigin:m_isNewLab.frame x:MIN(widht+m_labTitle.origin.x, m_labTitle.width+m_labTitle.origin.x) y:0];
+        m_isNewLab.text = @"HOT";
+        m_isNewLab.backgroundColor = [CommonImage colorWithHexString:@"ff2a21"];
+    }else{
+        m_isNewLab.hidden = YES;
+    }
+
+}
+
+- (void)setIconImage:(UIImage*)image
+{
+    m_imagePhoto.image = image;
+}
+
+- (void)setBackImage:(UIImage*)image
+{
+    backImage.image = image;
+}
+
+- (void)touchViewPush
+{
+    NSLog(@"aaaaa");
+    TopicDetailsViewController * top = [[TopicDetailsViewController alloc] init];
+    top.m_isHideNavBar = [m_infoDic[@"transparentYn"] isEqualToString:@"Y"];
+//    top.experCell = cell;
+    top.m_dic = m_infoDic;
+    top.shareTitle = m_infoDic[@"newTitle"];
+    top.shareImage = m_infoDic[@"newTitleFilepath"];
+    top.shareContentString = m_infoDic[@"newIntroduction"];
+    top.shareURL = [NSString stringWithFormat:@"%@%@.html", Share_Server_URL,m_infoDic[@"themeId"]];
+    UIViewController * object = [m_infoDic objectForKey:@"object"];
+    [object.navigationController pushViewController:top animated:YES];
+    [top release];
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end
+
+
+
+
+
+
+
+@interface ExpertTopicTableViewCell ()
+{
+    CGFloat leftMargin;
+    UIImageView *expertImageView;//专家头像
+    UILabel *expertName;//医师名称
+    UILabel *expertPos;//医生职称
+    UIButton *responseBtn;//响应Btn
+    
+    
+    UILabel *topicTitle;//话题名称
+    UILabel *dateLabel;//日期
+    
+    
+    
+    UILabel *detailLabel;//文字详细
+	
+	UIView *line;//线
+    
+    UIView *redView;//查看
+    UIView *favView;//喜欢
+    UIView *commentView;//评论
+    UIView *starView;//
+}
+
+@property (nonatomic,retain) NSString *doctorId;//医师id
+
+@end
+
+@implementation ExpertTopicTableViewCell
+@synthesize picImageView = picImageView;
+@synthesize detailLabel = detailLabel;
+//@synthesize picImageView;
+
+- (void)dealloc
+{
+    self.expertPhotoClickBlock = nil;
+    self.doctorId = nil;
+    [super dealloc];
+}
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier  isLeftRightStyle:(BOOL)yes
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        // Initialization code
+        self.isLeftRightStyle = yes;
+        
+        if(self.isLeftRightStyle){
+            [self getSubViews];
+        }else {
+            [self noLeftSideView];
+        }
+        
+        
+    }
+    return self;
+}
+
+- (UIView *)getFuncViewWithFrame:(CGRect)frame imageNor:(NSString *)norName imageSel:(NSString *)selName num:(NSString *)num tag:(int)tag{
+    
+    UIView *view = [[UIView alloc] initWithFrame:frame];
+    view.userInteractionEnabled = YES;
+    view.tag = 1000+tag;
+    UIButton *btn  = [UIButton buttonWithType:UIButtonTypeCustom];
+    UIImage *norImage = [UIImage imageNamed:norName];
+    btn.frame = CGRectMake(0, 2, norImage.size.width, norImage.size.height);
+    btn.tag = 100+tag;
+    [btn setImage:norImage forState:UIControlStateNormal];
+    [btn setImage:[UIImage imageNamed:selName] forState:UIControlStateHighlighted];
+    [view addSubview:btn];
+    UILabel *numLabel = [Common createLabel:CGRectMake(norImage.size.width+5, 0, frame.size.width-norImage.size.width-8, frame.size.height) TextColor:@"66666" Font:[UIFont systemFontOfSize:12] textAlignment:NSTextAlignmentLeft labTitle:num];
+    numLabel.tag = 90+tag;
+    //    numLabel.backgroundColor = [UIColor whiteColor];
+    [view addSubview:numLabel];
+    
+    return [view autorelease];
+}
+
+- (void)noLeftSideView
+{
+    //背景
+    _backView = [[UIView alloc] initWithFrame:CGRectMake(10, 0, kDeviceWidth-20, 280)];
+    _backView.backgroundColor = [UIColor whiteColor];
+//    _backView.userInteractionEnabled = NO;
+    _backView.layer.cornerRadius = 6.0f;
+    _backView.layer.borderColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_QIAN].CGColor;
+    _backView.layer.borderWidth = 0.5f;
+    [self.contentView addSubview:_backView];
+    [_backView release];
+    //话题名称
+    //标题
+    topicTitle = [[UILabel alloc] initWithFrame:CGRectMake(15, 15, _backView.size.width-30, 16)];
+    topicTitle.backgroundColor = [UIColor clearColor];
+    topicTitle.textColor = [CommonImage colorWithHexString:@"333333"];
+    topicTitle.font = [UIFont systemFontOfSize:17.0f];
+    topicTitle.numberOfLines = 2;
+    [_backView addSubview:topicTitle];
+    [topicTitle release];
+    //日期
+    dateLabel = [[UILabel alloc] initWithFrame:CGRectMake(topicTitle.origin.x, topicTitle.origin.y+topicTitle.size.height+7, 70, 13)];
+    dateLabel.backgroundColor = [UIColor clearColor];
+    dateLabel.font = [UIFont systemFontOfSize:12.0f];
+    dateLabel.textColor = [CommonImage colorWithHexString:@"666666"];
+    [_backView addSubview:dateLabel];
+    [dateLabel release];
+    //图片
+    picImageView = [[UIImageView alloc] initWithFrame:CGRectMake(10, dateLabel.origin.y+dateLabel.size.height+10, _backView.size.width-20, (160/320.f)*kDeviceWidth)];
+    picImageView.contentMode = UIViewContentModeScaleAspectFill;
+    [_backView addSubview:picImageView];
+    [picImageView release];
+    //简要
+    detailLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, picImageView.origin.y+picImageView.size.height+10, _backView.size.width-30, 27)];
+    detailLabel.backgroundColor = [UIColor clearColor];
+    detailLabel.font = [UIFont systemFontOfSize:15.0f];
+    detailLabel.numberOfLines = 2;
+    detailLabel.textColor = [CommonImage colorWithHexString:@"666666"];
+    [_backView addSubview:detailLabel];
+    [detailLabel release];
+	
+	line = [[UIView alloc] initWithFrame:CGRectMake(0, detailLabel.bottom, _backView.width, 0.5)];
+	line.backgroundColor = [CommonImage colorWithHexString:VERSION_LIN_COLOR_QIAN];
+	[_backView addSubview:line];
+	[line release];
+	
+    
+    CGFloat width = (kDeviceWidth-40)/4;
+    redView = [self getFuncViewWithFrame:CGRectMake(detailLabel.origin.x, detailLabel.origin.y+detailLabel.size.height, width, 20) imageNor:@"common.bundle/topic/conversation_icon_read.png" imageSel:@"common.bundle/topic/conversation_icon_read.png" num:@"" tag:0];
+    [_backView addSubview:redView];
+    favView = [self getFuncViewWithFrame:CGRectMake(detailLabel.origin.x+width, detailLabel.origin.y+detailLabel.size.height, width, 20) imageNor:@"common.bundle/topic/conversation_icon_praise.png" imageSel:@"common.bundle/topic/conversation_icon_praise.png" num:@"" tag:1];
+    [_backView addSubview:favView];
+    commentView = [self getFuncViewWithFrame:CGRectMake(detailLabel.origin.x+width*2, detailLabel.origin.y+detailLabel.size.height, width, 20) imageNor:@"common.bundle/topic/conversation_icon_evaluation.png" imageSel:@"common.bundle/topic/conversation_icon_evaluation.png" num:@"" tag:2];
+    [_backView addSubview:commentView];
+    starView = [self getFuncViewWithFrame:CGRectMake(detailLabel.origin.x+width*3, detailLabel.origin.y+detailLabel.size.height, width, 20) imageNor:@"common.bundle/topic/conversation_icon_collection.png" imageSel:@"common.bundle/topic/conversation_icon_collection.png" num:@"" tag:3];
+    [_backView addSubview:starView];
+    
+    UIButton *but = [[UIButton alloc] initWithFrame:CGRectMake(0, redView.origin.y - 10, kDeviceWidth-20, 40)];
+    but.tag = 897;
+//    [but setBackgroundImage:[UIImage imageNamed:@"common.bundle/topic/conversation_icon_evaluation.png"] forState:UIControlStateNormal];
+    [but addTarget:self action:@selector(qwe) forControlEvents:UIControlEventTouchUpInside];
+    [_backView addSubview:but];
+    [but release];
+}
+
+- (void)qwe
+{
+    NSLog(@"123123123123");
+}
+
+- (void)getSubViews
+{
+    //背景
+    _backView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 280)];
+    _backView.backgroundColor = [UIColor whiteColor];
+    [self.contentView addSubview:_backView];
+    [_backView release];
+    //头像
+    expertImageView = [[UIImageView alloc] initWithFrame:CGRectMake(15, 15, 60, 60)];
+    expertImageView.layer.cornerRadius = 30;
+    [_backView addSubview:expertImageView];
+    [expertImageView release];
+    expertImageView.userInteractionEnabled = NO;
+    responseBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    responseBtn.frame = expertImageView.bounds;
+    [responseBtn addTarget:self action:@selector(goToExpertTopicList) forControlEvents:UIControlEventTouchUpInside];
+    [expertImageView addSubview:responseBtn];
+    
+    //医师名称
+    expertName = [[UILabel alloc] initWithFrame:CGRectMake(0, expertImageView.origin.y+expertImageView.size.height+12, 15+60+18, 16)];
+    expertName.backgroundColor = [UIColor clearColor];
+    expertName.textColor = [CommonImage colorWithHexString:@"333333"];
+    expertName.textAlignment = NSTextAlignmentCenter;
+    expertName.text = @"肖建中";
+    [_backView addSubview:expertName];
+    [expertName release];
+    //医生职称
+    expertPos = [[UILabel alloc] initWithFrame:CGRectMake(0, expertName.origin.y+expertName.size.height+7, 15+60+18, 16)];
+    expertPos.backgroundColor = [UIColor clearColor];
+    expertPos.numberOfLines = 0;
+    expertPos.text = @"副主任医师";
+    expertPos.textColor = [CommonImage colorWithHexString:@"666666"];
+    expertPos.textAlignment = NSTextAlignmentCenter;
+    [_backView addSubview:expertPos];
+    [expertPos release];
+    
+    //话题名称
+    //标题
+    topicTitle = [[UILabel alloc] initWithFrame:CGRectMake(93, 15, _backView.width - 93 - 10, 16)];
+    topicTitle.backgroundColor = [UIColor clearColor];
+    topicTitle.textColor = [CommonImage colorWithHexString:@"333333"];
+    topicTitle.font = [UIFont systemFontOfSize:15.0f];
+    topicTitle.numberOfLines = 2;
+    [_backView addSubview:topicTitle];
+    [topicTitle release];
+    //日期
+    dateLabel = [[UILabel alloc] initWithFrame:CGRectMake(topicTitle.origin.x, topicTitle.origin.y+topicTitle.size.height+7, 70, 13)];
+    dateLabel.backgroundColor = [UIColor clearColor];
+    dateLabel.font = [UIFont systemFontOfSize:12.0f];
+    dateLabel.textColor = [CommonImage colorWithHexString:@"666666"];
+    [_backView addSubview:dateLabel];
+    [dateLabel release];
+    //图片
+//    _backView.userInteractionEnabled = YES;
+    picImageView = [[UIImageView alloc] initWithFrame:CGRectMake(93, dateLabel.origin.y+dateLabel.size.height+10, 212, (160/320.f)*kDeviceWidth)];
+    picImageView.contentMode = UIControlContentHorizontalAlignmentFill;
+    [_backView addSubview:picImageView];
+    [picImageView release];
+    
+    //简要
+    detailLabel = [[UILabel alloc] initWithFrame:CGRectMake(95, picImageView.origin.y+picImageView.size.height+10, 210, 27)];
+    detailLabel.backgroundColor = [UIColor clearColor];
+    detailLabel.font = [UIFont systemFontOfSize:13.0f];
+    detailLabel.numberOfLines = 2;
+    detailLabel.textColor = [CommonImage colorWithHexString:@"999999"];
+    [_backView addSubview:detailLabel];
+    [detailLabel release];
+    //    CGFloat width = 210/3;
+    //    redView = [self getFuncViewWithFrame:CGRectMake(detailLabel.origin.x, detailLabel.origin.y+detailLabel.size.height, width, 20) imageNor:@"common.bundle/diary/dairy_content_icon_delete.png" imageSel:@"common.bundle/diary/dairy_content_icon_delete.png" num:@"" tag:0];
+    //    [_backView addSubview:redView];
+    //     favView = [self getFuncViewWithFrame:CGRectMake(detailLabel.origin.x+width, detailLabel.origin.y+detailLabel.size.height, width, 20) imageNor:@"common.bundle/diary/dairy_content_icon_delete.png" imageSel:@"common.bundle/diary/dairy_content_icon_delete.png" num:@"" tag:1];
+    //    [_backView addSubview:favView];
+    //     commentView = [self getFuncViewWithFrame:CGRectMake(detailLabel.origin.x+width*2, detailLabel.origin.y+detailLabel.size.height, width, 20) imageNor:@"common.bundle/diary/dairy_content_icon_delete.png" imageSel:@"common.bundle/diary/dairy_content_icon_delete.png" num:@"" tag:2];
+    //    [_backView addSubview:commentView];
+}
+
+
+/**
+ *  跳转到该专家所有话题
+ */
+- (void)goToExpertTopicList
+{
+    self.expertPhotoClickBlock(self.doctorId);
+    
+}
+
+- (void)setDataListDic:(NSDictionary *)newDic
+{
+    NSString *imgurl = newDic[@"titleFilepath"];
+    
+    BOOL hasPic = NO;
+    if(imgurl.length){
+        hasPic = YES;
+    }
+    NSString *title = newDic[@"title"];
+    CGSize titleSize = [self getSizeWithString:title font:topicTitle.font constrainSize:CGSizeMake(topicTitle.size.width, 45)];
+    CGRect titleRect = topicTitle.frame;
+    titleRect.size.height = titleSize.height;
+    topicTitle.frame = titleRect;
+    topicTitle.text = title;
+    //日期
+    dateLabel.frame = CGRectMake(topicTitle.origin.x, topicTitle.origin.y+topicTitle.size.height+7, 70, 13);
+    dateLabel.text = [CommonDate  getServerTime:(long)([newDic[@"createTime"] longLongValue]/1000) type:4];
+    picImageView.frame = CGRectMake(10, dateLabel.origin.y+dateLabel.size.height+10, _backView.size.width-20, (160/320.f)*kDeviceWidth);
+//    [CommonImage setPicImageQiniu:newDic[@"titleFilepath"] View:picImageView Type:2 Delegate:nil];
+    [CommonImage setImageFromServer:newDic[@"titleFilepath"] View:picImageView Type:2];
+
+    //详细
+    NSString *content = newDic[@"introduction"];
+    CGSize detailSize = [self getSizeWithString:content font:detailLabel.font constrainSize:CGSizeMake(detailLabel.size.width, 45)];
+    CGRect detailRect = detailLabel.frame;
+    detailRect.origin.y = picImageView.origin.y+picImageView.size.height+10;
+    detailRect.size.height = detailSize.height;
+    detailLabel.frame = detailRect;
+    detailLabel.text = content;
+    
+    NSString *redCount = [NSString stringWithFormat:@"%@",newDic[@"readCount"]];
+    NSString *favCount = [NSString stringWithFormat:@"%@",newDic[@"greatCount"]];
+    NSString *discussCount = [NSString stringWithFormat:@"%@",newDic[@"discussCount"]];
+    NSString *starCount = [NSString stringWithFormat:@"%@",newDic[@"favortieCount"]];
+//    redCount = @"123";
+//    favCount = @"2444";
+//    discussCount = @"12334";
+//    starCount = @"1234";
+	
+	
+	CGRect rect = line.frame;
+	rect.origin.y = detailLabel.bottom + 10;
+	line.frame = rect;
+	
+	CGFloat viewY = line.bottom + 10;
+	
+    UILabel *redLabel = (UILabel *)[redView viewWithTag:90];
+    redLabel.text = redCount;
+    CGRect redRect = redView.frame;
+    redRect.origin.y = viewY;
+    redView.frame = redRect;
+    
+    
+    UILabel *favLabel = (UILabel *)[favView viewWithTag:91];
+    favLabel.text = favCount;
+    CGRect favRect = favView.frame;
+    favRect.origin.y = viewY;
+    favView.frame = favRect;
+    UILabel *disCussLabel = (UILabel *)[commentView viewWithTag:92];
+    disCussLabel.text = discussCount;
+    CGRect comRect = commentView.frame;
+    comRect.origin.y = viewY;
+    commentView.frame = comRect;
+    UILabel *starLabel = (UILabel *)[starView viewWithTag:93];
+    starLabel.text = starCount;
+    CGRect starRect = starView.frame;
+    starRect.origin.y = viewY;
+    starView.frame = starRect;
+    
+    
+    UIView *but = [_backView viewWithTag:897];
+    rect = but.frame;
+    rect.origin.y = starRect.origin.y - 10;
+    but.frame = rect;
+    
+    CGRect backRect = _backView.frame;
+    backRect.size.height = commentView.origin.y+commentView.size.height + 10;
+    _backView.frame = backRect;
+    _backView.backgroundColor = [UIColor whiteColor];
+    
+}
+
+- (void)setDataDic:(NSDictionary *)newDic
+{
+    
+    self.doctorId = newDic[@"doctorId"];
+    NSString *imgurl = newDic[@"titleFilepath"];
+    
+    BOOL hasPic = NO;
+    if(imgurl.length){
+        hasPic = YES;
+    }
+    
+//    [CommonImage setPicImageQiniu:newDic[@"pictureAddress"] View:expertImageView Type:2 Delegate:nil];
+    [CommonImage setImageFromServer:newDic[@"pictureAddress"] View:expertImageView Type:2];
+
+    expertName.text = newDic[@"fullName"];
+    expertPos.text = newDic[@"profession"];
+    NSString *title = newDic[@"title"];
+    CGSize titleSize = [self getSizeWithString:title font:topicTitle.font constrainSize:CGSizeMake(topicTitle.size.width, 45)];
+    CGRect titleRect = topicTitle.frame;
+    titleRect.size.height = titleSize.height;
+    topicTitle.frame = titleRect;
+    topicTitle.text = title;
+    //日期
+    dateLabel.frame = CGRectMake(topicTitle.origin.x, topicTitle.origin.y+topicTitle.size.height+7, 70, 13);
+    dateLabel.text = [CommonDate  getServerTime:[newDic[@"createTime"] longLongValue]/1000 type:4];
+    picImageView.frame = CGRectMake(93, dateLabel.origin.y+dateLabel.size.height+10, 212, (160/320.f)*kDeviceWidth);
+//    [CommonImage setPicImageQiniu:newDic[@"titleFilepath"] View:picImageView Type:2 Delegate:nil];
+    [CommonImage setImageFromServer:newDic[@"titleFilepath"] View:picImageView Type:2];
+
+    //详细dataDic[@"content"];
+    NSString *content = newDic[@"content"];
+    CGSize detailSize = [self getSizeWithString:content font:detailLabel.font constrainSize:CGSizeMake(detailLabel.size.width, 45)];
+    CGRect detailRect = detailLabel.frame;
+    detailRect.origin.y = picImageView.origin.y+picImageView.size.height+10;
+    detailRect.size.height = detailSize.height;
+    detailLabel.frame = detailRect;
+    detailLabel.text = content;
+    
+    //    NSString *redCount = [NSString stringWithFormat:@"%@",newDic[@"readCount"]];
+    //    NSString *favCount = [NSString stringWithFormat:@"%@",newDic[@"greatCount"]];
+    //    NSString *discussCount = [NSString stringWithFormat:@"%@",newDic[@"discussCount"]];
+    //
+    //    redCount = @"123";
+    //    favCount = @"2444";
+    //    discussCount = @"12334";
+    
+    //    CGFloat viewY = detailLabel.origin.y + detailLabel.size.height + 10;
+    //
+    //    UILabel *redLabel = (UILabel *)[redView viewWithTag:90];
+    //    redLabel.text = redCount;
+    //    CGRect redRect = redView.frame;
+    //    redRect.origin.y = viewY;
+    //    redView.frame = redRect;
+    //
+    //
+    //    UILabel *favLabel = (UILabel *)[favView viewWithTag:91];
+    //    favLabel.text = favCount;
+    //    CGRect favRect = favView.frame;
+    //    favRect.origin.y = viewY;
+    //    favView.frame = favRect;
+    //    UILabel *disCussLabel = (UILabel *)[commentView viewWithTag:92];
+    //    disCussLabel.text = discussCount;
+    //    CGRect comRect = commentView.frame;
+    //    comRect.origin.y = viewY;
+    //    commentView.frame = comRect;
+    
+    CGRect backRect = _backView.frame;
+    backRect.size.height = detailLabel.origin.y+detailLabel.size.height + 15;
+    _backView.frame = backRect;
+    _backView.backgroundColor = [UIColor whiteColor];
+    
+}
+- (CGSize)getSizeWithString:(NSString *)string font:(UIFont *)font constrainSize:(CGSize)constrsize
+{
+    CGSize size = [string sizeWithFont:font constrainedToSize:constrsize lineBreakMode:NSLineBreakByWordWrapping|NSLineBreakByTruncatingTail];
+    return size;
+}
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+- (void)setIconImage:(UIImage *)image
+{
+    picImageView.image = image;
+}
+
+
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+    
+    // Configure the view for the selected state
+}
+
+@end

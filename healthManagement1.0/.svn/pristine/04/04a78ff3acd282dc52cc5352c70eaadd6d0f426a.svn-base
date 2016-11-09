@@ -1,0 +1,345 @@
+//
+//  RichTextView.m
+//  jiuhaohealth4.0
+//
+//  Created by jiuhao-yangshuo on 15-5-27.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "RichTextView.h"
+#import "TTTAttributedLabel.h"
+#import "CommunityDetailCell.h"
+
+extern const CGFloat m_ReplaySpaceToedge;
+extern const CGFloat leftMargin;
+
+static CGFloat const kRTTextFontSize = 17.f;
+static NSString *const kRTTextColor = @"576b95";//特殊文字颜色
+static NSString *const kRTTextPressColor = @"c2c2c4";//特殊文字颜色
+static NSString *const  urlAction =  @"relay->";//自定义标示
+
+//前面名字
+static inline NSRegularExpression * ParenthesisRegularExpression() {
+    static NSRegularExpression *_parenthesisRegularExpression = nil;
+    
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _parenthesisRegularExpression = [[NSRegularExpression alloc] initWithPattern:@"★.+★" options:NSRegularExpressionCaseInsensitive error:nil];
+    });
+    return _parenthesisRegularExpression;
+}
+//后面名字
+static inline NSRegularExpression * ParenthesisRegularExpressionTwo() {
+    static NSRegularExpression *_parenthesisRegularExpressionTwo = nil;
+    
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _parenthesisRegularExpressionTwo = [[NSRegularExpression alloc] initWithPattern:@"☆.+☆" options:NSRegularExpressionCaseInsensitive error:nil];
+    });
+    return _parenthesisRegularExpressionTwo;
+}
+
+@interface RichTextView ()<TTTAttributedLabelDelegate,MLEmojiLabelDelegate,CopyableLabelDelegate>
+
+@end
+
+@implementation RichTextView
+{
+     MLEmojiLabel *m_emojiLabel;
+     NSString *m_richText;//全部
+     __block  RichTextView *weakSelf;
+     NSString *m_richTextPre;//前缀
+}
+
+@synthesize m_richTextDict;
+
+-(void)dealloc
+{
+//    if(m_richText)
+//        [m_richText release];
+    [m_emojiLabel release];
+    [super dealloc];
+}
+
+-(id)init
+{
+    self = [super init];
+    if (self)
+    {
+        m_emojiLabel = [[MLEmojiLabel alloc] init];
+        m_emojiLabel.numberOfLines = 0;
+        m_emojiLabel.font = [UIFont systemFontOfSize:kRTTextFontSize];
+        //        m_emojiLabel.emojiDelegate = self;
+        m_emojiLabel.lineBreakMode = NSLineBreakByCharWrapping;
+        m_emojiLabel.isNeedAtAndPoundSign = YES;
+        m_emojiLabel.disableThreeCommon = YES;
+        m_emojiLabel.emojiDelegate = self;
+        m_emojiLabel.textColor = [CommonImage colorWithHexString:COLOR_333333];
+        m_emojiLabel.font = [UIFont systemFontOfSize:M_FRONT_SEVENTEEN];
+        m_emojiLabel.customEmojiRegex = @"\\[[a-zA-Z0-9\\u4e00-\\u9fa5]+\\]";
+        m_emojiLabel.customEmojiPlistName = @"expression.plist";
+        [self addSubview:m_emojiLabel];
+        m_emojiLabel.copyingEnabled = YES;
+        m_emojiLabel.copyableLabelDelegate = self;
+//        m_attributedLabel = [[TTTAttributedLabel alloc] initWithFrame:CGRectZero];
+//        m_attributedLabel.font = [UIFont systemFontOfSize:kRTTextFontSize];
+//        m_attributedLabel.textColor = [CommonImage colorWithHexString:@"666666"];
+//        m_attributedLabel.lineBreakMode = NSLineBreakByWordWrapping;
+//        m_attributedLabel.numberOfLines = 0;
+//        m_attributedLabel.delegate = self;
+////        m_attributedLabel.userInteractionEnabled = NO;
+//        //连接标记
+//        m_attributedLabel.linkAttributes = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:NO] forKey:(__bridge NSString *)kCTUnderlineStyleAttributeName];
+//        
+//        //点击连接标记状态
+//        NSMutableDictionary *mutableActiveLinkAttributes = [NSMutableDictionary dictionary];
+//        [mutableActiveLinkAttributes setValue:[NSNumber numberWithBool:NO] forKey:(NSString *)kCTUnderlineStyleAttributeName];//下划线
+////        [mutableActiveLinkAttributes setValue:(__bridge id)[[UIColor redColor] CGColor] forKey:(NSString *)kCTForegroundColorAttributeName];//字颜色
+//        [mutableActiveLinkAttributes setValue:(__bridge id)[[CommonImage colorWithHexString:kRTTextPressColor] CGColor] forKey:(NSString *)kTTTBackgroundFillColorAttributeName];//背景颜色
+////        [mutableActiveLinkAttributes setValue:(__bridge id)[[UIColor colorWithRed:1.0f green:0.0f blue:0.0f alpha:0.25f] CGColor] forKey:(NSString *)kTTTBackgroundStrokeColorAttributeName];//描边框颜色
+////        [mutableActiveLinkAttributes setValue:[NSNumber numberWithFloat:1.0f] forKey:(NSString *)kTTTBackgroundLineWidthAttributeName];//线宽度
+////        [mutableActiveLinkAttributes setValue:[NSNumber numberWithFloat:5.0f] forKey:(NSString *)kTTTBackgroundCornerRadiusAttributeName];//背景框边角
+//        m_attributedLabel.activeLinkAttributes = mutableActiveLinkAttributes;
+//        [self addSubview:m_attributedLabel];
+    }
+    return self;
+}
+#pragma mark -set-getUi
+-(void)setM_richTextDict:(NSMutableDictionary *)dict
+{
+    //123:xxx replyUserName
+    //456对123回复:xxx  replyUserName =456,userName=123
+    NSString *replayContent = dict[@"replayContent"];
+    NSString *replyUserName = dict[@"replyUserName"];
+    
+    //被回复人的信息拼接
+    NSString *toReply = @"";
+    if ([dict[@"userName"] length])
+    {
+        toReply = [NSString stringWithFormat:@"回复%@%@%@",kRTEmptyStar,dict[@"userName"],kRTEmptyStar];
+    }
+    m_richText = [NSString stringWithFormat:@"%@%@%@%@: %@",kRTFullStar,replyUserName,kRTFullStar,toReply,replayContent];
+    
+//    m_richText = [NSString stringWithFormat:@"%@%@%@: %@",kRTFullStar,replyUserName,kRTFullStar,replayContent];
+    m_richTextPre = [NSString stringWithFormat:@"%@%@%@%@:",kRTFullStar,replyUserName,kRTFullStar,toReply];
+    
+    [dict retain];
+    if (m_richTextDict)
+    {
+        [m_richTextDict release];
+    }
+    m_richTextDict = dict;
+    
+    if (!m_richText.length)
+    {
+        return;
+    }
+    weakSelf = self;
+    
+    float replayContentLabelOffset = m_ReplaySpaceToedge;
+    float replayContentLabelWeight = kDeviceWidth-2*replayContentLabelOffset -2*leftMargin;
+    NSString *content = [m_richText  stringByReplacingOccurrencesOfString:kRTFullStar withString:@""];
+    content = [content  stringByReplacingOccurrencesOfString:kRTEmptyStar withString:@""];
+//    CGSize size = [Common sizeForAllString:content andFont:15.0 andWight:replayContentLabelWeight];
+    // 重设高度
+//     m_emojiLabel.frame = CGRectMake(0, 0, replayContentLabelWeight, ceil(size.height));
+    m_emojiLabel.frame = CGRectMake(0, 0, replayContentLabelWeight, 0.1);
+//    [m_emojiLabel setEmojiText:content];
+//    [m_emojiLabel sizeToFit];
+    [[self class] upadteEmojiLabelFrameWith:dict withView:m_emojiLabel withContent:content];
+    
+    self.frame = m_emojiLabel.bounds;
+    self.backgroundColor = [UIColor clearColor];
+//    [self handleRichText];
+}
+
+-(NSMutableArray *)customHandleNameString
+{
+    if (!m_richTextPre.length)
+    {
+        [Common TipDialog2:@"m_richText == null"];
+        return [[@{} mutableCopy] autorelease];
+    }
+    NSMutableAttributedString *mutableAttributedString = [[NSMutableAttributedString alloc]initWithString:m_richTextPre];
+    NSMutableArray *results = [[[NSMutableArray alloc]init] autorelease];
+   
+    NSRegularExpression * const regexpsNew[] = {ParenthesisRegularExpression(),ParenthesisRegularExpressionTwo()};
+    for (NSUInteger i=0; i<2; i++) {
+        NSRange stringRange = NSMakeRange(0, mutableAttributedString.length);
+        [regexpsNew[i] enumerateMatchesInString:[mutableAttributedString string] options:0 range:stringRange usingBlock:^(NSTextCheckingResult *result, __unused NSMatchingFlags flags, __unused BOOL *stop) {
+            
+            for (NSTextCheckingResult *record in results){
+                if (NSMaxRange(NSIntersectionRange(record.range, result.range))>0){
+                    return;
+                }
+            }
+            NSRange newrange = NSMakeRange(result.range.location+1, result.range.length-2);
+            NSRange addRange ={0,1};
+            //添加链接
+            NSString *actionString =@"";
+            if (i == 0)
+            {
+                addRange = NSMakeRange (newrange.location-1,newrange.length);
+                actionString = [[self class] produceActionStringWithDict:m_richTextDict andWithPre:YES];
+//                actionString =[NSString stringWithFormat:@"%@%@",urlAction,[NSString stringWithFormat:@"%@.%@.%@",m_richTextDict[@"replyUserId"],m_richTextDict[@"replyUserType"],m_richTextDict[@"isMyself"]]];
+            }
+            else  {
+                addRange = NSMakeRange(newrange.location-1-2*i,newrange.length);
+                 actionString = [[self class] produceActionStringWithDict:m_richTextDict andWithPre:NO];
+//                actionString = [NSString stringWithFormat:@"%@%@",urlAction,[NSString stringWithFormat:@"%@.%@.%@",m_richTextDict[@"userId"],m_richTextDict[@"userType"],m_richTextDict[@"isMyself"]]];
+            }
+            //这里暂时用NSTextCheckingTypeCorrection类型的传递消息吧
+            //因为有自定义的类型出现，所以这样方便点。
+            NSTextCheckingResult *aResult = [NSTextCheckingResult correctionCheckingResultWithRange:addRange replacementString:actionString];
+            [results addObject:aResult];
+        }];
+    }
+    return results;
+}
+
+//生成url 传递数据
++(NSString *)produceActionStringWithDict:(NSDictionary *)dict andWithPre:(BOOL)isPre
+{
+    NSString *actionString = @"";
+    NSString *urlAction =  @"relay->";
+    if (isPre)
+    {
+         actionString =[NSString stringWithFormat:@"%@%@",urlAction,[NSString stringWithFormat:@"%@.%@.%@",dict[@"replyUserId"],dict[@"replyUserType"],dict[@"isMyself"]]];
+    }
+    else
+    {
+        actionString = [NSString stringWithFormat:@"%@%@",urlAction,[NSString stringWithFormat:@"%@.%@.%@",dict[@"userId"],dict[@"userType"],dict[@"isReplyMyself"]]];
+    }
+    return actionString;
+}
+
+
+-(void)changeRichTextColorWithText:(NSMutableAttributedString *)mutableAttributedString andResult:(NSTextCheckingResult *)result
+{
+    [mutableAttributedString removeAttribute:(NSString *)kCTForegroundColorAttributeName range:result.range];
+    [mutableAttributedString addAttribute:(NSString*)kCTForegroundColorAttributeName value:(id)[[CommonImage colorWithHexString:kRTTextColor] CGColor] range:result.range];
+    [self deleteSringWith:result.range withString:mutableAttributedString];
+}
+
+//删除多余字符
+-(void)deleteSringWith:(NSRange )range withString:(NSMutableAttributedString *)string
+{
+    NSRange p[2] = {{range.location,1},{range.location+range.length-1,1}};
+    for (int i = 1; i >= 0; i--)
+    {
+        [string replaceCharactersInRange:p[i] withAttributedString:[[NSMutableAttributedString alloc] initWithString:@""]];
+    }
+}
+
+#pragma mark - TTTAttributedLabelDelegate
+- (void)attributedLabel:(__unused TTTAttributedLabel *)label didSelectLinkWithURL:(NSURL *)url
+{
+    NSString *content = [url host];
+    NSLog(@"+----%@",[url absoluteString]);
+    [self routerEventWithName:kRichTextViewTap userInfo:content];
+}
+
+- (void)customDidSelectLink:(NSString *)link
+{
+    if ([link hasPrefix:urlAction]) {
+        NSString *content = [link substringFromIndex:urlAction.length];
+        [self routerEventWithName:kRichTextViewTap userInfo:content];
+    }
+}
+
+#pragma mark - touchesBegan
+-(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    NSLog(@"123");
+    UIButton *superView = (UIButton *)(self.superview);
+    if (superView)
+    {
+          superView.backgroundColor = [CommonImage colorWithHexString:kRTTextPressColor];
+    }
+}
+
+-(void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    NSLog(@"123");
+    [(UIButton *)(self.superview) sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [self resetSuperViewColor];
+}
+
+- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    if (!m_emojiLabel.isCopyIng)
+    {
+        [self resetSuperViewColor];
+    }
+}
+
+//恢复正常得状态
+-(void)resetSuperViewColor
+{
+    UIButton *superView = (UIButton *)(self.superview);
+    if (superView)
+    {
+        superView.backgroundColor = [UIColor clearColor];
+    }
+}
+
++ (MLEmojiLabel*)setEmgText:(NSString*)text withOldEmojiLabel:(MLEmojiLabel*)m_emojiLabel withContentWeight:(float)contentWeight withTitleFront:(CGFloat)fontSize;
+{
+    if (!m_emojiLabel)
+    {
+        m_emojiLabel = [[MLEmojiLabel alloc] init];
+        m_emojiLabel.numberOfLines = 0;
+//        m_emojiLabel.font = [UIFont systemFontOfSize:kRTTextFontSize];
+//        m_emojiLabel.emojiDelegate = self;
+        m_emojiLabel.lineBreakMode = NSLineBreakByCharWrapping;
+        m_emojiLabel.customEmojiRegex = @"\\[[a-zA-Z0-9\\u4e00-\\u9fa5]+\\]";
+        m_emojiLabel.customEmojiPlistName = @"expression.plist";
+    }
+    m_emojiLabel.frame = CGRectMake(0, 0, contentWeight, 30);
+    m_emojiLabel.font = [UIFont systemFontOfSize:fontSize];
+    [m_emojiLabel setEmojiText:text];
+    [m_emojiLabel sizeToFit];
+    return m_emojiLabel;
+}
+
+//用缓存宽度
++(void)upadteEmojiLabelFrameWith:(NSMutableDictionary *)dataDict withView:(MLEmojiLabel *)mEmojiLabel withContent:(NSString *)content
+{
+    float hightContent = 0;
+    hightContent = [dataDict[kTextHeight] floatValue];
+    if (![dataDict.allKeys containsObject:kTextHeight])
+    {
+        NSLog(@"eroeoe11-1-");
+    }
+    mEmojiLabel.frameHeight = hightContent;
+    [mEmojiLabel setEmojiText:content];
+    //   [m_commentTitle sizeToFit];
+}
+
+#pragma mark - HTCopyableLabelDelegate
+- (NSString *)stringToCopyForCopyableLabel:(UILabel *)copyableLabel withChangeColor:(BOOL)changeColor
+{
+    NSString *stringToCopy = @"";
+    if (copyableLabel == m_emojiLabel)
+    {
+        
+        NSString *str =  m_richTextDict[@"replayContent"];
+        stringToCopy = [NSString stringWithFormat:@"%@",str];
+    }
+    if (changeColor)
+    {
+       self.superview.backgroundColor = [UIColor clearColor];
+    }
+    return stringToCopy;
+}
+
+- (CGRect)copyMenuTargetRectInCopyableLabelCoordinates:(UILabel *)copyableLabel
+{
+    CGRect rect;
+    //        // The UIMenuController will appear close to container, indicating all of its contents will be copied
+    self.superview.backgroundColor = [CommonImage colorWithHexString:kRTTextCopyColor];
+    //        rect = [self.labelContainer1 convertRect:self.labelContainer1.bounds toView:copyableLabel];
+    rect = m_emojiLabel.bounds;
+    return rect;
+}
+@end

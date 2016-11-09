@@ -1,0 +1,232 @@
+//
+//  WeekActivityView.m
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 16/6/3.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "WeekActivityView.h"
+#import "ThinHeader.h"
+#import "KXMoviePlayer.h"
+
+@interface WeekActivityView()
+@property (nonatomic,strong) UILabel *m_nameLabel;
+@property (nonatomic,strong) NSMutableArray *m_btnArray;
+@property (nonatomic,strong) UILabel *m_desLabel;
+@property (nonatomic,strong) UIImageView *m_calendarImage;
+@property (nonatomic,strong) UIScrollView *m_weekView;
+@property (nonatomic,strong) UIView *m_showContentView;
+@end
+
+@implementation WeekActivityView
+{
+    UIView *lastLineView;
+    UIImageView *m_picImage;
+    KXMoviePlayer* m_moviePlayerView;
+}
+
+-(id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self)
+    {
+        _m_btnArray = [[NSMutableArray alloc] init];
+        self.backgroundColor = [UIColor whiteColor];
+        [self createContentView];
+    }
+    return self;
+}
+
+-(void)dealloc
+{
+    _thinPlanViewBlock = nil;
+}
+
+- (BOOL)closeNowView
+{
+    [self closeWebViewItem];
+    return YES;
+}
+
+-(void)setInfoDict:(NSDictionary *)infoDict
+{
+    _infoDict = infoDict;
+   _m_nameLabel.text = infoDict[@"title"];
+    
+//    float topSpace = 15.0;
+//    CGSize size = [Common sizeForAllString:desStr andFont:_m_desLabel.font.pointSize andWight:_m_desLabel.width];
+//    _m_desLabel.height = ceil(size.height) + topSpace*2;
+//
+    self.height = lastLineView.bottom;
+    UIButton *weekBtn = nil;
+    for (int i = 0; i<_m_btnArray.count; i++)
+    {
+        weekBtn = _m_btnArray[i];
+        
+        if (i == 0)
+        {
+            UIImage* unlockImage = k_fetchImage(@"unlock");
+            [weekBtn setImage:unlockImage forState:UIControlStateNormal];
+            [weekBtn setTitle:@"" forState:UIControlStateNormal];
+            UIImage *backImage = [CommonImage createImageWithColor: [CommonImage colorWithHexString:@"333333"] ];
+            [weekBtn setBackgroundImage:backImage forState:UIControlStateNormal];
+        }
+        else if (i == 1)
+        {
+//            [weekBtn setTitle:@"DAY\n2" forState:UIControlStateNormal];
+            [weekBtn setTitleColor:[CommonImage colorWithHexString:@"ffffff"] forState:UIControlStateNormal];
+            weekBtn.titleLabel.attributedText = [NSString replaceRedColorWithNSString:@"DAY\n2" andUseKeyWord:@"DAY" andWithFontSize:11.0 andWithFrontColor:@"ffffff"];
+        }
+        else
+        {
+            UIImage* HighlenbleImage =k_fetchImage(@"lock");
+            [weekBtn setImage:HighlenbleImage forState:UIControlStateNormal];
+            [weekBtn setTitle:@"" forState:UIControlStateNormal];
+            UIImage *backImage = [CommonImage createImageWithColor: [CommonImage colorWithHexString:@"ebebeb"] ];
+            [weekBtn setBackgroundImage:backImage forState:UIControlStateNormal];
+        }
+    }
+}
+
+-(void)createContentView
+{
+    UIImage *calendarPng = k_fetchImage(@"calendar");
+    UIImageView *m_calendarImage = [[UIImageView alloc] initWithFrame:CGRectMake(kLeftw, 12.0, calendarPng.size.width, calendarPng.size.height)];
+    m_calendarImage.image = calendarPng;
+    m_calendarImage.layer.cornerRadius = 4.0;
+    m_calendarImage.layer.masksToBounds = YES;
+    m_calendarImage.backgroundColor = [UIColor whiteColor];
+    [self addSubview:m_calendarImage];
+    self.m_nameLabel.left = m_calendarImage.right +10;
+    _m_nameLabel.text = @"准备期第一周";
+    _m_nameLabel.top = m_calendarImage.top;
+    
+    self.m_weekView.top = _m_nameLabel.bottom +  self.m_nameLabel.top;
+    
+    UIView *lineView = [self createSepratorView];
+    lineView.top = self.m_weekView.bottom + 15.0;
+    self.m_showContentView.top = lineView.bottom;
+    
+    lastLineView = [self createSepratorView];
+    lastLineView.top = self.m_showContentView.bottom;
+    
+    
+//    self.height = lastLineView.bottom;
+}
+
+#pragma mark - Event response
+-(void)butEventTool:(UIButton *)btn
+{
+    NSLog(@"------%@",btn);
+    _thinPlanViewBlock(btn);
+}
+
+#pragma mark - Set-getUi
+
+- (void)createMovPlay:(NSString*)URL
+{
+    if(0 == URL.length)
+    {
+        return;
+    }
+    if (!m_moviePlayerView)
+    {
+        m_moviePlayerView = [[KXMoviePlayer alloc] init];
+//        [m_moviePlayerView noEnbleScrollBackView:m_webView];
+    }
+    [m_moviePlayerView loadMoviePlayerWithUrl:URL inParentViewControler:self.viewController];
+}
+
+- (void)closeWebViewItem
+{
+    [CommonImage popToNoNavigationView];
+    [ m_moviePlayerView  stopMoviePlayer];//关闭视频
+}
+
+-(UIView *)createSepratorView
+{
+    UIView *lineView  = [[UIView alloc] initWithFrame:CGRectMake(0,0,kDeviceWidth,7)];
+    lineView.backgroundColor =  [CommonImage colorWithHexString:@"ededed"];
+    [self addSubview:lineView];
+    return lineView;
+}
+
+-(UIView *)m_showContentView
+{
+    if (_m_showContentView) {
+        return _m_showContentView;
+    }
+    _m_showContentView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 470/2.0)];
+    [self addSubview:_m_showContentView];
+    
+    m_picImage = [[UIImageView alloc] initWithFrame:CGRectMake(kLeftw, kLeftw, kDeviceWidth-kLeftw*2, 180)];
+    m_picImage.backgroundColor = [UIColor redColor];
+    m_picImage.userInteractionEnabled = YES;
+    [_m_showContentView addSubview:m_picImage];
+    
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapHeaderPicture:)];
+    [m_picImage addGestureRecognizer:tap];
+    
+    UILabel * titleLabel = [Common createLabel:CGRectMake(m_picImage.left, m_picImage.bottom, m_picImage.width, 40) TextColor:@"333333" Font:[UIFont systemFontOfSize:16.0] textAlignment:NSTextAlignmentLeft labTitle:@"今日运动:有氧拉伸"];
+    [_m_showContentView addSubview:titleLabel];
+    
+    _m_showContentView.height = titleLabel.bottom;
+    return _m_showContentView;
+}
+
+- (void)tapHeaderPicture:(UITapGestureRecognizer *)gesture
+{
+    NSLog(@"-------放视频");
+//    [self createMovPlay:@""];
+}
+
+-(UIScrollView *)m_weekView
+{
+    if (_m_weekView) {
+        return _m_weekView;
+    }
+    
+    _m_weekView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 55.0)];
+    //    _m_weekView.contentOffset = CGPointMake(rect.size.width * BIGNUM * (pageNum<3?4:pageNum), 0.0f);
+    _m_weekView.showsHorizontalScrollIndicator = NO;
+    _m_weekView.showsVerticalScrollIndicator = NO;
+    [self addSubview:_m_weekView];
+    
+    float  leftWeight = 10;
+    float kBtnw = _m_weekView.height;
+    float kBtnSpacew = 10.0;
+    UIButton *planBtn = nil;
+    
+    for (int i = 0; i<7; i++) {
+        planBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        planBtn.frame = CGRectMake(leftWeight+i*(kBtnw+kBtnSpacew), 0, kBtnw,kBtnw);
+        planBtn.tag = 100+i;
+        [planBtn setTitle:@"DAY\n2" forState:UIControlStateNormal];
+        [planBtn setTitleColor:[CommonImage colorWithHexString:@"ffffff"] forState:UIControlStateNormal];
+        planBtn.titleLabel.font = [UIFont systemFontOfSize:20.0];
+        UIImage *backImage = [CommonImage createImageWithColor: [CommonImage colorWithHexString:COLOR_Red]];
+        planBtn.titleLabel.numberOfLines = 0;
+        planBtn.layer.cornerRadius = planBtn.width/2.0;
+        planBtn.layer.masksToBounds = YES;
+        planBtn.titleLabel.textAlignment = NSTextAlignmentCenter;
+        [planBtn setBackgroundImage:backImage forState:UIControlStateNormal];
+        [planBtn addTarget:self action:@selector(butEventTool:) forControlEvents:UIControlEventTouchUpInside];
+        [_m_weekView addSubview:planBtn];
+        [_m_btnArray addObject:planBtn];
+    }
+    _m_weekView.contentSize = CGSizeMake(planBtn.right+leftWeight, _m_weekView.height);
+    return _m_weekView;
+}
+
+-(UILabel *)m_nameLabel
+{
+    if (_m_nameLabel) {
+        return _m_nameLabel;
+    }
+    _m_nameLabel = [Common createLabel:CGRectMake(0, 0, 200, 20) TextColor:@"666666" Font:[UIFont systemFontOfSize:14.0] textAlignment:NSTextAlignmentLeft labTitle:@"享受计划"];
+    [self addSubview:_m_nameLabel];
+    return _m_nameLabel;
+}
+
+@end

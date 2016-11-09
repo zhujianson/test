@@ -1,0 +1,84 @@
+//
+//  MyCollectionTableViewCell.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-9-7.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "MyCollectionTableViewCell.h"
+//#import "UIImageView+WebCache.h"
+@implementation MyCollectionTableViewCell
+{
+    UILabel * titleLab;
+    UILabel * dataLab;
+
+}
+- (void)dealloc
+{
+    [_Image release];
+    [super dealloc];
+}
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        // Initialization code
+        titleLab = [Common createLabel:CGRectMake(15, 10, (kDeviceWidth-120), 45) TextColor:@"333333" Font:[UIFont systemFontOfSize:16] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        titleLab.tag = 1;
+        titleLab.numberOfLines = 0;
+        [self addSubview:titleLab];
+        
+        dataLab = [Common createLabel:CGRectMake(15, 45, (kDeviceWidth-120), 40) TextColor:@"999999" Font:[UIFont systemFontOfSize:13] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        dataLab.tag = 2;
+        dataLab.numberOfLines = 0;
+        [self addSubview:dataLab];
+        
+        _Image = [[UIImageView alloc]initWithFrame:CGRectMake(kDeviceWidth-105, 10, 90, 70)];
+        _Image.contentMode = UIViewContentModeScaleAspectFill;
+        _Image.clipsToBounds = YES;
+//        _Image.image = [UIImage imageNamed:@"common.bundle/common/conversation_logo.png"];
+        
+        [self addSubview:_Image];
+        
+        
+    }
+    return self;
+}
+
+- (void)setData:(NSDictionary*)dic
+{
+    CGFloat titleH =[Common heightForString:dic[@"title"]
+                                      Width:(kDeviceWidth-120)
+                                       Font:[UIFont systemFontOfSize:16]].height;
+    CGFloat dataH =[Common heightForString:dic[@"info"]
+                                     Width:(kDeviceWidth-120)
+                                      Font:[UIFont systemFontOfSize:13]].height;
+
+    titleLab.text = dic[@"title"];
+    titleLab.frame = [Common rectWithSize:titleLab.frame width:0 height:titleH];
+    dataLab.text = dic[@"info"];
+    dataLab.frame = [Common rectWithOrigin:dataLab.frame x:0 y:titleLab.bottom+4];
+    dataLab.frame = [Common rectWithSize:dataLab.frame width:0 height:dataH];
+    
+//    [CommonImage setPicImageQiniu:dic[@"titlepath"] View:_Image Type:2 Delegate:nil];
+}
+
+- (void)setPickerImage:(UIImage *)Image
+{
+    _Image.image = Image;
+}
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

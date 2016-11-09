@@ -1,0 +1,223 @@
+//
+//  BindAgentViewController.m
+//  healthManagement1.0
+//
+//  Created by xuguohong on 16/7/22.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "BindAgentViewController.h"
+#import "ChangesReginViewController.h"
+#import "ScanningViewController.h"
+#import "TheAgentViewController.h"
+
+@interface BindAgentViewController () <UITextFieldDelegate>
+{
+    UITextField *m_phoneText;
+    UIButton *m_butLogin;
+    
+    NSDictionary *textDic;
+    
+    NSString *phoneStr;
+}
+
+@end
+
+@implementation BindAgentViewController
+
+- (void)createNav
+{
+    self.navigationItem.rightBarButtonItem = [Common createNavBarButton:self setEvent:@selector(setupCamera)withNormalImge:@"common.bundle/personnal/device/scanCode" andHighlightImge:nil];
+}
+
+- (void)setupCamera
+{
+    //是否有摄像头
+    if (![self isCameraAvailable]) {
+        [Common TipDialog2:@"该设备不支持此功能！"];
+        return;
+    }
+    ScanningViewController * rt = [[ScanningViewController alloc] init];
+    //    rt.m_userId = userIdStr;
+    rt.isFirst = YES;
+    rt.sao_type = typeSaoAgent;
+    rt.title = @"扫码添加";
+    [self.navigationController pushViewController:rt animated:YES];
+}
+
+- (BOOL)isCameraAvailable
+{
+    return [UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"代理人绑定";
+    // Do any additional setup after loading the view.
+    [self createNav];
+    self.view.backgroundColor = [UIColor whiteColor];
+    
+    
+    UILabel *labTitle = [Common createLabel];
+    labTitle.frame = CGRectMake(25, 10, kDeviceWidth-50, 40);
+    labTitle.text = g_nowUserInfo.agent_mobile.length ? @"绑定新代理人，将覆盖原代理人！" : @"绑定代理人，可以开放更多资源奥！";
+    labTitle.font = [UIFont systemFontOfSize:15];
+    [self.view addSubview:labTitle];
+    
+    
+    //手机号
+    UIView *view1 = [[UIView alloc] initWithFrame:CGRectMake(25, labTitle.bottom, kDeviceWidth-50, 50)];
+    [self.view addSubview:view1];
+    
+    
+    UIButton *butCountry = [UIButton buttonWithType:UIButtonTypeCustom];
+    butCountry.frame = CGRectMake(0, 0, 56, view1.height);
+    [butCountry setTitle:@"+86" forState:UIControlStateNormal];
+    [butCountry addTarget:self action:@selector(selectCountry:) forControlEvents:UIControlEventTouchUpInside];
+    [butCountry setTitleColor:[CommonImage colorWithHexString:@"666666"] forState:UIControlStateNormal];
+    [butCountry setImage:[UIImage imageNamed:@"common.bundle/login/down.png"] forState:UIControlStateNormal];
+    butCountry.titleLabel.font = [UIFont systemFontOfSize:17];
+    [view1 addSubview:butCountry];
+    float width = [Common sizeForString:butCountry.titleLabel.text andFont:butCountry.titleLabel.font.pointSize].width;
+    [butCountry setTitleEdgeInsets:UIEdgeInsetsMake(0, MIN(width-butCountry.width+2, 0), 0, 0)];
+    [butCountry setImageEdgeInsets:UIEdgeInsetsMake(0, width+5, 0, 0)];
+    
+    UIView *lindh = [[UIView alloc] initWithFrame:CGRectMake(butCountry.right-0.5, 12, 0.5, butCountry.height-24)];
+    lindh.backgroundColor = [CommonImage colorWithHexString:LINE_COLOR];
+    [butCountry addSubview:lindh];
+    
+    m_phoneText = [self createTextField:@"请输入手机号"];
+    [m_phoneText setKeyboardType:UIKeyboardTypeNumberPad];
+    m_phoneText.frame = CGRectMake(butCountry.right+15, 0, view1.width-butCountry.right-30, view1.height);
+    [view1 addSubview:m_phoneText];
+    
+    UIView *line = [[UILabel alloc] initWithFrame:CGRectMake(0, view1.height - 0.5, view1.width, 0.5)];
+    line.backgroundColor = [CommonImage colorWithHexString:LINE_COLOR];
+    [view1 addSubview:line];
+    
+    //
+    m_butLogin = [UIButton buttonWithType:UIButtonTypeCustom];
+    m_butLogin.layer.cornerRadius = 22.5;
+    m_butLogin.clipsToBounds = YES;
+    m_butLogin.enabled = NO;
+    m_butLogin.frame = CGRectMake(view1.left, view1.bottom+30, view1.width, 45);
+    [m_butLogin setTitle:@"绑定" forState:UIControlStateNormal];
+    [m_butLogin setBackgroundImage:[CommonImage createImageWithColor:[CommonImage colorWithHexString:@"cccccc"]] forState:UIControlStateDisabled];
+    [m_butLogin setBackgroundImage:[CommonImage createImageWithColor:[CommonImage colorWithHexString:@"37de80"]] forState:UIControlStateNormal];
+    [m_butLogin addTarget:self action:@selector(denglu:) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:m_butLogin];
+}
+
+- (UITextField*)createTextField:(NSString*)title
+{
+    UITextField* text = [[UITextField alloc] init];
+    text.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+    text.contentMode = UIViewContentModeCenter;
+    text.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    text.placeholder = title;
+    text.clearButtonMode = YES;
+    text.delegate = self;
+    [text setTextColor:[CommonImage colorWithHexString:@"#666666"]];
+    [text setFont:[UIFont systemFontOfSize:17]];
+    return text;
+}
+
+- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string
+{
+    NSMutableString *changeString = [NSMutableString stringWithString:textField.text];
+    [changeString replaceCharactersInRange:range withString:string];
+    if (textField == m_phoneText) {
+        if ([changeString length] >= 7) {
+            m_butLogin.enabled = YES;
+            if ([changeString length]>11) {
+                return NO;
+            }
+        }
+    }
+    return YES;
+}
+
+
+- (void)selectCountry:(UIButton*)but
+{
+    ChangesReginViewController *change = [[ChangesReginViewController alloc] init];
+    change.textDic = textDic;
+    [change setChangesReginBlock:^(NSDictionary *dic) {
+        UILabel *lab = (UILabel*)[self.view viewWithTag:11];
+        lab.text = dic[@"regin"];
+        lab = (UILabel*)[self.view viewWithTag:12];
+        lab.text = [NSString stringWithFormat:@"(%@)",dic[@"num"]];
+        
+        textDic = dic;
+        
+        [but setTitle:[NSString stringWithFormat:@"+%@", textDic[@"num"]] forState:UIControlStateNormal];
+        float width = [Common sizeForString:but.titleLabel.text andFont:but.titleLabel.font.pointSize].width;
+        [but setTitleEdgeInsets:UIEdgeInsetsMake(0, MIN(width-but.width+2, 0), 0, 0)];
+        [but setImageEdgeInsets:UIEdgeInsetsMake(0, width+5, 0, 0)];
+    }];
+    [self.navigationController pushViewController:change animated:YES];
+}
+
+- (void)denglu:(UIButton*)but
+{
+    phoneStr = m_phoneText.text;
+    if (![textDic[@"regin"] isEqualToString:@"中国大陆"] && textDic) {
+        phoneStr = [NSString stringWithFormat:@"%@%@",textDic[@"num"],m_phoneText.text];
+    }
+    
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [dic setObject:m_phoneText.text forKey:@"mobile"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:bind_account_agent values:dic requestKey:bind_account_agent delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"加载中...", nil)];
+}
+
+- (void)didFinishFail:(ASIHTTPRequest*)loader
+{
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dict = [responseString KXjSONValueObject];
+    
+    NSDictionary * dic = dict[@"head"];
+    if (![[dic objectForKey:@"state"] intValue]) {
+//        NSDictionary *body = dict[@"body"];
+        if ([loader.username isEqualToString:bind_account_agent]) {
+            
+            g_nowUserInfo.agent_mobile = phoneStr;
+            
+            [Common MBProgressTishi:@"绑定代理人成功" forHeight:kDeviceHeight];
+            
+            NSArray *views = [self.navigationController viewControllers];
+            for (UIViewController *vc in views) {
+                if ([vc isKindOfClass:[TheAgentViewController class]]) {
+                    [self.navigationController popToViewController:vc animated:YES];
+                    return;
+                }
+            }
+            TheAgentViewController * agent = [[TheAgentViewController alloc] init];
+            [self.navigationController pushViewController:agent animated:YES];
+        }
+    }
+    else {
+        [Common TipDialog:dic[@"msg"]];
+    }
+}
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

@@ -1,0 +1,70 @@
+//
+//  FDGraphView.h
+//  disegno
+//
+//  Created by wangmin on 14-4-14.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+typedef enum  _timeType{
+    SevenDaysType = 0,
+    ThirtyDaysType = 1,
+    NinetyDaysType = 2,
+    OneDayType = 3,
+    ScaleType = 4
+}TimeType;
+
+@protocol ReportFrameDelegate;
+@interface FDGraphView : UIView
+
+@property (nonatomic,assign) TimeType theTimeType;//时间类型
+@property (nonatomic,assign) BOOL  isYClipTo5;//y轴是否切成5段
+// Data
+
+@property (nonatomic, retain) NSArray *dataPoints;
+
+@property (nonatomic,retain) NSArray *dataPoints2;
+
+@property (nonatomic,retain) NSArray *timePointsString;
+
+//最大最小值
+@property (nonatomic, strong) NSNumber *maxDataPoint;
+@property (nonatomic, strong) NSNumber *minDataPoint;
+//总数据源
+
+@property (nonatomic,retain) NSMutableArray *multiDataArray;//用于画各条折线
+@property (nonatomic,retain) NSArray *normalValueArray;//用于画正常线条
+
+@property (nonatomic,retain) NSArray *lineMeansArray;//线条说明
+@property (nonatomic,assign) BOOL timeFlag;//按照time进行绘图
+
+@property (nonatomic,retain) NSArray *multiOriginalLocalArray;//数据原始位置，用于按照时间分布的各测试数据画线
+
+// Style
+@property (nonatomic) UIEdgeInsets edgeInsets;
+@property (nonatomic) CGFloat dataPointsXoffset;
+// -- colors
+@property (nonatomic, retain) UIColor *dataPointColor;
+@property (nonatomic, retain) UIColor *dataPointStrokeColor;
+@property (nonatomic, retain) UIColor *linesColor;
+
+// Behaviour
+@property (nonatomic) BOOL autoresizeToFitData;
+
+@property (nonatomic,assign)id<ReportFrameDelegate> delegate;
+
+@property (nonatomic,assign) TimeType timeType;//时间类型
+@property (nonatomic,assign) BOOL  isNewSugarTrend;//新加 血糖趋势图
+
+@property (nonatomic,assign) BOOL  isThin;//新加 享瘦派
+
+
+@end
+
+@protocol ReportFrameDelegate <NSObject>
+
+- (void)reportNewFrameWithWidth:(CGFloat)width;
+
+@end

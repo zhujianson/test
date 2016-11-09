@@ -1,0 +1,676 @@
+//
+//  ImproveSubscribeViewController.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-8-20.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "ImproveSubscribeViewController.h"
+#import "ImproveSubscribeTableViewCell.h"
+#import "DBOperate.h"
+#import "CommonHttpRequest.h"
+#import "ImproveSubscribeViewController.h"
+#import "AppDelegate.h"
+#import "ImproveDataViewController.h"
+#import "ImproveWebViewController.h"
+
+@interface ImproveSubscribeViewController () <UITableViewDataSource, UITableViewDelegate, UIActionSheetDelegate,
+                                              ImproveSubDelegate> {
+    UITableView* m_tableView;
+    NSMutableArray* dataArr;
+    NSMutableArray* allTextArr;
+    NSMutableDictionary* imageDic;
+    //    NSMutableDictionary * sectionDic;
+
+    int _allDays;
+    int _todays;
+    int _pageNum;
+    BOOL isSub;
+}
+
+@end
+
+@implementation ImproveSubscribeViewController
+
+- (id)initWithNibName:(NSString*)nibNameOrNil bundle:(NSBundle*)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        dataArr = [[NSMutableArray alloc] init];
+        _headerArr = [[NSMutableDictionary alloc] init];
+        allTextArr = [[NSMutableArray alloc] init];
+        imageDic = [[NSMutableDictionary alloc] init];
+        //        sectionDic = [[NSMutableDictionary alloc] init];
+
+        UIBarButtonItem* rightButtonItem =
+            [Common createNavBarButton:self
+                              setEvent:@selector(butEventShowShare)
+                        withNormalImge:@"common.bundle/nav/top_more_icon_nor.png"
+                      andHighlightImge:@"common.bundle/nav/top_more_icon_pre.png"];
+        self.navigationItem.rightBarButtonItem = rightButtonItem;
+        self.log_pageID = 22;
+
+    }
+    return self;
+}
+
+- (BOOL)closeNowView
+{
+    [super closeNowView];
+    UIViewController *viewC = [self.navigationController.viewControllers objectAtIndex:0];
+    [self.navigationController popToViewController:viewC animated:YES];
+    return NO;
+}
+
+- (void)dealloc
+{
+    [m_tableView release];
+    [dataArr release];
+    [_headerArr release];
+    [allTextArr release];
+    [imageDic release];
+
+    [super dealloc];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+
+    //请求获取我的预定天数
+    [self getRequestData];
+
+    // Do any additional setup after loading the view.
+}
+
+- (void)getDataFromSqlite
+{
+    [dataArr removeAllObjects];
+    [allTextArr removeAllObjects];
+    
+    _pageNum = g_everyPageNum;
+    NSString* dayStr = [NSString stringWithFormat:@"%d", _todays];
+    NSMutableArray* firstArr =
+        [NSMutableArray arrayWithArray:[[DBOperate shareInstance] getPlanAllData:dayStr type:2 ids:_headerArr[@"id"]]];
+//    [dataArr addObjectsFromArray:[[firstArr reverseObjectEnumerator] allObjects]];
+    [dataArr addObjectsFromArray:firstArr];
+//    [firstArr removeAllObjects];
+//    int tep;
+//    if ([_headerArr[@"id"] intValue]==1) {
+//        tep = 1;
+//    }else{
+//        tep = 19;
+//    }
+//    for (int i = tep; i < _todays + tep; i++) {
+//        [firstArr
+//            addObject:[sqlite getPlanAllText:[NSString stringWithFormat:@"%d", i]
+//                                         Pid:nil]];
+//    }
+//    [allTextArr
+//        addObjectsFromArray:[[firstArr reverseObjectEnumerator] allObjects]];
+    
+}
+
+//请求方案数据
+- (void)getRequestData
+{
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:_headerArr[@"id"] forKey:@"planId"];
+    [dic setObject:g_nowUserInfo.userid forKey:@"userId"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GETPROGRESS_PLAN_BY_ID
+                                                  values:dic
+                                              requestKey:GETPROGRESS_PLAN_BY_ID
+                                                delegate:self
+                                              controller:self
+                                            actiViewFlag:1
+                                                   title:nil];
+}
+
+- (void)creatHeaderView
+{
+    UIView* headerView =
+        [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 135)];
+    headerView.backgroundColor = [UIColor whiteColor];
+    headerView.layer.borderWidth = 0.5;
+    headerView.layer.borderColor =
+        [[CommonImage colorWithHexString:@"e2e2e2"] CGColor];
+    [self.view addSubview:headerView];
+    [headerView release];
+    //标题
+    UILabel* hospitolLable = [Common createLabel:CGRectMake(20, 15, kDeviceWidth-40, 25)
+                                       TextColor:@"333333"
+                                            Font:[UIFont systemFontOfSize:17]
+                                   textAlignment:NSTextAlignmentLeft
+                                        labTitle:_headerArr[@"title"]];
+    [headerView addSubview:hospitolLable];
+    //天数
+    UILabel* positionLable = [Common
+          createLabel:CGRectMake(20, hospitolLable.frame.origin.y + 25, 232, 25)
+            TextColor:@"656565"
+                 Font:[UIFont systemFontOfSize:15]
+        textAlignment:NSTextAlignmentLeft
+             labTitle:[NSString
+                          stringWithFormat:@"周期共%d天，还剩%d天",
+                                           _allDays, _allDays - _todays]];
+    positionLable.tag = 1;
+    [headerView addSubview:positionLable];
+    //进度条
+    [self addSubView:headerView];
+    //订阅日期
+    NSString* timeStr;
+    if ([_userDic[@"plantime"] length] > 2) {
+        timeStr = _userDic[@"plantime"];
+    } else {
+        timeStr =
+            [[NSString stringWithFormat:@"%@", [NSDate date]] substringToIndex:10];
+    }
+
+    UILabel* goodLable = [Common
+          createLabel:CGRectMake(20, 102, 150, 20)
+            TextColor:@"656565"
+                 Font:[UIFont systemFontOfSize:14]
+        textAlignment:NSTextAlignmentLeft
+             labTitle:[NSString stringWithFormat:@"订阅日期：%@", timeStr]];
+    goodLable.tag = 2;
+    
+    [headerView addSubview:goodLable];
+    // icon_me1
+    UIImageView* smallImage =
+        [[UIImageView alloc] initWithFrame:CGRectMake(kDeviceWidth-130, 105, 15, 15)];
+    smallImage.image =
+        [UIImage imageNamed:@"common.bundle/common/user-group_icon.png"];
+    [headerView addSubview:smallImage];
+    [smallImage release];
+    //订阅人数
+    UILabel* numLable = [Common
+          createLabel:CGRectMake(kDeviceWidth-105, 102, 100, 20)
+            TextColor:@"656565"
+                 Font:[UIFont systemFontOfSize:13]
+        textAlignment:NSTextAlignmentLeft
+             labTitle:[NSString stringWithFormat:@"%d人成功订阅",
+                                                 [_userDic[@"pcount"] intValue] + _addOne]];
+    [headerView addSubview:numLable];
+}
+
+//进度条
+- (void)addSubView:(UIView*)back
+{
+    UIView* view = [[UIView alloc] initWithFrame:CGRectMake(0, 75, kDeviceWidth, 17)];
+    view.backgroundColor = [UIColor clearColor];
+    [back addSubview:view];
+    [view release];
+
+    UIView* bgView = [[UIView alloc] init];
+    bgView.backgroundColor = [CommonImage colorWithHexString:@"e5e5e5"];
+    bgView.frame = CGRectMake(20, 0, kDeviceWidth-45, 17);
+    bgView.layer.cornerRadius = 4;
+    [view addSubview:bgView];
+    [bgView release];
+
+    UILabel* scaleLabel = [Common
+                           createLabel:CGRectMake(0, 0, kDeviceWidth-40, 17)
+                           TextColor:@"6e6e6e"
+                           Font:[UIFont systemFontOfSize:15]
+                           textAlignment:NSTextAlignmentCenter
+                           labTitle:[NSString stringWithFormat:@"%d%@",
+                                     _todays * 100 / _allDays, @"%"]];
+    scaleLabel.tag = 3;
+    [bgView addSubview:scaleLabel];
+
+    UIView* coverView = [[UIView alloc]
+        initWithFrame:CGRectMake(0, 0, (kDeviceWidth-40) * _todays / _allDays, 17)];
+    coverView.tag = 4;
+    if (coverView.frame.size.width == kDeviceWidth-40) {
+        coverView.layer.cornerRadius = 4;
+    } else {
+        UIBezierPath* maskPath = [UIBezierPath
+            bezierPathWithRoundedRect:coverView.bounds
+                    byRoundingCorners:UIRectCornerBottomLeft | UIRectCornerTopLeft
+                          cornerRadii:CGSizeMake(4, 4)];
+        CAShapeLayer* maskLayer = [[[CAShapeLayer alloc] init] autorelease];
+        maskLayer.frame = coverView.bounds;
+        maskLayer.path = maskPath.CGPath;
+        coverView.layer.mask = maskLayer;
+    }
+    [bgView addSubview:coverView];
+    coverView.clipsToBounds = YES;
+    
+    UIImageView* coverImge = [[UIImageView alloc] init];
+    coverImge.backgroundColor = [CommonImage colorWithHexString:VERSION_TEXT_COLOR];
+    coverImge.frame = CGRectMake(0, 0, kDeviceWidth-40, 17);
+    [coverView addSubview:coverImge];
+    [coverImge release];
+
+    UILabel* whiteLabel = [Common
+                           createLabel:CGRectMake(0, 0, kDeviceWidth-40, 17)
+                           TextColor:@"ffffff"
+                           Font:[UIFont systemFontOfSize:15]
+                           textAlignment:NSTextAlignmentCenter
+                           labTitle:[NSString stringWithFormat:@"%d%@",
+                                     _todays * 100 / _allDays, @"%"]];
+    [coverView addSubview:whiteLabel];
+
+    [coverView release];
+}
+
+- (void)creatTableView
+{
+    if (m_tableView) {
+        UILabel* lab = (UILabel*)
+            [m_tableView.tableFooterView viewWithTag:tableFooterViewLabTag];
+
+        if (_pageNum < _todays) {
+            lab.text = NSLocalizedString(@"加载更多...", nil);
+        } else {
+            lab.text = NSLocalizedString(@"已到底部", nil);
+            lab.textColor = [CommonImage colorWithHexString:@"666666"];
+            lab.frame = CGRectMake(0, 0, kDeviceWidth, 45);
+            UIActivityIndicatorView* activi = (UIActivityIndicatorView*)
+                [m_tableView.tableFooterView viewWithTag:tableFooterViewActivityTag];
+            [activi removeFromSuperview];
+        }
+
+        [m_tableView reloadData];
+        return;
+    }
+    m_tableView = [[UITableView alloc]
+        initWithFrame:CGRectMake(0, 135, kDeviceWidth, kDeviceHeight - 135)
+                style:UITableViewStylePlain];
+    m_tableView.delegate = self;
+    m_tableView.dataSource = self;
+    m_tableView.backgroundColor = [UIColor clearColor];
+//    m_tableView.separatorColor = [UIColor clearColor];
+    [self.view addSubview:m_tableView];
+
+    //创建加载更多
+    UIView* footerView = [Common createTableFooter];
+    m_tableView.tableFooterView = footerView;
+    UILabel* lab = (UILabel*)[m_tableView.tableFooterView viewWithTag:tableFooterViewLabTag];
+
+    if (_pageNum < _todays) {
+        lab.text = NSLocalizedString(@"加载更多...", nil);
+    } else {
+        lab.text = NSLocalizedString(@"已到底部", nil);
+        lab.textColor = [CommonImage colorWithHexString:@"666666"];
+        lab.frame = CGRectMake(0, 0, kDeviceWidth, 45);
+        UIActivityIndicatorView* activi = (UIActivityIndicatorView*)
+            [m_tableView.tableFooterView viewWithTag:tableFooterViewActivityTag];
+        [activi removeFromSuperview];
+    }
+}
+
+//- (UIView*)tableView:(UITableView*)tableView
+//    viewForHeaderInSection:(NSInteger)section
+//{
+//    UIView* cleanView = [[[UIView alloc] init] autorelease];
+//    cleanView.backgroundColor = [UIColor clearColor];
+//    return cleanView;
+//}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView*)tableView
+{
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView*)tableView
+    numberOfRowsInSection:(NSInteger)section
+{
+    return _pageNum;
+}
+
+- (CGFloat)tableView:(UITableView*)tableView
+heightForRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    return 44;
+}
+
+//- (CGFloat)tableView:(UITableView*)tableView
+//    heightForRowAtIndexPath:(NSIndexPath*)indexPath
+//{
+//    //    NSString * title = dataArr[indexPath.section][@"text"];
+//    CGFloat heiht = 46 + 170;
+//    CGFloat imageH = 0;
+//    NSArray* array = allTextArr[indexPath.section];
+//
+//    NSMutableDictionary* dicItem2 = dataArr[indexPath.section];
+//    NSMutableDictionary* dicItem;
+//    for (int i = 0; i < array.count; i++) {
+//        dicItem = [array objectAtIndex:i];
+//        //        dicItem2 = imageDic[[NSString stringWithFormat:@"%d",
+//        //        indexPath.section]];
+//        if (dicItem[@"img"]) {
+//            imageH = [[dicItem2 objectForKey:@"imageSize"] floatValue];
+//            if (!imageH) {
+//                //根据宽度等比缩放高度
+//                NSString* strCon = [dicItem[@"img"] stringByAppendingString:@"?imageView/2/w/560"];
+//                NSString* strCon12 =
+//                    [strCon stringByReplacingOccurrencesOfString:@"/"
+//                                                      withString:@"_"];
+//                NSLog(@"%@", strCon12);
+//
+//                UIImage* image = [UIImage
+//                    imageWithContentsOfFile:[[Common getImagePath]
+//                                                stringByAppendingFormat:@"/%@",
+//                                                                        strCon12]];
+//                imageH = image.size.height / 2;
+//                [dicItem2 setObject:[NSNumber numberWithFloat:imageH]
+//                             forKey:@"imageSize"];
+//            }
+//            //含有图片
+//            if (!imageDic[dicItem[@"img"]]) {
+//                [imageDic
+//                    setObject:dicItem[@"img"]
+//                       forKey:[NSString stringWithFormat:@"%d", indexPath.section]];
+//                [imageDic setObject:[NSString stringWithFormat:@"%d", i]
+//                             forKey:dicItem[@"img"]];
+//            }
+//        }
+//        if (dicItem[@"title"]) {
+//            
+//            if (imageDic[[NSString stringWithFormat:@"title_%d_%@",indexPath.section,dicItem[@"title"]]])
+//            {
+//                heiht += [imageDic[[NSString stringWithFormat:@"title_%d_%@",indexPath.section,dicItem[@"title"]]]
+//                floatValue];
+//            }else{
+//                CGFloat h =[Common heightForString:dicItem[@"title"]
+//                                             Width:270
+//                                              Font:[UIFont systemFontOfSize:16]].height + 10;
+//                heiht += h;
+//                [imageDic setObject:[NSString stringWithFormat:@"%f",h]
+//                             forKey:[NSString
+//                                     stringWithFormat:@"title_%d_%@",indexPath.section,dicItem[@"title"]]];
+//            }
+//        }
+//        if (dicItem[@"content"]) {
+//            if (imageDic[[NSString
+//            stringWithFormat:@"content_%d_%@",indexPath.section,dicItem[@"content"]]])
+//            {
+//                heiht += [imageDic[[NSString
+//                                    stringWithFormat:@"content_%d_%@",indexPath.section,dicItem[@"content"]]]
+//                floatValue];
+//            }else{
+//                CGFloat h =[Common heightForString:dicItem[@"content"]
+//                                             Width:270
+//                                              Font:[UIFont systemFontOfSize:15]].height + 10;
+//                heiht += h;
+//                [imageDic setObject:[NSString
+//                stringWithFormat:@"%f",h]
+//                forKey:[NSString
+//                stringWithFormat:@"content_%d_%@",indexPath.section,dicItem[@"content"]]];
+//            }
+//        }
+//    }
+//    if (_pageNum == (indexPath.section+1)) {
+//        return heiht + imageH+10;
+//    }
+//    return heiht + imageH;
+//}
+
+//- (CGFloat)tableView:(UITableView*)tableView
+//    heightForHeaderInSection:(NSInteger)section
+//{
+//    return 15;
+//}
+
+- (UITableViewCell*)tableView:(UITableView*)tableView
+        cellForRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    static NSString* identifier = @"cell";
+    UITableViewCell* cell =
+    [tableView dequeueReusableCellWithIdentifier:identifier];
+    if (!cell) {
+        cell = [[[UITableViewCell alloc]
+                 initWithStyle:UITableViewCellStyleDefault
+                 reuseIdentifier:identifier] autorelease];
+        cell.textLabel.font = [UIFont systemFontOfSize:17];
+        cell.textLabel.textColor = [CommonImage colorWithHexString:@"333333"];
+        //cell点击背景颜色
+        cell.selectedBackgroundView = [Common creatCellBackView];
+    }
+    cell.textLabel.text = dataArr[indexPath.row][@"text"];
+    
+    return cell;
+
+//    static NSString* identifier = @"cell";
+//    ImproveSubscribeTableViewCell* cell =
+//        [tableView dequeueReusableCellWithIdentifier:identifier];
+//    if (!cell) {
+//        cell = [[[ImproveSubscribeTableViewCell alloc]
+//              initWithStyle:UITableViewCellStyleDefault
+//            reuseIdentifier:identifier] autorelease];
+//        cell.backgroundColor = [UIColor clearColor];
+//        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+//        cell.delegate = self;
+//    }
+//    [cell setPlanText:allTextArr[indexPath.section]
+//                 Data:dataArr[indexPath.section]
+//                 days:_todays - indexPath.section
+//                 date:_userDic[@"plantime"]
+//                image:imageDic
+//              section:indexPath.section];
+//    return cell;
+    
+}
+
+- (void)tableView:(UITableView*)tableView
+    didSelectRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    ImproveWebViewController * web = [[ImproveWebViewController alloc]init];
+    web.m_array = dataArr;
+    web.m_index = (int)indexPath.row;
+    web.title = @"详情";
+    [self.navigationController pushViewController:web animated:YES];
+    [web release];
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+- (void)reloadData:(id)cell
+{
+    NSIndexPath* indexPath = [m_tableView indexPathForCell:cell];
+    if (indexPath) {
+        [m_tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath]
+                           withRowAnimation:UITableViewRowAnimationNone];
+    }
+}
+
+// UIScrollView滚动停止
+- (void)scrollViewDidEndDecelerating:(UIScrollView*)scrollView
+{
+    // 下拉到最底部时显示更多数据
+    if (scrollView.contentOffset.y >= (scrollView.contentSize.height - scrollView.frame.size.height - 45)) {
+        if (_pageNum < _todays) {
+            _pageNum += g_everyPageNum;
+            if (_pageNum < _todays) {
+            } else {
+                _pageNum = _todays;
+            }
+            [self creatTableView];
+        } else {
+        }
+    }
+}
+
+- (void)butEventShowShare
+{
+    UIActionSheet* sheet = [[UIActionSheet alloc]
+                 initWithTitle:nil
+                      delegate:self
+             cancelButtonTitle:@"取消"
+        destructiveButtonTitle:@"再来一次"
+             otherButtonTitles:@"介绍", @"取消订阅", nil];
+    [sheet showInView:self.view];
+    [sheet release];
+}
+
+- (void)actionSheet:(UIActionSheet*)actionSheet
+    clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (buttonIndex == 0) {
+        if (_todays>1) {
+            isSub = NO;
+            [self subscribe:3]; //再来一次
+        }
+    } else if (buttonIndex == 1) {
+        ImproveDataViewController* improve =
+            [[ImproveDataViewController alloc] init];
+        improve.userDic = self.userDic;
+        improve.dataArr =_headerArr;
+        
+        [self.navigationController pushViewController:improve animated:YES];
+        [improve release];
+    } else if (buttonIndex == 2) {
+        isSub = YES;
+        [self subscribe:2]; //取消康友手册预定
+    }
+}
+
+//- (void)actionSheet:(UIActionSheet*)actionSheet
+// didDismissWithButtonIndex:(NSInteger)buttonIndex
+//{
+//    //分享
+//    if (buttonIndex == 1) {
+//        [self goToShare];
+//    }
+//}
+
+- (void)alertView:(UIAlertView*)alertView
+    clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    //    ImproveSubscribeViewController * import =
+    //    [[ImproveSubscribeViewController alloc]init];
+    //    [self.navigationController popToViewController:import animated:YES];
+    //    [import release];
+    if (_addOne == 1) {
+        int index =
+            (int)[[self.navigationController viewControllers] indexOfObject:self];
+        [self.navigationController
+            popToViewController:[self.navigationController.viewControllers
+                                    objectAtIndex:index - 2]
+                       animated:YES];
+    } else {
+        [self.navigationController popViewControllerAnimated:YES];
+    }
+}
+
+- (void)subscribe:(int)type
+{
+    NSLog(@"退订");
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [dic setObject:_headerArr[@"id"] forKey:@"planId"];
+    [dic setObject:g_nowUserInfo.userid forKey:@"userId"];
+    [dic setObject:[NSString stringWithFormat:@"%d", type] forKey:@"actiontype"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:SUBSCRIBE_PLAN_BY_ID
+                                                  values:dic
+                                              requestKey:SUBSCRIBE_PLAN_BY_ID
+                                                delegate:self
+                                              controller:self
+                                            actiViewFlag:1
+                                                   title:nil];
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dic = [responseString KXjSONValueObject];
+    if (![[dic objectForKey:@"state"] intValue]) {
+        if ([loader.username isEqualToString:SUBSCRIBE_PLAN_BY_ID]) {
+            if (isSub) {
+                UIAlertView* av = [[UIAlertView alloc]
+                                   initWithTitle:NSLocalizedString(@"提示", nil)
+                                   message:NSLocalizedString(@"取消订阅成功！", nil)
+                                   delegate:self
+                                   cancelButtonTitle:NSLocalizedString(@"确定", nil)
+                                   otherButtonTitles:nil, nil];
+                [av show];
+                [av release];
+            } else {
+                //再来一次
+                NSDictionary* resultDic = dic[@"rs"];
+                for (NSMutableDictionary* dic1 in resultDic) {
+                    _userDic = dic1;
+                }
+                _pageNum = 1;
+                _todays = 1;
+                [self oneMoreTime];
+                [self creatTableView];
+            }
+        } else if ([loader.username isEqualToString:GETPROGRESS_PLAN_BY_ID]) {
+            NSDictionary* resultDic = dic[@"rs"];
+            NSLog(@"resultArray:%@", resultDic);
+            for (NSDictionary* dicd in resultDic) {
+                _todays = [dicd[@"day"] intValue];
+                _allDays = [_headerArr[@"comments"] intValue];
+                if (_todays > _allDays) {
+                    _todays = _allDays;
+                }
+                [self getDataFromSqlite];
+            }
+            if (_todays < _pageNum) {
+                _pageNum = _todays;
+            }
+            [self creatHeaderView];
+            [self creatTableView];
+
+        }
+    }else{
+        [Common TipDialog:[dic objectForKey:@"msg"]];
+    }
+}
+
+- (void)oneMoreTime
+{
+    UILabel * lab;
+    for (int i = 1; i<4; i++) {
+        lab = (UILabel*)[self.view viewWithTag:i];
+        switch (i) {
+            case 1:
+                lab.text = [NSString
+                            stringWithFormat:@"周期共%d天，还剩%d天",
+                            _allDays, _allDays - 1];
+                break;
+            case 2:
+            {
+                //订阅日期
+                NSString* timeStr=[[NSString stringWithFormat:@"%@", [NSDate date]] substringToIndex:10];
+                lab.text = [NSString stringWithFormat:@"订阅日期：%@", timeStr];
+            }
+                break;
+            case 3:
+                lab.text = [NSString stringWithFormat:@"%d%@",
+                            1 * 100 / _allDays, @"%"];
+                break;
+            default:
+                break;
+        }
+    }
+    UIView * view = (UIView*)[self.view viewWithTag:4];
+    view.frame = [Common rectWithSize:view.frame width:(kDeviceWidth-40) * 1 / _allDays height:0];
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little
+preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+{
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

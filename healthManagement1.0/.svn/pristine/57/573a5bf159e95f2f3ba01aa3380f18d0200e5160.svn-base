@@ -1,0 +1,220 @@
+//
+//  ConsultInfoTableViewCell.m
+//  jiuhaohealth2.1
+//
+//  Created by 徐国洪 on 14-9-13.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "ConsultInfoTableViewCell.h"
+
+@implementation ConsultInfoTableViewCell
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        // Initialization code
+    }
+    return self;
+}
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end
+
+
+
+@implementation ConsultInfoTableViewCellText
+@synthesize infoDic;
+@synthesize textBlock;
+@synthesize m_labTitle1;
+@synthesize m_labTitle2;
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        m_labTitle1 = [Common createLabel];
+        m_labTitle1.frame = CGRectMake(15, 10, kDeviceWidth - 30, 18);
+        m_labTitle1.font = [UIFont systemFontOfSize:15];
+        m_labTitle1.textColor = [CommonImage colorWithHexString:@"333333"];
+        m_labTitle1.text = @"职业经历:";
+        [self.contentView addSubview:m_labTitle1];
+        
+        m_labIntroduction = [Common createLabel];
+        m_labIntroduction.frame = CGRectMake(m_labTitle1.origin.x, m_labTitle1.bottom + 2, m_labTitle1.width, 18);
+        m_labIntroduction.font = [UIFont systemFontOfSize:15];
+        m_labIntroduction.numberOfLines = 0;
+        m_labIntroduction.textColor = [CommonImage colorWithHexString:@"333333"];
+        [self.contentView addSubview:m_labIntroduction];
+        
+        m_labTitle2 = [Common createLabel];
+        m_labTitle2.frame = CGRectMake(m_labTitle1.origin.x, m_labTitle1.bottom + 8, m_labTitle1.width, 18);
+        m_labTitle2.font = [UIFont systemFontOfSize:15];
+        m_labTitle2.textColor = [CommonImage colorWithHexString:@"333333"];
+        m_labTitle2.text = @"擅长:";
+        [self.contentView addSubview:m_labTitle2];
+        
+        m_labBegood = [Common createLabel];
+        m_labBegood.frame = CGRectMake(m_labTitle1.origin.x, m_labTitle2.bottom + 2, m_labTitle1.width, 18);
+        m_labBegood.font = [UIFont systemFontOfSize:15];
+        m_labBegood.numberOfLines = 0;
+        m_labBegood.textColor = [CommonImage colorWithHexString:@"333333"];
+        [self.contentView addSubview:m_labBegood];
+    }
+    return self;
+}
+
+
+- (void)setInfoDic:(NSMutableDictionary *)dic
+{
+    infoDic = dic;
+    
+    m_labIntroduction.text = [dic objectForKey:@"briefIntroduction"]; // 执业经历
+    m_labBegood.text = [dic objectForKey:@"begood"]; // 擅长
+    
+    CGRect rect = m_labIntroduction.frame;
+    rect.size.height = [[dic objectForKey:@"briefIntroductionHeight"] floatValue];
+    m_labIntroduction.frame = rect;
+	
+	if (m_labTitle2.hidden) {
+		
+		m_labIntroduction.transform = CGAffineTransformMakeTranslation(0, -20);
+		m_labBegood.transform = CGAffineTransformMakeTranslation(0, rect.size.height-40);
+	}
+	else {
+		m_labTitle2.transform = CGAffineTransformMakeTranslation(0, rect.size.height);
+		m_labBegood.transform = CGAffineTransformMakeTranslation(0, rect.size.height);
+	}
+    
+    rect = m_labBegood.frame;
+    rect.size.height = [[dic objectForKey:@"begoodHeight"] floatValue];
+    m_labBegood.frame = rect;
+}
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+    
+    // Configure the view for the selected state
+}
+
+- (void)dealloc
+{
+    [m_labTitle1 release];
+    [m_labTitle2 release];
+    [m_labIntroduction release];
+    [m_labBegood release];
+    
+    [super dealloc];
+}
+
+@end
+
+
+
+
+@implementation ConsultInfoTableViewCellPost
+@synthesize infoDic;
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        // Initialization code
+        
+        m_labTitle = [Common createLabel];
+        m_labTitle.frame = CGRectMake(15, 10, kDeviceWidth - 80, 19);
+        m_labTitle.font = [UIFont systemFontOfSize:18];
+        m_labTitle.textColor = [CommonImage colorWithHexString:@"333333"];
+        [self.contentView addSubview:m_labTitle];
+        
+        m_labTime = [Common createLabel];
+        m_labTime.frame = CGRectMake(m_labTitle.origin.x, m_labTitle.bottom+11, 120, 16);
+        m_labTime.font = [UIFont systemFontOfSize:11];
+        m_labTime.textColor = [CommonImage colorWithHexString:@"999999"];
+        [self.contentView addSubview:m_labTime];
+        
+        m_icon = [[UIImageView alloc] initWithFrame:CGRectMake(self.width-10-20, m_labTitle.bottom + 8, 20, 20)];
+        m_icon.image = [UIImage imageNamed:@"common.bundle/topic/conversation_icon_read.png"];
+        m_icon.contentMode = UIViewContentModeCenter;
+        [self.contentView addSubview:m_icon];
+        
+        m_labCount = [Common createLabel];
+        m_labCount.textAlignment = NSTextAlignmentRight;
+        m_labCount.frame = CGRectMake(m_labTime.right, m_labTitle.bottom+11, self.width-m_labTime.right-10, 16);
+        m_labCount.font = [UIFont systemFontOfSize:11];
+        m_labCount.textColor = [CommonImage colorWithHexString:@"666666"];
+        [self.contentView addSubview:m_labCount];
+    }
+    return self;
+}
+
+- (void)setInfoDic:(NSMutableDictionary *)dic
+{
+    if ([dic isKindOfClass:[NSString class]]) {
+        m_labTitle.text = (NSString*)dic;
+        m_labTitle.frame = CGRectMake(15, 0, kDeviceWidth - 80, 35);
+        m_labTitle.textColor = [CommonImage colorWithHexString:VERSION_TEXT_COLOR];
+        
+        m_labTime.hidden = YES;
+        m_icon.hidden = YES;
+        m_labCount.hidden = YES;
+    }
+    else {
+        infoDic = dic;
+        
+        m_labTime.hidden = NO;
+        m_icon.hidden = NO;
+        m_labCount.hidden = NO;
+        
+        m_labTitle.text = [dic objectForKey:@"title"];
+        m_labTitle.frame = CGRectMake(15, 10, kDeviceWidth - 80, 19);
+        m_labTitle.textColor = [CommonImage colorWithHexString:@"333333"];
+        m_labTime.text = [CommonDate getServerTime:(long)([[dic objectForKey:@"createTime"] longLongValue]/1000) type:11];
+        m_labCount.text = [NSString stringWithFormat:@"%@",dic[@"readCount"]];
+        
+        float widht = [m_labCount.text sizeWithFont:m_labCount.font].width + 5;
+        m_icon.transform = CGAffineTransformMakeTranslation(-widht, 0);
+    }
+}
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+    
+    // Configure the view for the selected state
+}
+
+- (void)dealloc
+{
+    [m_labTitle release];
+    [m_labTime release];
+    [m_labCount release];
+    [m_icon release];
+    
+    [super dealloc];
+}
+
+@end

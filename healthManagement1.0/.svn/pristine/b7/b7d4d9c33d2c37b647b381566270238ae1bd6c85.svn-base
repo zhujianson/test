@@ -1,0 +1,364 @@
+//
+//  CommunitySearchVIew.m
+//  jiuhaohealth4.0
+//
+//  Created by 徐国洪 on 15-4-19.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "CommunitySearchVIew.h"
+#import "SearchResultViewController.h"
+#import "PostListViewController.h"
+#import "CommunityViewController.h"
+
+@interface CommunitySearchVIew () <UISearchBarDelegate, UISearchDisplayDelegate, UITableViewDelegate, UITableViewDataSource>
+{
+    NSMutableArray *m_array;
+    UISearchBar *m_searchBar;
+    
+    UITableView *m_tableView;
+    UIButton *butClear;
+    UISearchDisplayController *searchC;
+    
+    BOOL  isFromHistoryCell;
+    
+}
+@property (nonatomic,retain) NSMutableArray *m_array;
+@property (nonatomic,retain) NSString *searchText;
+
+@end
+
+@implementation CommunitySearchVIew
+
+@synthesize m_array;
+- (void)dealloc
+{
+    [m_array release];
+    [m_tableView release];
+    [m_searchBar release];
+    self.groupId = nil;
+    [butClear release];
+    [self setSearchText:nil];
+    
+    
+    [super dealloc];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    
+    self.title = @"搜索";
+    self.view.backgroundColor = [UIColor whiteColor];
+    
+    m_array = [[NSMutableArray alloc] init];
+    
+    m_tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight)];
+    m_tableView.separatorColor = [CommonImage colorWithHexString:LINE_COLOR];
+    m_tableView.delegate = self;
+    m_tableView.dataSource = self;
+    m_tableView.backgroundColor = [UIColor clearColor];
+    [self.view addSubview:m_tableView];
+    
+    m_searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 44)];
+    m_searchBar.delegate = self;
+    m_searchBar.layer.borderWidth = 0.5f;
+    m_searchBar.placeholder = @"搜索你感兴趣的帖子";
+    m_searchBar.returnKeyType = UIReturnKeyDone;
+    m_searchBar.layer.borderColor = [CommonImage colorWithHexString:@"e5e5e5"].CGColor;
+    if (IOS_7) {
+        m_searchBar.barTintColor = [CommonImage colorWithHexString:@"e5e5e5"];
+    } else {
+        m_searchBar.tintColor = [CommonImage colorWithHexString:@"e5e5e5"];
+        //右按钮微调ios6下
+        [m_searchBar setPositionAdjustment:UIOffsetMake(-10, 0) forSearchBarIcon:UISearchBarIconBookmark];
+    }
+    
+    searchC = [[UISearchDisplayController alloc] initWithSearchBar:m_searchBar contentsController:self];
+    searchC.delegate = self;
+    searchC.searchResultsDelegate = self;
+    searchC.searchResultsDataSource = self;
+    searchC.searchResultsTableView.backgroundColor = [UIColor whiteColor];
+    
+    [Common setExtraCellLineHidden:searchC.searchResultsTableView];
+    m_searchBar.backgroundColor = [UIColor clearColor];
+    
+    
+    m_tableView.tableHeaderView = m_searchBar;
+    
+    butClear = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 40)];
+    butClear.tag = 100;
+    [butClear setTitle:@"清空历史" forState:UIControlStateNormal];
+    [butClear setTitleColor:[CommonImage colorWithHexString:@"666666"] forState:UIControlStateNormal];
+    [butClear addTarget:self action:@selector(butEventClear) forControlEvents:UIControlEventTouchUpInside];
+    m_tableView.tableFooterView = butClear;
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    NSArray *array = [[NSUserDefaults standardUserDefaults] objectForKey:@"quanzilishisousuo"];
+    if (array) {
+        [m_array removeAllObjects];
+        [m_array addObjectsFromArray:array];
+    }
+    [m_tableView reloadData];
+    
+    if(m_array.count == 0){
+        [butClear setTitle:@"暂无搜索历史记录" forState:UIControlStateNormal];
+    }else{
+        [butClear setTitle:@"清空历史" forState:UIControlStateNormal];
+    }
+
+}
+
+- (void)butEventClear
+{
+    [[NSUserDefaults standardUserDefaults] setObject:nil forKey:@"quanzilishisousuo"];
+    [m_array removeAllObjects];
+    [m_tableView reloadData];
+    [butClear setTitle:@"暂无搜索历史记录" forState:UIControlStateNormal];
+}
+
+- (void)hiddenNavigationBarLine
+{
+    if ([self.navigationController.navigationBar respondsToSelector:@selector(setBackgroundImage:forBarMetrics:)]){
+        
+        NSArray *list = self.navigationController.navigationBar.subviews;
+        
+        for (id obj in list) {
+            
+            if ([obj isKindOfClass:[UIImageView class]]) {
+                
+                UIImageView *imageView=(UIImageView *)obj;
+                
+                NSArray *list2=imageView.subviews;
+                
+                for (id obj2 in list2) {
+                    
+                    if ([obj2 isKindOfClass:[UIImageView class]]) {
+                        
+                        UIImageView *imageView2=(UIImageView *)obj2;
+                        
+                        imageView2.hidden=YES;
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+#pragma mark - UISearBarDelegae
+
+- (void)searchBarTextDidBeginEditing:(UISearchBar *)searchBar
+{
+    //    [m_searchBar setShowsCancelButton:YES animated:YES];
+    isFromHistoryCell =  NO;
+}
+
+- (void)searchBarSearchButtonClicked:(UISearchBar *)searchBar
+{
+    //    //判断
+    //    NSString *searchText = [searchBar.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    //    if([m_array containsObject:searchText]){
+    //
+    //        [m_array removeObject:searchText];
+    //    }
+    //
+    //    [m_array insertObject:searchText atIndex:0];
+    //    if (m_array.count > 20) {
+    //        [m_array removeObjectAtIndex:m_array.count-1];
+    //    }
+    //
+    //
+    //
+    //    PostListViewController *postList = [[PostListViewController alloc] init];
+    //    postList.groupId = _groupId;
+    //    postList.isfromSearchListFlag = YES;
+    //    postList.keyword =  searchText;
+    //    postList.m_tableHeight = kDeviceHeight;
+    //    postList.type = ALLPosts;
+    //    [self.navigationController pushViewController:postList animated:YES];
+    //    [postList release];
+    //    [m_tableView reloadData];
+    //    butClear.hidden = m_array.count == 0;
+}
+
+- (void)addPostsResultTableView:(NSString *)keyword
+{
+    UIView *postView = [self.view viewWithTag:1816];
+    if(postView){
+        
+        PostListViewController *postVC = (PostListViewController *)postView.nextResponder;
+        [postVC searchPostWithString:keyword];
+        return;
+    }
+    PostListViewController *postList = [[PostListViewController alloc] init];
+    if(isFromHistoryCell){
+        postList.m_tableHeight = kDeviceHeight-44;
+    }else{
+        postList.m_tableHeight = SCREEN_HEIGHT-44;
+    }
+    postList.keyword =  keyword;
+    postList.view.tag = 1816;
+    postList.isfromSearchListFlag = YES;
+    
+    if(isFromHistoryCell){
+        postList.view.frame = CGRectMake(0, 44, kDeviceWidth, kDeviceHeight-44);
+    }else{
+        postList.view.frame = CGRectMake(0, 44, kDeviceWidth, SCREEN_HEIGHT-44);
+
+    }
+    
+    postList.groupId = @"";//圈子列表搜索不指定
+    
+    postList.type = ALLPosts;
+    
+    __block typeof(self) weakSelf = self;
+    postList.didSelectedBlock = ^(void){
+        
+        if([weakSelf.m_array containsObject:weakSelf.searchText]){
+            [weakSelf.m_array removeObject:weakSelf.searchText];
+        }
+        
+        [weakSelf.m_array insertObject:weakSelf.searchText atIndex:0];
+        if (weakSelf.m_array.count > 20) {
+            [weakSelf.m_array removeObjectAtIndex:weakSelf.m_array.count-1];
+        }
+        [[NSUserDefaults standardUserDefaults] setObject:weakSelf.m_array forKey:@"quanzilishisousuo"];
+        
+        
+    };
+    
+    [self.view addSubview:postList.view];
+    
+}
+
+- (void)removePostsResultTableView
+{
+    UIView *postView = [self.view viewWithTag:1816];
+    
+    [postView removeFromSuperview];
+    postView = nil;
+    
+}
+
+
+- (void)searchBar:(UISearchBar *)searchBar
+    textDidChange:(NSString *)searchText {
+    
+    NSString *m_searchText = [searchText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    self.searchText = m_searchText;
+    if(m_searchText.length){
+        
+        [self addPostsResultTableView:m_searchText];
+        
+    }else{
+        
+        [self removePostsResultTableView];//移除搜索结果页
+        [m_tableView reloadData];//更新搜索历史页
+        
+    }
+    
+    
+}
+
+- (void)searchBarCancelButtonClicked:(UISearchBar *)searchBar
+{
+    [self performSelector:@selector(showNavigationBarLine) withObject:nil afterDelay:0.01];
+
+    [self removePostsResultTableView];
+    
+}
+
+
+#pragma mark - UITableViewDataSource And Delegate
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return [m_array count];
+}
+
+- (UIView*)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section
+{
+    UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 30)];
+    view.backgroundColor = [CommonImage colorWithHexString:@"f5f5f5"];
+    
+    UILabel *labTitle = [Common createLabel];
+    labTitle.frame = CGRectMake(15, 0, kDeviceWidth-30, 30);
+    labTitle.text = @"历史搜索:";
+    labTitle.font = [UIFont systemFontOfSize:13];
+    labTitle.textColor = [CommonImage colorWithHexString:@"666666"];
+    [view addSubview:labTitle];
+    [labTitle release];
+    
+    UIView *line = [Common createLineLabelWithHeight:30];
+    [view addSubview:line];
+    
+    return [view autorelease];
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section
+{
+    
+    return 30.0f;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *identifier = @"cell";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
+    if(!cell){
+        cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier] autorelease];
+        //cell点击背景颜色
+        cell.selectedBackgroundView = [Common creatCellBackView];
+        cell.textLabel.textColor = [CommonImage colorWithHexString:@"000000"];
+    }
+    
+    NSString *title = m_array[indexPath.row];
+    cell.textLabel.text = title;
+    
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    if ([self.m_superClass isKindOfClass:[CommunityViewController class]]) {
+        
+        SearchResultViewController *search = [[SearchResultViewController alloc] init];
+        [self.navigationController pushViewController:search animated:YES];
+        [search release];
+    }
+    else if(tableView.tag == 1816){
+        isFromHistoryCell = NO;
+        m_searchBar.text = self.m_array[indexPath.row];
+        [self searchBar:m_searchBar textDidChange:self.m_array[indexPath.row]];
+    }else{
+        isFromHistoryCell = YES;
+        m_searchBar.text = self.m_array[indexPath.row];
+        [self searchBar:m_searchBar textDidChange:self.m_array[indexPath.row]];
+    }
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+ #pragma mark - Navigation
+ 
+ // In a storyboard-based application, you will often want to do a little preparation before navigation
+ - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+ // Get the new view controller using [segue destinationViewController].
+ // Pass the selected object to the new view controller.
+ }
+ */
+
+@end

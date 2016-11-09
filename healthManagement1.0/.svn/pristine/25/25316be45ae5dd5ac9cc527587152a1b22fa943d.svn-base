@@ -1,0 +1,101 @@
+//
+//  HomeModel.m
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 16/1/18.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "HomeModel.h"
+
+@implementation HomeModel
+
++(NSString *)analysisTimeSegmentFromDict:(NSDictionary *)dict
+{
+    NSInteger timeInterval = [dict[@"timeInterval"] intValue];
+    NSString *timesStr = @"下午好";
+    switch (timeInterval) {
+        case 1:
+            timesStr = @"早上好";
+            break;
+        case 2:
+            timesStr = @"中午好";
+            break;
+        case 3:
+            timesStr = @"下午好";
+            break;
+        case 4:
+            timesStr = @"晚上好";
+            break;
+        default:
+            break;
+    }
+    return timesStr;
+}
+
++(NSString *)fetchViewControllerStrWith:(NSString *)iconTarget
+{
+    NSString *classStr = @"";
+    NSDictionary *dict = @{@"report":@"web",
+                           @"question":@"DoctorViewController",
+                           @"sport":@"SteperHomeViewController",
+                           @"tools":@"ToolsViewController",
+                           @"weight_note":@"web",
+                           @"blood_sugar_note":@"web",
+                           @"plan":@"web",
+                           @"medicine":@"web"
+                           };
+    if (iconTarget.length)
+    {
+       classStr = [dict objectForKey:iconTarget];
+    }
+    return classStr;
+}
+
+//转化分享字段
++(NSString *)getShareFromDict:(NSDictionary *)dict withKey:(NSString *)key
+{
+    NSString *isShare = @"1";
+    if ([@"0" isEqualToString:[Common isNULLString3:dict[key]]])//内容为0 为不可以分享
+    {
+        isShare = @"0";
+    }
+    return isShare;
+}
+
++(BOOL)isShowRedImageWithDict:(NSDictionary *)dcit
+{
+    NSString *iconTarget = dcit[@"iconTarget"];
+    BOOL state = YES;
+    if ([@"report" isEqualToString:iconTarget])
+    {
+        state =  !g_nowUserInfo.myReportCounts;
+    }
+    else  if ([@"question" isEqualToString:iconTarget])
+    {
+         state =  !g_nowUserInfo.doctorMsgCount;
+    }
+    else  if ([@"plan" isEqualToString:iconTarget])
+    {
+         state =  !g_nowUserInfo.myPlanCounts;
+    }
+    return state;
+}
+
++(void)setNoRedImageWithDict:(NSDictionary *)dcit
+{
+    NSString *iconTarget = dcit[@"iconTarget"];
+    if ([@"report" isEqualToString:iconTarget])
+    {
+        g_nowUserInfo.myReportCounts = 0;
+    }
+    else  if ([@"question" isEqualToString:iconTarget])
+    {
+//        g_nowUserInfo.doctorMsgCount = 0;
+    }
+    else  if ([@"plan" isEqualToString:iconTarget])
+    {
+        g_nowUserInfo.myPlanCounts = 0;
+    }
+}
+@end

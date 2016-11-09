@@ -1,0 +1,215 @@
+//
+//  ShowSelectBaseView.m
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 16/2/23.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "ShowSelectBaseView.h"
+static NSString *const KViewSeparatorColor = @"dcdcdc";
+static float kFooterSelectViewH = 25.0;
+
+@interface ShowSelectBaseView ()<UITableViewDataSource, UITableViewDelegate>
+{
+    UITableView *m_tableView;
+    KXSelectBaseViewBlock _inBlock;
+    UIView* m_view;
+    float kHeaderSelectViewH;
+}
+@end
+@implementation ShowSelectBaseView
+@synthesize m_dataArray;
+
+-(id)initWithKXPayManageViewBlock:(KXSelectBaseViewBlock)block 
+{
+    CGRect frame = [UIScreen mainScreen].bounds;
+    self = [super initWithFrame:frame];
+    if (self)
+    {
+        m_dataArray = [[NSMutableArray alloc] init];
+        [self setUpCustomData];
+        
+         kHeaderSelectViewH = 50;
+        [self addSubview:self.tableView];
+        _inBlock = [block copy];
+        
+        m_view = [[UIView alloc] initWithFrame:frame];
+        m_view.backgroundColor = [UIColor clearColor];
+        [self addSubview:m_view];
+        [self bringSubviewToFront:m_tableView];
+    }
+    return self;
+}
+
+-(void)setUpCustomData
+{
+    _m_cellHight = 30.;
+    _m_titleString = @"选择设备";
+}
+
+-(UITableView *)tableView
+{
+    if (m_tableView != nil) {
+        return m_tableView;
+    }
+    
+    CGRect rect = self.frame;
+    rect.origin.x = 0;
+    rect.origin.y = 0;
+    rect.size.width = kDeviceWidth-15*2;
+    rect.size.height = kHeaderSelectViewH+m_dataArray.count*self.m_cellHight + kFooterSelectViewH;
+    
+    m_tableView = [[UITableView alloc] initWithFrame:rect style:UITableViewStylePlain];
+    m_tableView.delegate = self;
+    m_tableView.separatorColor = [CommonImage colorWithHexString:KViewSeparatorColor];
+    m_tableView.dataSource = self;
+    m_tableView.alwaysBounceHorizontal = NO;
+    m_tableView.alwaysBounceVertical = NO;
+    m_tableView.showsHorizontalScrollIndicator = NO;
+    m_tableView.showsVerticalScrollIndicator = NO;
+    m_tableView.scrollEnabled = NO;
+    m_tableView.backgroundColor =  [CommonImage colorWithHexString:@"f5f5f5"];
+    m_tableView.layer.cornerRadius = 4.0;
+    m_tableView.tableHeaderView = [self createHeaderView];
+    m_tableView.tableFooterView = [self createFooterView];
+//    [self adjustSeparatorInsetWithView:m_tableView];
+    m_tableView.center = self.center;
+    m_tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    return m_tableView;
+}
+
+-(void)updateFrame
+{
+    m_tableView.frameHeight = kHeaderSelectViewH+m_dataArray.count*self.m_cellHight + kFooterSelectViewH;
+    m_tableView.center = self.center;
+    [m_tableView reloadData];
+}
+
+-(UIView *)createFooterView
+{
+    UIView * headerView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, m_tableView.width, kFooterSelectViewH)];
+    headerView.backgroundColor = [UIColor clearColor];
+    return headerView;
+}
+
+-(UIView *)createHeaderView
+{
+    UIView * headerView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, m_tableView.width, kHeaderSelectViewH)];
+    headerView.backgroundColor = [UIColor clearColor];
+    
+    UILabel *m_titleLabel = [Common createLabel:CGRectMake(0,0, headerView.width, headerView.height) TextColor:COLOR_333333 Font:[UIFont boldSystemFontOfSize:M_FRONT_SEVENTEEN] textAlignment:NSTextAlignmentCenter labTitle:@""];
+    m_titleLabel.text = _m_titleString;
+    [headerView addSubview:m_titleLabel];
+    
+    UIButton *closeBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    closeBtn.frame = CGRectMake(headerView.size.width-30, 14, 15, 15);
+    [closeBtn setImage:[UIImage imageNamed:@"common.bundle/common/search_close_icon_nor.png"] forState:UIControlStateNormal];
+    [closeBtn setImage:[UIImage imageNamed:@"common.bundle/common/search_close_icon_pre.png"] forState:UIControlStateHighlighted];
+    [closeBtn addTarget:self action:@selector(butEventClose) forControlEvents:UIControlEventTouchUpInside];
+    [headerView addSubview:closeBtn];
+    closeBtn.centerY = m_titleLabel.centerY;
+    
+    UILabel* lineLable = [[UILabel alloc] initWithFrame:CGRectMake(0, headerView.height - 0.5, headerView.width, 0.5)] ;
+    lineLable.backgroundColor = [CommonImage colorWithHexString:KViewSeparatorColor];
+    [headerView addSubview:lineLable];
+    return headerView;
+}
+
+#pragma mark - UITableView DataSource
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return [m_dataArray count];
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *identifier = @"cell";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
+    if (cell == nil) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
+    }
+    if (indexPath.row < m_dataArray.count)
+    {
+//        cell.m_dict = m_dataArray[indexPath.row];
+    }
+    return cell;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return _m_cellHight;
+}
+
+//- (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
+//{
+//    [self adjustSeparatorInsetWithView:cell];
+//}
+
+//-(void)adjustSeparatorInsetWithView:(UITableViewCell *)view
+//{
+//    UIEdgeInsets insetSep = UIEdgeInsetsMake(0, 15, 0, 15);
+//    if ([view respondsToSelector:@selector(setSeparatorInset:)]) {
+//        [view setSeparatorInset:insetSep];
+//    }
+//    if ([view respondsToSelector:@selector(setLayoutMargins:)]) {
+//        [view setLayoutMargins:insetSep];
+//    }
+//}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    NSDictionary *dict = m_dataArray[indexPath.row];
+    if (_inBlock)
+    {
+        _inBlock(dict);
+    }
+    [self dismiss:YES];
+}
+
+-(void)butEventClose
+{
+    [self dismiss:YES];
+}
+
+-(void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    [self dismiss:YES];
+}
+
+-(void)dismiss:(BOOL)animate
+{
+    [UIView animateWithDuration:0.3 animations:^{
+        m_tableView.transform = CGAffineTransformMakeScale(0.1f, 0.1f);
+        self.alpha = 0.f;
+    } completion:^(BOOL finished) {
+        m_view.backgroundColor = [UIColor clearColor];
+        [self removeFromSuperview];
+    }];
+}
+
+-(void)show
+{
+    self.alpha = 0.f;
+    self.transform = CGAffineTransformMakeScale(0.1f, 0.1f);
+    [UIView animateWithDuration:0.2f delay:0.f options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        self.transform = CGAffineTransformMakeScale(1.05f, 1.05f);
+        self.alpha = 1.f;
+    } completion:^(BOOL finished) {
+        [UIView animateWithDuration:0.08f delay:0.f options:UIViewAnimationOptionCurveEaseInOut animations:^{
+            self.transform = CGAffineTransformIdentity;
+            m_view.backgroundColor = [UIColor colorWithWhite:0 alpha:0.6];
+        } completion:nil];
+    }];
+}
+
++(void)showShowSelectViewWithBlock:(KXSelectBaseViewBlock )block
+{
+    ShowSelectBaseView *payView = [[self alloc] initWithKXPayManageViewBlock:block ];
+    [APP_DELEGATE addSubview:payView];
+    [payView show];
+}
+
+@end

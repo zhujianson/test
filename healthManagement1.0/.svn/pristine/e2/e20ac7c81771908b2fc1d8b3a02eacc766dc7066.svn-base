@@ -1,0 +1,58 @@
+//
+//  SearchResultViewController.m
+//  jiuhaohealth4.0
+//
+//  Created by 徐国洪 on 15-4-21.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "SearchResultViewController.h"
+#import "PostListViewController.h"
+
+@interface SearchResultViewController ()
+{
+}
+
+@end
+
+@implementation SearchResultViewController
+
+- (void)dealloc
+{
+    self.groupId = nil;
+    [super dealloc];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    
+    float height = kDeviceHeight;
+    PostListViewController *postList = [[PostListViewController alloc] init];
+    postList.groupId = _groupId;
+    postList.keyword = _searchKeyString;
+    postList.m_tableHeight = height;
+    postList.type = ALLPosts;
+    
+    [self.view addSubview:postList.view];
+    [postList release];
+    
+    
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

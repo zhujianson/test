@@ -1,0 +1,101 @@
+//
+//  HomeOrderCellTableViewCell.m
+//  jiuhaohealth2.1
+//
+//  Created by 徐国洪 on 14-11-28.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "HomeOrderCellTableViewCell.h"
+
+@implementation HomeOrderCellTableViewCell
+@synthesize m_dicInfo;
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+	self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+	if (self) {
+		
+		m_labTitle = [Common createLabel];
+		m_labTitle.frame = CGRectMake(10, 0, 100, 45);
+		m_labTitle.font = [UIFont systemFontOfSize:16];
+		[self addSubview:m_labTitle];
+		
+//		m_labState = [Common createLabel];
+//		m_labState.frame = CGRectMake(kDeviceWidth - 130, 0, 60, 40);
+//		m_labState.font = [UIFont systemFontOfSize:15];
+//		[self.contentView addSubview:m_labState];
+		
+		m_butShowHide = [UIButton buttonWithType:UIButtonTypeCustom];
+		m_butShowHide.backgroundColor = [UIColor clearColor];
+		m_butShowHide.frame = CGRectMake(0, 5, kDeviceWidth - 110, 35);
+		m_butShowHide.titleLabel.font = [UIFont systemFontOfSize:14];
+        [m_butShowHide setTitleEdgeInsets:UIEdgeInsetsMake(0, (kDeviceWidth-160), 0, 0)];
+		[m_butShowHide addTarget:self action:@selector(butEventShowHide) forControlEvents:UIControlEventTouchUpInside];
+		[self.contentView addSubview:m_butShowHide];
+	}
+	return self;
+}
+
+- (void)setM_dicInfo:(NSMutableDictionary *)dic
+{
+	m_dicInfo = [dic retain];
+	
+	NSString *keyTitle = [[m_dicInfo allKeys] objectAtIndex:0];
+	NSArray *arrayValue = [[m_dicInfo allValues] objectAtIndex:0];
+	m_labTitle.text = keyTitle;
+	
+	NSString *color, *title;
+	if ([[arrayValue objectAtIndex:1] intValue]) {
+		color = COLOR_FF5351;
+		title = @"显示";
+	}
+	else {
+		color = VERSION_LIN_COLOR_SHEN;
+		title = @"隐藏";
+	}
+	[m_butShowHide setTitle:title forState:UIControlStateNormal];
+	m_labTitle.textColor = [CommonImage colorWithHexString:color];
+	[m_butShowHide setTitleColor:[CommonImage colorWithHexString:color] forState:UIControlStateNormal];
+}
+
+- (void)butEventShowHide
+{
+	NSMutableArray *arrayValue = [[m_dicInfo allValues] objectAtIndex:0];
+	NSString *color, *title, *value;
+	if ([[arrayValue objectAtIndex:1] intValue]) {
+		color = VERSION_LIN_COLOR_SHEN;
+		title = @"隐藏";
+		value = @"0";
+	}
+	else {
+		color = COLOR_FF5351;
+		title = @"显示";
+		value = @"1";
+	}
+	[m_butShowHide setTitle:title forState:UIControlStateNormal];
+	m_labTitle.textColor = [CommonImage colorWithHexString:color];
+	[m_butShowHide setTitleColor:[CommonImage colorWithHexString:color] forState:UIControlStateNormal];
+	
+	[arrayValue removeObjectAtIndex:1];
+	[arrayValue insertObject:value atIndex:1];
+}
+
+- (void)awakeFromNib {
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+- (void)dealloc
+{
+	[m_dicInfo release];
+	
+	[super dealloc];
+}
+
+@end

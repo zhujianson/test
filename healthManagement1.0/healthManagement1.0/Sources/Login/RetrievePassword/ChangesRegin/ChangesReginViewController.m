@@ -1,0 +1,103 @@
+//
+//  ChangesReginViewController.m
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-10-11.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "ChangesReginViewController.h"
+
+@interface ChangesReginViewController ()
+
+@end
+
+@implementation ChangesReginViewController
+{
+    NSArray * dataArr;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"选择地区";
+    
+    dataArr = [[NSArray alloc]initWithObjects:@{@"regin": @"中国大陆",@"num": @"86"},@{@"regin": @"香港地区",@"num": @"852"},@{@"regin": @"澳门地区",@"num": @"853"},@{@"regin": @"台湾地区",@"num": @"886"}, nil];
+    
+    UITableView * m_table = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight) style:UITableViewStylePlain];
+    m_table.delegate = self;
+    m_table.dataSource = self;
+	m_table.backgroundColor = [UIColor clearColor];
+    [self.view addSubview:m_table];
+    m_table.rowHeight = 45;
+    [Common setExtraCellLineHidden:m_table];
+    [m_table release];
+    
+    // Do any additional setup after loading the view.
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return dataArr.count;
+}
+
+// Row display. Implementers should *always* try to reuse cells by setting each cell's reuseIdentifier and querying for available reusable cells with dequeueReusableCellWithIdentifier:
+// Cell gets various attributes set automatically based on table (separators) and data source (accessory views, editing controls)
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    UITableViewCell * cell = [tableView dequeueReusableCellWithIdentifier:@"cell"];
+    if (!cell) {
+        cell = [[[UITableViewCell alloc]initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"cell"]autorelease];
+        cell.textLabel.textColor = [CommonImage colorWithHexString:@"333333"];
+        cell.textLabel.font = [UIFont systemFontOfSize:16];
+        cell.detailTextLabel.textColor = [CommonImage colorWithHexString:@"333333"];
+        cell.detailTextLabel.font = [UIFont systemFontOfSize:16];
+        
+        //cell点击背景颜色
+        cell.selectedBackgroundView = [Common creatCellBackView];
+
+
+    }
+    if (indexPath.row<dataArr.count) {
+        cell.textLabel.text = dataArr[indexPath.row][@"regin"];
+        cell.detailTextLabel.text = dataArr[indexPath.row][@"num"];
+    }
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+//    _textDic = dataArr[indexPath.row];
+    block(dataArr[indexPath.row]);
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)setChangesReginBlock:(ChangesReginBlock)back
+{
+    block = [back copy];
+    
+}
+
+- (void)dealloc
+{
+    [dataArr release];
+    [super dealloc];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

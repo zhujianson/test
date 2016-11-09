@@ -1,0 +1,44 @@
+//
+//  ConsultInfoTableViewCell.h
+//  jiuhaohealth2.1
+//
+//  Created by 徐国洪 on 14-9-13.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+
+@interface ConsultInfoTableViewCell : UITableViewCell
+
+@property (nonatomic, assign) NSMutableDictionary* infoDic;
+
+@end
+
+
+
+typedef void (^ConsultInfoTableViewCellTextBlock)(float);
+@interface ConsultInfoTableViewCellText : ConsultInfoTableViewCell
+{
+//    UILabel *m_labTitle1;
+//    UILabel *m_labTitle2;
+	
+    UILabel *m_labIntroduction;
+    UILabel *m_labBegood;
+}
+@property (nonatomic, copy) ConsultInfoTableViewCellTextBlock textBlock;
+@property (nonatomic, assign) UILabel *m_labTitle1;
+@property (nonatomic, assign) UILabel *m_labTitle2;
+
+@end
+
+
+@interface ConsultInfoTableViewCellPost : ConsultInfoTableViewCell
+{
+    UILabel *m_labTitle;
+    UILabel *m_labTime;
+    UIImageView *m_icon;
+    UILabel *m_labCount;
+}
+
+@end

@@ -1,0 +1,1857 @@
+//
+//  CommunityDetailViewController.m
+//  jiuhaohealth4.0
+//
+//  Created by jiuhao-yangshuo on 15-4-17.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "CommunityDetailViewController.h"
+//#import "IconOperationQueue.h"
+#import "EGORefreshTableHeaderView.h"
+#import "CommunityDetailCell.h"
+#import "SelectPostView.h"
+#import "CommentsInput.h"
+#import "UIInputToolbar.h"
+#import "MJPhotoBrowser.h"
+#import "ImagePicker.h"
+#import <AssetsLibrary/AssetsLibrary.h>
+#import "GetToken.h"
+#import "ConvertToPostModel.h"
+#import "CommunityPickerView.h"
+#import "NewUserDetailViewController.h"
+#import "CircleDetailViewController.h"
+#import "DocDetailViewController.h"
+#import "ZBMessageManagerFaceView.h"
+#import "MLEmojiLabel.h"
+#import "RichTextView.h"
+#import "CommunityViewController.h"
+#import "ModifyInformationViewController.h"
+#import "GetFamilyList.h"
+#import "UIImageView+WebCache.h"
+
+#define SelectPostViewTag  1334
+#define kDefaultToolbarHeight 50
+
+static const float maxCount = 4;//最大值
+
+extern NSString *const kIsAddAter;
+
+//1:全部帖子;2:楼主帖子;3:最新回复
+typedef enum
+{
+    TopicOfAll= 1,
+    TopicOfOwner ,
+    TopicOfNew ,
+} TopicType;
+
+extern const CGFloat leftMargin;
+extern const CGFloat TopMargin;
+extern const CGFloat spaceMargin;
+
+static NSString *const kUserTypeKangxun = @"kUserTypeKangxun";//用户类型
+static NSString *const kUserIdKangxun = @"kUserIdKangxun";//用户id
+static NSString *const kUserIsSelfKangxun = @"kUserIsSelfKangxun";//用户id
+
+@interface CommunityDetailViewController ()<UITableViewDataSource, UITableViewDelegate,EGORefreshTableHeaderDelegate,UIInputToolbarDelegate,MJPhotoBrowserDelegate,UIActionSheetDelegate,UIExpandingTextViewDelegate,UIAlertViewDelegate,ZBMessageManagerFaceViewDelegate>
+{
+    __block UITableView* m_tableView;
+    __block NSMutableArray *m_dataArray;
+//    IconOperationQueue *m_OperationQueue;
+    EGORefreshTableHeaderView *m_headView;
+    BOOL m_isloading;
+    
+    NSIndexPath *m_seleteIndexpath;//选中
+   __block UIButton *selectContentBtn;//选择内容
+    BOOL rotationAnimation;//旋转方向
+    UIInputToolbar *inputToolbar;
+    CGRect originInputToolbarFrame;
+    
+    CGRect originMTableViewFrame;
+   __block NSMutableArray *m_array;
+   __block NSMutableArray *m_arrayForImagePath;
+    int m_submitNumber;
+    NSDictionary *replayDict;//回复
+    
+    TopicEventType m_topicEventType;
+    NSDictionary *topDict;
+    NSString *replayString;//回复内容
+    CommunityPickerView *m_communityPickerView;
+    UIButton * m_sendButton;//发送按钮
+    
+    UIButton *butPic;//图片按钮
+    
+    UIButton *rightCollect;//收藏
+    ZBMessageManagerFaceView *m_emgView;
+    MLEmojiLabel *m_emojiLabel;//处理富文本的对象
+    
+    BOOL isRequestingCollect;//防止收藏连续点击
+    UIButton *keyBordButton;
+}
+
+@property(nonatomic,assign) TopicType m_topicType;
+
+@end
+
+@implementation CommunityDetailViewController
+
+@synthesize m_topicType,isfromSearchListFlag,myCommunityDetailViewControllerBlock;
+@synthesize isfromTopicDataFlag;
+
+#pragma mark - life cycle
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        m_dataArray = [[NSMutableArray alloc]init];
+//        self.log_pageID = 85;
+        isfromTopicDataFlag = NO;
+        self.m_topicType = TopicOfAll;
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(UIMenuControllerWillShowMenuNotification) name:UIMenuControllerWillShowMenuNotification object:nil];
+    }
+    return self;
+}
+
+-(void)createTwoItemNavBar:(BOOL)noShareFlag
+{
+    if (!noShareFlag)
+    {
+//       UIBarButtonItem * collectItem = [[UIBarButtonItem alloc] initWithTitle:@"收藏" style:UIBarButtonItemStylePlain target:self action:@selector(butEventShowShare:)];
+//    }
+//    else
+//    {
+        UIBarButtonItem *shareItem = [[UIBarButtonItem alloc] initWithTitle:@"分享 " style:UIBarButtonItemStylePlain target:self action:@selector(shareFunc)];
+//        UIBarButtonItem *collectItem = [[UIBarButtonItem alloc] initWithTitle:@"收藏" style:UIBarButtonItemStylePlain target:self action:@selector(butEventShowShare:)];
+        self.navigationItem.rightBarButtonItem = shareItem;
+//          self.navigationItem.rightBarButtonItems = @[shareItem,collectItem];
+        [shareItem release];
+//        [collectItem release];
+    }
+}
+
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    if (myCommunityDetailViewControllerBlock)
+    {
+        [myCommunityDetailViewControllerBlock release];
+    }
+    if (m_emojiLabel)
+    {
+        [m_emojiLabel release];
+    }
+    if (m_seleteIndexpath)
+    {
+        [m_seleteIndexpath release];
+        m_seleteIndexpath = nil;
+    }
+    [inputToolbar removeObserver:self forKeyPath:@"frame"];
+    [inputToolbar release];
+    [m_headView release];
+//    [m_OperationQueue release];
+    [m_tableView release];
+    [m_dataArray release];
+    [m_array release];
+    [m_arrayForImagePath release];
+    [super dealloc];
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    /* Listen for keyboard */
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    /* No longer listen for keyboard */
+//    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+//    weakSelf = self;
+    
+    self.log_pageID = 417;
+    
+    [self createNavView];
+    m_nowPage = 1;
+    m_topicEventType = TopicAddReply;
+    m_submitNumber = 0;
+    isRequestingCollect = NO;
+    
+    m_array = [[NSMutableArray alloc]init];
+    m_arrayForImagePath = [[NSMutableArray alloc]init];
+    
+    inputToolbar = [[UIInputToolbar alloc] initWithFrame:CGRectMake(0, kDeviceHeight-kDefaultToolbarHeight, kDeviceWidth, kDefaultToolbarHeight)];
+    originInputToolbarFrame = inputToolbar.frame;//获得原始frame
+    inputToolbar.backgroundColor = [CommonImage colorWithHexString:@"fafafa"];
+    inputToolbar.mydelegate = self;
+    inputToolbar.textView.placeholder = NSLocalizedString(@"写跟帖信息",nil);
+    UIView *inputView = [self createInputView];
+    inputToolbar.m_inputView = inputView;
+    inputToolbar.textView = (UIExpandingTextView*)[inputView viewWithTag:9080];
+    [self.view addSubview:inputToolbar];
+    inputToolbar.inputButton = m_sendButton;
+    
+    [inputToolbar.textView changePlaceholderLabelOffSet:20];
+    [self getDataSource];
+    
+    [inputToolbar addObserver:self forKeyPath:@"frame" options:NSKeyValueObservingOptionNew|NSKeyValueObservingOptionOld context:NULL];
+}
+
+- (UIView*)createInputView
+{
+    UIView *view = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDefaultToolbarHeight)] autorelease];
+    
+    butPic = [UIButton buttonWithType:UIButtonTypeCustom];
+    butPic.titleLabel.font = [UIFont systemFontOfSize:15.0f];
+    butPic.frame = CGRectMake(8, (view.height-31)/2.f, 31, 31);
+    UIImage *image = [UIImage imageNamed:@"common.bundle/msg/camera_btn_nor.png"];
+    [butPic setImage:image forState:UIControlStateDisabled];
+    UIImage *imageEnble = [UIImage imageNamed:@"common.bundle/msg/camera_btn_en.png"];
+    [butPic setImage:imageEnble forState:UIControlStateNormal];
+    [butPic addTarget:self action:@selector(inputButtonPressedPic) forControlEvents:UIControlEventTouchUpInside];
+    [view addSubview:butPic];
+
+    float kSendButtonHeight = 35;
+    UIImage* disenbleImage = [CommonImage createImageWithColor:[CommonImage colorWithHexString:@"ffffff"]];
+    UIImage* enbleImage = [CommonImage createImageWithColor:[CommonImage colorWithHexString:COLOR_FF5351]];
+    m_sendButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    m_sendButton.frame = CGRectMake(kDeviceWidth-50-8, (view.height-kSendButtonHeight)/2.f, 50, kSendButtonHeight);
+    m_sendButton.layer.borderColor = [CommonImage colorWithHexString:@"cccccc"].CGColor;
+    m_sendButton.layer.borderWidth = 0.5;
+    [m_sendButton addTarget:self action:@selector(sendButton:) forControlEvents:UIControlEventTouchUpInside];
+    [m_sendButton setTitle:@"发送" forState:UIControlStateNormal];
+    m_sendButton.titleLabel.font = [UIFont systemFontOfSize:15.];
+    [m_sendButton setTitleColor:[CommonImage colorWithHexString:@"ffffff"] forState:UIControlStateNormal];
+    [m_sendButton setTitleColor:[CommonImage colorWithHexString:@"666666"] forState:UIControlStateDisabled];
+    [m_sendButton setBackgroundImage:enbleImage forState:UIControlStateNormal];
+    [m_sendButton setBackgroundImage:disenbleImage forState:UIControlStateDisabled];
+    m_sendButton.layer.cornerRadius = 4;
+    m_sendButton.clipsToBounds = YES;
+    m_sendButton.enabled = NO;
+    [view addSubview:m_sendButton];
+    
+    UIButton *butEmg = [UIButton buttonWithType:UIButtonTypeCustom];
+    //    butEmg.tag = 9070;
+    butEmg.titleLabel.font = [UIFont systemFontOfSize:15.0f];
+    butEmg.buttonDefultString = @"表情";
+    butEmg.frame = CGRectMake(m_sendButton.left - 8-31, (view.height-31)/2.f, 31, 31);
+    image = [UIImage imageNamed:@"common.bundle/msg/inputFace.png"];
+    [butEmg setImage:image forState:UIControlStateNormal];
+    [butEmg addTarget:self action:@selector(butEventEmg:) forControlEvents:UIControlEventTouchUpInside];
+    [view addSubview:butEmg];
+    
+    /* Create UIExpandingTextView input */
+     float kTextViewHeight = kDefaultToolbarHeight-16;
+    UIExpandingTextView *textView = [[UIExpandingTextView alloc] initWithFrame:CGRectMake(butPic.right + 8, (view.height-kTextViewHeight)/2.f, m_sendButton.left - butPic.width*1 -3*8, kTextViewHeight)];
+    textView.tag = 9080;
+    textView.internalTextViewOffSet = 20;
+    textView.placeholder = NSLocalizedString(@"写跟帖信息",nil);
+    //    textView.text = text;
+    [textView setReturnKeyType:UIReturnKeySend];//设为发送
+    [view addSubview:textView];
+    [textView release];
+    
+    [view bringSubviewToFront:butEmg];
+    return view;
+}
+
+-(void)createNavView
+{
+    NSString *selectContentBtnTitle = @"全部帖子";
+    UIImage *imgeNormal = [SelectPostView createImageWithFillColor:[CommonImage colorWithHexString:COLOR_FF5351] andWithStrokeColor:nil withWeigt:23/2.0 andWithHeight:13/2.0 andWithStrokeWeight:1.0];
+//    UIImage *imgeNormal1 = [UIImage imageWithCGImage:imgeNormal.CGImage scale:2.0 orientation:UIImageOrientationDown];
+    
+    selectContentBtn =  [UIButton buttonWithType:UIButtonTypeCustom];
+    selectContentBtn.frame = CGRectMake(0, 0, 120, 44);
+    selectContentBtn.titleLabel.font = [UIFont systemFontOfSize:M_FRONT_EIGHTEEN];
+    [selectContentBtn setTitleColor:[CommonImage colorWithHexString:@"333333"] forState:UIControlStateNormal];
+    [selectContentBtn setTitle:selectContentBtnTitle forState:UIControlStateNormal];
+    [selectContentBtn setImage:imgeNormal forState:UIControlStateNormal];
+    [selectContentBtn setImage:imgeNormal forState:UIControlStateHighlighted];
+    CGSize  size = [selectContentBtnTitle sizeWithFont:selectContentBtn.titleLabel.font];
+    [selectContentBtn setImageEdgeInsets:UIEdgeInsetsMake(0, size.width+18, 0, 0)];
+    [selectContentBtn setTitleEdgeInsets:UIEdgeInsetsMake(0, -imgeNormal.size.width-10, 0, 0)];
+    [selectContentBtn addTarget:self action:@selector(showSelectContent:) forControlEvents:UIControlEventTouchUpInside];
+    self.navigationItem.titleView = selectContentBtn;
+    selectContentBtn.enabled = NO;
+}
+
+
+
+- (void)creatTableView
+{
+//    m_OperationQueue = [[IconOperationQueue alloc] init];
+//    [m_OperationQueue setM_arrayList:m_dataArray];
+//    m_OperationQueue.delegate = self;
+//    m_OperationQueue.imageKey = @"iconUrl";
+//    m_OperationQueue.pathSuffix = @"?imageView2/1/w/160/h/160";
+    
+    UIView *headerView  = [self creatHeaderView];
+    headerView.tag = 1110;
+    [self.view addSubview:headerView];
+    
+    m_tableView = [[UITableView alloc]
+                   initWithFrame:CGRectMake(0, headerView.bottom, kDeviceWidth, kDeviceHeight - kDefaultToolbarHeight-headerView.height)
+                   style:UITableViewStylePlain];
+    m_tableView.delegate = self;
+    m_tableView.dataSource = self;
+    m_tableView.backgroundColor = [UIColor whiteColor];
+    [Common setExtraCellLineHidden:m_tableView];
+    [self.view addSubview:m_tableView];
+    
+    originMTableViewFrame = m_tableView.frame;
+    
+    m_tableView.separatorColor = [CommonImage colorWithHexString:LINE_COLOR];
+    if (IOS_7) {
+        [m_tableView setSeparatorInset:UIEdgeInsetsMake(0, 0, 0, 0)];
+    }
+    //创建加载更多
+    UIView* footerView = [Common createTableFooter];
+    m_tableView.tableFooterView = footerView;
+    
+    m_headView = [[EGORefreshTableHeaderView alloc] initWithFrame:CGRectMake(0, -460, kDeviceWidth, 460)];
+    m_headView.delegate = self;
+    m_headView.backgroundColor = [UIColor clearColor];
+    [m_tableView addSubview:m_headView];
+    [m_headView egoRefreshScrollViewDidScroll:m_tableView];
+    [m_headView egoRefreshScrollViewDidEndDragging:m_tableView];
+    
+    [self createKeyBordButton];
+}
+
+-(void)createKeyBordButton
+{
+    keyBordButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    keyBordButton.frame = CGRectMake(0, 0, kDeviceWidth, kDeviceHeight);
+    keyBordButton.backgroundColor = [UIColor clearColor];
+    [self.view addSubview:keyBordButton];
+    [keyBordButton addTarget:self action:@selector(btnClickHiden:) forControlEvents:UIControlEventTouchUpInside];
+    keyBordButton.hidden = YES;
+}
+
+-(void)btnClickHiden:(UIButton *)btn
+{
+    [self scrollViewWillBeginDragging:m_tableView];
+    keyBordButton.hidden = YES;
+    //隐藏
+    UIMenuController *copyMenu = [UIMenuController sharedMenuController];
+    [copyMenu setMenuVisible:NO animated:YES];
+}
+
+-(void)UIMenuControllerWillShowMenuNotification
+{
+    keyBordButton.hidden = NO;
+}
+
+- (UIView*)creatHeaderView
+{
+    UIView * headerView = [[[UIView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, 65)]autorelease];
+    headerView.backgroundColor = [UIColor whiteColor];
+    UILabel* contentlab = [Common createLabel:CGRectMake(leftMargin, TopMargin, kDeviceWidth-2*leftMargin, 65) TextColor:@"333333" Font:[UIFont fontWithName:@"Arial-BoldMT" size:22] textAlignment:NSTextAlignmentLeft labTitle:[NSString stringWithFormat:@"今天过节吃什么合适呢?我想吃火锅和三鲜水饺?"]];
+    contentlab.numberOfLines = 0;
+    [headerView addSubview:contentlab];
+    
+    ConvertToPostModel *postModel = topDict[@"postModel"];
+    contentlab.attributedText = postModel.postTitleString;
+    contentlab.height = postModel.postTitleHeight;
+//    contentlab.frame = CGRectMake(15, 15,postModel.postTitleSize.width, postModel.postTitleHeight);
+//分类
+    UIButton* categaryBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    categaryBtn.frame = CGRectMake(contentlab.left,contentlab.bottom+spaceMargin, 75,25);
+//    categaryBtn.tag =1006;
+    [categaryBtn setTitleColor:[CommonImage colorWithHexString:@"666666"] forState:UIControlStateNormal];
+    categaryBtn.titleLabel.font = [UIFont systemFontOfSize:M_FRONT_THREETEEN];
+    NSString *categaryBtnTitle = topDict[@"groupName"];
+    if (!categaryBtnTitle.length)
+    {
+        categaryBtnTitle = @"";
+    }
+    CGSize  size = [categaryBtnTitle sizeWithFont:categaryBtn.titleLabel.font];
+    [categaryBtn setTitle: categaryBtnTitle forState:UIControlStateNormal];
+    categaryBtn.layer.cornerRadius = 2.5;
+    categaryBtn.layer.borderWidth = 0.5;
+    categaryBtn.tag = 1001;
+    categaryBtn.layer.borderColor = [CommonImage colorWithHexString:@"c8c8c8"].CGColor;
+    categaryBtn.layer.masksToBounds = YES;
+    
+    UIImage *imgeNormal = [UIImage imageNamed:@"common.bundle/community/rightBreak.png"];
+    [categaryBtn setImageEdgeInsets:UIEdgeInsetsMake(0, size.width+10 -imgeNormal.size.width, 0, -size.width-10+imgeNormal.size.width)];
+    [categaryBtn setTitleEdgeInsets:UIEdgeInsetsMake(0, -imgeNormal.size.width, 0, imgeNormal.size.width)];
+    [categaryBtn addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
+    [categaryBtn setImage:imgeNormal forState:UIControlStateNormal];
+//    [categaryBtn setImage:[UIImage imageNamed:@"common.bundle/commont/conversation_icon_praise_pressed.png"] forState:UIControlStateSelected];
+    [headerView addSubview:categaryBtn];
+     UIImage* backImage = [CommonImage createImageWithColor:[CommonImage colorWithHexString:@"ffffff"]];
+    [categaryBtn setBackgroundImage:backImage forState:UIControlStateNormal];
+    //举报
+    UIButton* reportBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    reportBtn.frame = CGRectMake(kDeviceWidth-75/2.0,categaryBtn.top, 75/2.0,25);
+    [reportBtn setImage:[UIImage imageNamed:@"common.bundle/community/report.png"] forState:UIControlStateNormal];
+    [reportBtn addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
+    reportBtn.tag = 1002;
+    [headerView addSubview:reportBtn];
+    //跟帖数
+    NSString *discussCount = [topDict[@"discussCount"] stringValue];
+    UIButton *disscussBtn = [self creatViewWithTitle:discussCount andWithImgePath:@"common.bundle/community/discuss.png" withSuperView:headerView];
+    disscussBtn.frameX = reportBtn.left - disscussBtn.width;
+    disscussBtn.frameY = categaryBtn.top;
+    disscussBtn.tag = 1003;
+    [disscussBtn addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
+    //赞
+    NSString *praiseCount = [topDict[@"praiseCount"] stringValue];
+    UIButton *heartBtn = [self creatViewWithTitle:praiseCount andWithImgePath:@"common.bundle/community/floorPraise_n.png" withSuperView:headerView];
+    heartBtn.frameX = disscussBtn.left- heartBtn.width;
+    heartBtn.frameY = categaryBtn.top;
+    [heartBtn setImage:[UIImage imageNamed:@"common.bundle/community/floorPraise_p.png"] forState:UIControlStateSelected];
+    heartBtn.tag = 1004;
+    [heartBtn addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
+    headerView.height = categaryBtn.bottom + 12.0;
+    [heartBtn setImageEdgeInsets:UIEdgeInsetsMake(-3, 0, 3, 0)];
+    
+    //0 是没有 1是有赞
+    BOOL isPraise = [topDict[@"isPriase"] boolValue];
+    heartBtn.selected = isPraise;
+    
+    categaryBtn.width = MIN(size.width+40-contentlab.left,heartBtn.left-10);
+    UILabel *lineLabel = [Common createLineLabelWithHeight:headerView.height];
+    [headerView addSubview:lineLabel];
+    return headerView;
+}
+
+-(void)createPickerView
+{
+    if (!m_communityPickerView)
+    {
+        m_communityPickerView = [[CommunityPickerView alloc]initWithFrame:CGRectMake(0, inputToolbar.bottom, kDeviceWidth, kDeviceHeight - inputToolbar.bottom)];
+        m_communityPickerView.maxCount = maxCount;
+        [self.view addSubview:m_communityPickerView];
+    }
+    else
+    {
+        m_communityPickerView.frameY = inputToolbar.bottom;
+
+    }
+    m_communityPickerView.dataArray = m_array;
+    [m_communityPickerView reloadCommunityPickerViewData];
+    [self.view bringSubviewToFront:m_communityPickerView];
+    keyBordButton.hidden = NO;
+}
+
+
+#pragma mark -actionSheetDelegate
+-(void)btnClick:(UIButton *)btn
+{
+    switch (btn.tag)
+    {
+        case 1001:
+            NSLog(@"分类页面");
+            [self goToCircleDetailViewController];
+            break;
+        case 1002:
+            NSLog(@"举报页面");
+        {
+            UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:nil delegate:self cancelButtonTitle:NSLocalizedString(@"取消", nil) destructiveButtonTitle:nil otherButtonTitles:NSLocalizedString(@"广告信息", nil),
+                                          NSLocalizedString(@"色情话题", nil),
+                                          NSLocalizedString(@"人身攻击",nil),
+                                          NSLocalizedString(@"内容无关",nil),
+                                          NSLocalizedString(@"反动言论",nil),
+                                          nil];
+            [actionSheet showInView:self.view];
+            [actionSheet release];
+
+        }
+            break;
+        case 1003:
+            NSLog(@"跟帖");
+            m_topicEventType = TopicAddReply;
+            butPic.enabled = YES;
+            [inputToolbar.textView.internalTextView becomeFirstResponder];
+            [inputToolbar.textView clearText];
+            inputToolbar.textView.placeholder = NSLocalizedString(@"写跟帖信息",nil);
+            break;
+        case 1004:
+            NSLog(@"赞");
+        {
+            if (btn.selected == YES)
+            {
+              [Common MBProgressTishi:@"已经赞过!" forHeight:kDeviceHeight];
+               return;
+            }
+            [self topicPraiseWithDict:topDict isTopic:YES];
+            btn.selected = YES;
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    int type = (int)(buttonIndex +1);
+    if (type >= 1 && type <= 5)
+    {
+        NSMutableDictionary *sendDic  = nil;
+        sendDic = [NSMutableDictionary dictionary];
+        [sendDic setObject:self.m_superDic[@"postId"]  forKey:@"postId"];
+        [sendDic setObject:[NSString stringWithFormat:@"%d",type] forKey:@"type"];
+        [[CommonHttpRequest defaultInstance] sendNewPostRequest:kReportPost values:sendDic requestKey:kReportPost delegate:self controller:self actiViewFlag:0 title:nil];
+    }
+}
+
+#pragma mark -event response
+-(void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
+{
+    CGRect  newRect = [[change objectForKey:@"new"] CGRectValue];
+    CGRect  oldRect = [[change objectForKey:@"old"] CGRectValue];
+    float offHeight = newRect.size.height - oldRect.size.height;
+    originInputToolbarFrame.origin.y -= offHeight;
+    originInputToolbarFrame.size.height = newRect.size.height;
+    originMTableViewFrame.size.height -= offHeight;
+}
+
+- (void)butEventPersonal
+{
+    WS(weakSelf);
+   [[GetFamilyList alloc] initWithBlcok:^(NSMutableArray *farray){
+        if (!farray.count) {
+            NSMutableDictionary *dic = [[[NSMutableDictionary alloc] init] autorelease];
+            [dic setObject:g_nowUserInfo.userid forKey:@"id"];
+            [dic setObject:g_nowUserInfo.filePath forKey:@"filePath"];
+            [g_familyList addObject:dic];
+        }
+        [weakSelf gotoModifyInformationViewController];
+    } withView:self];
+}
+
+-(void)gotoModifyInformationViewController
+{
+    ModifyInformationViewController * modify = [[ModifyInformationViewController alloc]init];
+    modify.log_pageID = 87;
+    modify.title = @"修改信息";
+    [modify setM_infoDic:[g_familyList firstObject]];
+    [self.navigationController pushViewController:modify animated:YES];
+    [modify release];
+}
+
+-(void)goToCircleDetailViewController
+{
+    if (!isfromSearchListFlag)
+    {
+        NSArray *array = self.navigationController.viewControllers;
+        for (CommonViewController  *vc in array)
+        {
+            if ([vc isKindOfClass:[CircleDetailViewController class]])//特殊帖子
+            {
+                [self.navigationController popToViewController:vc animated:YES];
+            }
+        }
+        return;
+    }
+    CircleDetailViewController *circleDetailVC = [[CircleDetailViewController alloc] init];
+    circleDetailVC.m_superDic = nil;
+    circleDetailVC.title = topDict[@"groupName"];
+    circleDetailVC.groupId = topDict[@"groupId"];
+    [self.navigationController pushViewController:circleDetailVC animated:YES];
+    [circleDetailVC release];
+}
+
+- (void)butEventEmg:(UIButton*)but
+{
+    UIImage *image;
+    if ([but.buttonDefultString isEqualToString:@"表情"]) {
+        but.buttonDefultString = @"文字";
+        image = [UIImage imageNamed:@"common.bundle/msg/inputText.png"];
+        [self inputButtonEmg:YES];
+    }
+    else {
+        but.buttonDefultString = @"表情";
+        image = [UIImage imageNamed:@"common.bundle/msg/inputFace.png"];
+        [self inputButtonEmg:NO];
+    }
+    [but setImage:image forState:UIControlStateNormal];
+}
+
+#pragma mark - 语音
+- (void)inputButtonEmg:(BOOL)isShow
+{
+    float y;
+    if (isShow) {
+        if (!m_emgView) {
+            emoStruct *emo = [[emoStruct alloc] init];
+            emo.m_bigEmo = NO;
+            emo.m_smallEmo = YES;
+            m_emgView = [[ZBMessageManagerFaceView alloc] initWithFrame:CGRectMake(0, kDeviceHeight, kDeviceWidth, 203+45) withDic:emo];//216-->196
+            m_emgView.delegate = self;
+            [self.view addSubview:m_emgView];
+            [m_emgView release];
+        }
+        
+        [inputToolbar.textView.internalTextView resignFirstResponder];
+//        [self showInputDataView:m_audioView.height];
+        y = m_emgView.height;
+        
+        [UIView animateWithDuration:0.3 animations:^ {
+            CGRect frame = originInputToolbarFrame;
+            frame.origin.y -= y;
+            inputToolbar.frame = frame;
+            //调整textView的高度
+            frame = m_tableView.frame;
+            frame.size.height = inputToolbar.frame.origin.y;
+            m_tableView.frame = frame;
+            frame = m_emgView.frame;
+            frame.origin.y -= m_emgView.height;
+            m_emgView.frame = frame;
+        }];
+    }
+    else {
+        [inputToolbar.textView.internalTextView becomeFirstResponder];
+        
+        [UIView animateWithDuration:0.3 animations:^ {
+            CGRect frame = m_emgView.frame;
+            frame.origin.y = kDeviceHeight;
+            m_emgView.frame = frame;
+        }];
+    }
+    
+    [self.view bringSubviewToFront:inputToolbar];
+    [self.view bringSubviewToFront:m_emgView];
+    keyBordButton.hidden = NO;
+}
+
+-(void)headerImageTapWithInfoDict:(NSMutableDictionary *)m_dicInfo
+{
+    if([m_dicInfo[kUserIsSelfKangxun] boolValue])//isMyself   1是自己 0是其他人
+    {
+        [self butEventPersonal];
+        return;
+    }
+//相关等1 app用户 2医师 3合作医师
+    int type = [[m_dicInfo valueForKey:kUserTypeKangxun] intValue];////accountType":1,//1 普通用户，2  医师
+    [m_dicInfo setObject:m_dicInfo[kUserIdKangxun] forKey:@"friendId"];//好友id
+    if (type == 2) {
+        DocDetailViewController *docVC = [[DocDetailViewController alloc] init];
+        docVC.m_dicInfo = m_dicInfo;
+        [self.navigationController pushViewController:docVC animated:YES];
+        [docVC release];
+    }
+    else { //会员不可查看别人资料
+        NewUserDetailViewController *newUserDetail = [[NewUserDetailViewController alloc] init];
+        newUserDetail.m_dicInfo = m_dicInfo;
+        newUserDetail.isFromPost = YES;
+        [self.navigationController pushViewController:newUserDetail animated:YES];
+        [newUserDetail release];
+    }
+}
+
+- (void)shareFunc
+{
+    //组织url
+    self.shareTitle = [NSString stringWithFormat:@"【康迅360】- 您值得信赖的健康管理专家%@",topDict[@"groupName"]];
+    self.shareContentString = [NSString stringWithFormat:@"%@",topDict[@"postName"]];
+    NSMutableString *myshareURL = [NSMutableString stringWithFormat:@"%@article.html?postId=%@",Share_Server_URL,self.m_superDic[@"postId"]];
+//    NSString  *lastshareURL = [myshareURL substringToIndex:myshareURL.length-1];
+//    lastshareURL = [lastshareURL stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+    self.shareURL = myshareURL;
+    [self goToShare];
+}
+
+-(void)butEventShowShare:(UIButton*)btn
+{
+    NSLog(@"收藏");
+    if (isRequestingCollect)
+    {
+        return;
+    }
+    if (btn.selected) {
+        //取消收藏
+        NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+        [dic setObject:[NSString stringWithFormat:@"%@",topDict[@"postId"]] forKey:@"id"];
+        [[CommonHttpRequest defaultInstance] sendNewPostRequest:COLLECT_REMOVE_API values:dic requestKey:COLLECT_REMOVE_API delegate:self controller:self actiViewFlag:0 title:nil];
+
+    }else{
+        //收藏
+        NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+        [dic setObject:[NSString stringWithFormat:@"%@",topDict[@"postId"]] forKey:@"key"];
+        [dic setObject:[NSString stringWithFormat:@"%@",@"1000"] forKey:@"type"];
+        
+        [[CommonHttpRequest defaultInstance] sendNewPostRequest:COLLECT_ADD_API values:dic requestKey:COLLECT_ADD_API delegate:self controller:self actiViewFlag:0 title:nil];
+
+    }
+    btn.selected = !btn.selected;
+
+}
+//发送
+-(void)sendButton:(UIButton *)button
+{
+    [self.view endEditing:YES];
+    //是否禁言，1为禁言 0为正常
+    BOOL canReplay = ![topDict[@"isGag"] boolValue];
+    if (canReplay)
+    {
+        replayString = [inputToolbar.textView.text copy];
+        [self relpalyContentWithPictureAndMessage];
+    }
+    else
+    {
+        NSString *reason = topDict[@"gagMsg"];
+        [Common TipDialog2:reason];
+    }
+}
+
+//选择器
+-(void)showSelectContent:(UIButton *)btn
+{
+    NSLog(@"123");
+    if ([self.view containsSubViewOfClassType:[SelectPostView class]])
+    {
+        for (UIView *view in [self.view subviews]) {
+            if ([view isMemberOfClass:[SelectPostView class]]) {
+                [(SelectPostView*)view removeView];
+                view = nil;
+            }
+        }
+        [self actionbuttonAnamation];
+    }
+    else
+    {
+        [self actionbuttonAnamation];
+//        __block CommunityDetailViewController* weakSelf = self;
+        WS(weakSelf);
+        __block  SelectPostView* selectPostView = [[SelectPostView alloc]initWithFrame:self.view.bounds];
+        selectPostView.tag = SelectPostViewTag;
+        [self.view addSubview:selectPostView];
+        [selectPostView release];
+        
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(removeSelectPostView)];
+        [selectPostView.m_view addGestureRecognizer:tap];
+        [tap release];
+        
+        [selectPostView  setSelectPostViewBlock:^(id selectContent) {
+            [weakSelf actionbuttonAnamation];
+            NSLog(@"++++++++ %@",selectContent);
+            [weakSelf reloadDataWithContent:selectContent];
+            selectPostView = nil;
+            
+        } andWithSelectConent:btn.titleLabel.text];
+    }
+}
+
+// 重新加载数据根据内容
+-(void)reloadDataWithContent:(NSString *)selectContent
+{
+    m_nowPage = 1;
+    [selectContentBtn setTitle:selectContent forState:UIControlStateNormal];
+    NSArray * dataArray = @[@"全部帖子",@"只看楼主",@"最新回复"];
+    self.m_topicType = (TopicType)([dataArray indexOfObject:selectContent]+1);
+    [self getDataSource];
+}
+
+-(void)showAlertViewWithTipString:(NSString *)tipString withTag:(NSInteger)alertTag
+{
+    UIAlertView *av =[[UIAlertView alloc]initWithTitle:@"提示" message:tipString delegate:self cancelButtonTitle:@"取消" otherButtonTitles:@"确认", nil];
+    [av show];
+    av.tag = alertTag;
+    [av release];
+}
+
+
+-(void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    NSInteger alertTag= alertView.tag;
+    if (buttonIndex)
+    {
+        switch (alertTag)
+        {
+            case 8001:
+                [self deletePostWithDict:replayDict];
+                break;
+            case 8002:
+                [self deleteDataWithDict:replayDict];
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+-(void)handleEventWithTopicEventType:(TopicEventType) topicEventType andWithData:(NSDictionary *)cellDict andWithIndexpath:(NSIndexPath*)indexPath
+{
+    NSLog(@"-----%@",cellDict);
+    butPic.enabled = YES;
+    switch (topicEventType) {
+        case TopicPraise:
+            NSLog(@"赞");
+//            m_seleteIndexpath = [indexPath retain];
+//            [self upateHeadViewPriaseCountWithChangeCount:1];//赞+
+//            [self topicPraiseWithDict:cellDict isTopic:NO];
+            break;
+        case TopicDelete:
+            NSLog(@"删除");
+            m_seleteIndexpath = [indexPath retain];
+            replayDict = [cellDict retain];
+            if ([cellDict[@"isMainPost"] boolValue])//yes 主贴
+            {
+                [self showAlertViewWithTipString:@"此操作将删除帖子和帖子里面所有回复内容,确认要执行此操作吗?" withTag:8001];
+            }
+            else
+            {
+                [self showAlertViewWithTipString:@"确认删除该跟帖吗?" withTag:8002];
+            }
+            break;
+        case TopicReply:
+            m_seleteIndexpath = [indexPath retain];
+            [self topicReplyReplayWithDict:cellDict];
+            NSLog(@"回复跟帖");
+            break;
+        case TopicReplyPeople:
+            m_seleteIndexpath = [indexPath retain];
+            m_topicEventType = TopicReplyPeople;
+            replayDict = [cellDict retain];
+            inputToolbar.textView.placeholder = [NSString stringWithFormat:@"回复:%@",cellDict[@"replyUserName"]];
+            [inputToolbar.textView.internalTextView becomeFirstResponder];
+            butPic.enabled = NO;
+            NSLog(@"跟帖回复");
+            break;
+        case TopicImageList:
+            [self showPicWithDict:cellDict];
+            NSLog(@"图片组");
+            break;
+        case TopicAddFriend:
+            m_seleteIndexpath = [indexPath retain];
+//            [inputToolbar.textView.internalTextView becomeFirstResponder];
+            NSLog(@"加好友");
+            break;
+        case TopicExpansionReplyList:
+            m_seleteIndexpath = [indexPath retain];
+            replayDict = [cellDict retain];
+            NSLog(@"TopicExpansionReplyList");
+            [self getTopicExpansionReplyList];
+            break;
+        case TopicTapHeader:
+            m_seleteIndexpath = [indexPath retain];
+            replayDict = [cellDict retain];
+            NSLog(@"headerImageTap");
+            NSMutableDictionary *m_infodict = [@{kUserIdKangxun :replayDict[@"userId"],
+                                                 kUserTypeKangxun:replayDict[@"userType"],
+                                                 kUserIsSelfKangxun :replayDict[@"isMyself"]
+                                                 } mutableCopy];
+            [self headerImageTapWithInfoDict:m_infodict];
+            [m_infodict release];
+            break;
+        case TopicAddReply:
+             m_topicEventType = TopicAddReply;
+             butPic.enabled = YES;
+             m_seleteIndexpath = [indexPath retain];
+             inputToolbar.textView.placeholder = @"回复帖子";
+             [inputToolbar.textView.internalTextView becomeFirstResponder];
+            break;
+
+        default:
+            break;
+    }
+}
+//触发详情回复楼
+-(void)topicReplyReplayWithDict:(NSDictionary *)cellDict
+{
+    m_topicEventType = TopicReply;
+    replayDict = [cellDict retain];
+    inputToolbar.textView.placeholder = [NSString stringWithFormat:@"回复:%@",cellDict[@"userName"]];
+    [inputToolbar.textView.internalTextView becomeFirstResponder];
+     butPic.enabled = NO;
+}
+//重置一些标识数据
+-(void)resetMarkData
+{
+    m_topicEventType = TopicAddReply;
+    [m_arrayForImagePath removeAllObjects];
+    [m_array removeAllObjects];
+    [replayDict release];
+    replayDict = nil;
+    if (m_communityPickerView)
+    {
+        [m_communityPickerView.dataArray removeAllObjects];
+    }
+    if (replayString)
+    {
+        replayString = nil;
+    }
+    [inputToolbar.textView clearText];
+    inputToolbar.textView.placeholder = @"回复帖子";
+    [self.view endEditing:YES];
+     m_tableView.frame = originMTableViewFrame;
+}
+
+#pragma  mark - 网络回调
+//上传图片数据
+-(void)uploadingImageArray
+{
+    __block LoadingAnimation*loadViews = [[LoadingAnimation alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, self.view.frame.size.height)];
+    loadViews.center = CGPointMake(self.view.width/2, (self.view.height-40)/2);
+    [self.view addSubview:loadViews];
+    
+    __block NSMutableArray *newArray = [[NSMutableArray alloc]init];
+    for (int i = 0 ; i < m_array.count ; i++) {
+        UIImage *image = m_array[i];
+        NSData *data = UIImageJPEGRepresentation(image, Define_picScale);
+        [m_arrayForImagePath addObject:data];
+        [GetToken submitData:data withBlock:^(BOOL isOK,NSString*st) {
+            NSLog(@"%@",st);
+            if (!isOK) {
+                [loadViews stopAnimating];
+                [loadViews removeFromSuperview];
+                [loadViews release];
+                loadViews = nil;
+                [Common TipDialog2:@"图片上传失败，请检查网络是否正常!"];
+            }
+            else
+            {
+                NSInteger index = [m_arrayForImagePath indexOfObject:data];
+                [m_arrayForImagePath replaceObjectAtIndex:index withObject:st];
+                [newArray addObject:st];
+                if (newArray.count== m_array.count)
+                {
+                    [loadViews stopAnimating];
+                    [loadViews removeFromSuperview];
+                    [loadViews release];
+                    loadViews = nil;
+                    [self topicReplyMsg];
+                    [newArray release];
+                }
+            }
+        } withName:nil];
+    }
+}
+//删除跟帖
+-(void)deleteDataWithDict:(NSDictionary *)cellDict
+{
+    [self upateHeadViewPriaseCountWithChangeCount:-([cellDict[@"praiseCount"] intValue])];//赞减少
+    [m_tableView.dataSource tableView:m_tableView commitEditingStyle:UITableViewCellEditingStyleDelete forRowAtIndexPath:m_seleteIndexpath];
+    
+    NSMutableDictionary *sendDic  = nil;
+    sendDic = [NSMutableDictionary dictionary];
+    [sendDic setObject:[cellDict[@"commentsId"] stringValue] forKey:@"commentsId"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:kDelGroupPostComments values:sendDic requestKey:kDelGroupPostComments delegate:self controller:self actiViewFlag:0 title:nil];
+}
+
+//删除帖子
+-(void)deletePostWithDict:(NSDictionary *)cellDict
+{
+    NSMutableDictionary *sendDic  = nil;
+    sendDic = [NSMutableDictionary dictionary];
+    [sendDic setObject:[cellDict[@"postId"] stringValue] forKey:@"postId"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:kDelGroupPost values:sendDic requestKey:kDelGroupPost delegate:self controller:self actiViewFlag:0 title:nil];
+}
+//赞 跟帖 0 帖子 1
+-(void)topicPraiseWithDict:(NSDictionary *)cellDict isTopic:(BOOL)isTopic
+{
+    NSMutableDictionary *sendDic  = nil;
+    sendDic = [NSMutableDictionary dictionary];
+    [sendDic setObject:isTopic?cellDict[@"postId"] :cellDict[@"commentsId"] forKey:@"belongId"];
+    [sendDic setObject:@"0" forKey:@"praiseType"];//0 点赞 1取消
+    [sendDic setObject:isTopic? @"1":@"0" forKey:@"belongType"];//0 跟帖 1 帖子
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:kAddPostPraise values:sendDic requestKey:kAddPostPraise delegate:self controller:self actiViewFlag:0 title:nil];
+}
+//回复展开
+-(void)getTopicExpansionReplyList
+{
+    NSDictionary *lastReplayDict = [replayDict[@"replyList"] lastObject];
+    NSMutableDictionary* sendDic = [NSMutableDictionary dictionary];
+    [sendDic setObject:lastReplayDict[@"commentsId"] forKey:@"replyId"];
+    [sendDic setObject:[lastReplayDict[@"replyId"] stringValue] forKey:@"commentsId"];//0 点赞 1取消
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:kGetGroupPostCommentsReplyList values:sendDic requestKey:kGetGroupPostCommentsReplyList delegate:self controller:self actiViewFlag:1 title:nil];
+}
+//跟帖和回复某一个人
+-(void)topicReplyMsg
+{
+    NSString *inputText = replayString;
+    inputText = [inputText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if(inputText.length == 0){
+        [Common TipDialog:NSLocalizedString(@"请输入回复内容",nil)];
+        return ;
+    }
+    else if (inputText.length > 200) {
+        [Common TipDialog:NSLocalizedString(@"一次最多只能输入200个字符",nil)];
+        return ;
+    }
+    
+    BOOL is = [NSString isContainsEmoji:inputText];
+    if (is) {
+        [Common TipDialog:NSLocalizedString(@"暂不支持表情信息",nil)];
+        return ;
+    }
+    
+    switch (m_topicEventType) {
+        case TopicReplyPeople:
+            [self topicReplyPeopleWithText:inputText];
+            break;
+        case TopicReply:
+            [self topicReplyWithText:inputText];
+            break;
+        case TopicAddReply:
+            [self topicAddReplyWithText:inputText];
+            break;
+        default:
+            break;
+    }
+    replayString = nil;
+    
+    [self hideInputDate];
+    [self resstajustPickerView];
+}
+
+//添加跟帖
+-(void)topicAddReplyWithText:(NSString *)inputText
+{
+    NSMutableDictionary *sendDic = [[NSMutableDictionary alloc] init];
+    [sendDic setObject:self.m_superDic[@"postId"]  forKey:@"postId"];
+    [sendDic setObject:inputText forKey:@"content"];
+    [sendDic setObject:m_arrayForImagePath forKey:@"pictureArray"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:kAddGroupPostComments values:sendDic requestKey:kAddGroupPostComments delegate:self controller:self actiViewFlag:1 title:nil];
+    [sendDic release];
+}
+//跟帖里面针对人回复
+-(void)topicReplyPeopleWithText:(NSString *)inputText
+{
+    NSMutableDictionary *sendDic = [[NSMutableDictionary alloc] init];
+    [sendDic setObject:self.m_superDic[@"postId"]  forKey:@"postId"];
+    [sendDic setObject:inputText forKey:@"content"];
+    [sendDic setObject:m_arrayForImagePath forKey:@"pictureArray"];
+    [sendDic setObject:replayDict[@"replyId"] forKey:@"commentsId"];
+    [sendDic setObject:replayDict[@"replyUserId"] forKey:@"replyUser"];
+    [sendDic setObject:replayDict[@"replyUserName"] forKey:@"replyUserName"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:kAddGroupPostCommentsReply values:sendDic requestKey:kAddGroupPostCommentsReply delegate:self controller:self actiViewFlag:1 title:nil];
+     [sendDic release];
+}
+//跟帖楼
+-(void)topicReplyWithText:(NSString *)inputText
+{
+    NSMutableDictionary *sendDic = [[NSMutableDictionary alloc] init];
+    [sendDic setObject:self.m_superDic[@"postId"]  forKey:@"postId"];
+    [sendDic setObject:inputText forKey:@"content"];
+    [sendDic setObject:m_arrayForImagePath forKey:@"pictureArray"];
+    [sendDic setObject:replayDict[@"commentsId"] forKey:@"commentsId"];
+    [sendDic setObject:replayDict[@"userId"] forKey:@"replyUser"];
+    [sendDic setObject:replayDict[@"userName"] forKey:@"replyUserName"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:kAddGroupPostCommentsReply values:sendDic requestKey:kAddGroupPostCommentsReply delegate:self controller:self actiViewFlag:1 title:nil];
+     [sendDic release];
+}
+
+- (void)getDataSource
+{
+    m_loadingMore = YES;
+    NSString *commentsId = @"";
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+//    [dic setObject:g_nowUserInfo.userid forKey:@"userId"];
+    [dic setObject:self.m_superDic[@"postId"] forKey:@"postId"];
+    if (m_nowPage != 1)
+    {
+        NSDictionary *dict = [m_dataArray lastObject];
+        commentsId = dict[@"commentsId"];
+    }
+    [dic setObject:commentsId forKey:@"commentsId"];
+    [dic setObject:[NSString stringWithFormat:@"%d",g_everyPageNum] forKey:@"pageSize"];
+    [dic setObject:[NSString stringWithFormat:@"%d",m_nowPage] forKey:@"pageNum"];
+    [dic setObject:[NSString stringWithFormat:@"%d",self.m_topicType] forKey:@"type"];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:kGetGroupPostCommentsList values:dic requestKey:kGetGroupPostCommentsList delegate:self controller:self actiViewFlag:0 title:nil];
+    m_nowPage++;
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest *)loader
+{
+    NSString *responseString = [loader responseString];
+    NSDictionary *dic = [responseString KXjSONValueObject];
+    if ([dic[@"head"][@"state"] isEqualToString:@"0000"])
+    {
+        if ([loader.username isEqualToString:kGetGroupPostCommentsList]) {
+            if (m_nowPage==2) {
+                [m_dataArray removeAllObjects];
+            }
+            NSMutableArray *resultList = dic[@"body"][@"topicList"];
+            [m_dataArray addObjectsFromArray:resultList];
+            
+            //修改数据
+            topDict = [dic[@"body"][@"dto"] retain];
+            ConvertToPostModel *model = [[ConvertToPostModel alloc] init];
+            model.postTitleFont = [UIFont fontWithName:@"Arial-BoldMT" size:22];
+            [model parseWithDic:topDict];
+            [topDict setValue:model forKey:@"postModel"];
+            [model release];
+            
+            if (!m_tableView)
+            {
+                [self createTwoItemNavBar:isfromTopicDataFlag];
+                [self creatTableView];
+                selectContentBtn.enabled = YES;
+                rightCollect.selected = [topDict[@"isCollected"] boolValue];//0不是收藏 1是收藏
+            }
+            else
+            {
+                 [self disscussCountBtnCount:dic[@"body"][@"dto"][@"discussCount"]];
+                 [self praiseCountBtnCount:dic[@"body"][@"dto"][@"praiseCount"]];
+            }
+            if(resultList.count < g_everyPageNum)
+            {
+                [self endOfResultList];
+            }
+            else {
+                m_loadingMore = NO;
+            }
+            [m_tableView reloadData];
+            [self finishRefresh];
+        }
+        else if ([loader.username isEqualToString:kAddPostPraise])
+        {
+             UIView *headView =  [self.view viewWithTag:1110];
+            if (myCommunityDetailViewControllerBlock)
+            {
+                myCommunityDetailViewControllerBlock(kPraisePost);
+            }
+            if (headView)
+            {
+                UIButton *praiseCount = (UIButton *)[headView viewWithTag:1004];
+                [CommunityDetailCell actionWithViewLayer:praiseCount.imageView.layer];
+                [self upateHeadViewPriaseCountWithChangeCount:1];//赞+
+            }
+        }
+        else if ([loader.username isEqualToString:kReportPost]) {
+            //标记以读
+            [Common TipDialog2:@"谢谢您得反馈!"];
+        }
+        else if ([loader.username isEqualToString:kDelGroupPost]) {
+            //删除帖子
+            if (myCommunityDetailViewControllerBlock)
+            {
+                myCommunityDetailViewControllerBlock(kDeletePost);
+            }
+            [self.navigationController popViewControllerAnimated:YES];
+        }
+        else if ([loader.username isEqualToString:kGetGroupPostCommentsReplyList]) {
+            //刷新当前cell
+            NSMutableArray *replayArray = replayDict[@"replyList"];
+            NSMutableArray *addReplayArray = dic[@"body"][@"replyList"];
+            [replayArray addObjectsFromArray:addReplayArray];
+            [m_tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:m_seleteIndexpath] withRowAnimation:UITableViewRowAnimationNone];
+            [self resetMarkData];
+        }
+        else if ([loader.username isEqualToString:kDelGroupPostComments]) {
+            //            删除跟帖
+            [self disscussCountBtnCount:dic[@"body"][@"data"][@"discussCount"]];
+            [self resetMarkData];
+        }
+        else if ([loader.username isEqualToString:kAddGroupPostComments]) {
+            NSLog(@"添加成功!");
+            
+            if (m_topicType == TopicOfNew)
+            {
+                NSDictionary *resultList = dic[@"body"][@"dto"];
+                [m_dataArray insertObject:resultList atIndex:0];
+                [m_tableView reloadData];
+            }
+            else if (m_topicType == TopicOfAll)
+            {
+                int countNextPage = (int)(m_dataArray.count +1)/(g_everyPageNum) + 1;//超过当前页面
+                int countCurrunetPage =  m_nowPage-1;
+                
+                if (countNextPage == countCurrunetPage)
+                {
+                    NSDictionary *resultList = dic[@"body"][@"dto"];
+                    [m_dataArray addObject:resultList];
+                    [m_tableView reloadData];
+                }
+                else
+                {
+                    m_loadingMore = NO;
+                }
+            }
+             else if (m_topicType == TopicOfOwner)
+             {
+                 int countNextPage = (int)(m_dataArray.count +1)/(g_everyPageNum) + 1;//超过当前页面
+                 int countCurrunetPage =  m_nowPage-1;
+                 if (countNextPage == countCurrunetPage)
+                 {
+                     NSDictionary *resultList = dic[@"body"][@"dto"];
+                     BOOL isFloor = [resultList[@"isFloor"] boolValue];//是楼主0 是楼主 1 不是楼主
+                     if (!isFloor)
+                     {
+                         [m_dataArray addObject:resultList];
+                         [m_tableView reloadData];
+                     }
+                 }
+                 else
+                 {
+                     m_loadingMore = NO;
+                 }
+             }
+            [self upateHeadViewDisscussBtnCountWithChangeCount:1];
+            [self resetMarkData];
+        }
+        else if ([loader.username isEqualToString:kAddGroupPostCommentsReply])
+        {
+            NSLog(@"添加成功!");
+            NSDictionary *dict = m_dataArray[m_seleteIndexpath.row];
+            
+            NSDictionary *resultList = m_dataArray[m_seleteIndexpath.row];
+            NSMutableArray *replayArray = resultList[@"replyList"];
+            NSMutableDictionary *addReplayDict = dic[@"body"][@"dto"];
+            [replayArray addObject:addReplayDict];
+            
+            if ([dict[@"haveFlag"] boolValue])//标记回复可以展开  插入一条带标记的作为标示
+            {
+                [addReplayDict setObject:@1 forKey:kIsAddAfter];
+            }
+            [m_tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:m_seleteIndexpath] withRowAnimation:UITableViewRowAnimationNone];
+            butPic.enabled = YES;
+            
+            [self resetMarkData];
+            [self upateHeadViewDisscussBtnCountWithChangeCount:1];
+        }
+        else if ([loader.username isEqualToString:COLLECT_ADD_API])
+        {
+            [self setMBProgressHUD:@"收藏成功!"];
+            isRequestingCollect = NO;
+
+        }else if ([loader.username isEqualToString:COLLECT_REMOVE_API])
+        {
+            [self setMBProgressHUD:@"取消收藏成功!"];
+            isRequestingCollect = NO;
+        }
+    }
+    else {
+        [Common TipDialog2:dic[@"head"][@"msg"]];
+    }
+}
+
+- (void)setMBProgressHUD:(NSString*)tip
+{
+    __block MBProgressHUD *progress_ = [[MBProgressHUD alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, self.view.frame.size.height)];
+    progress_.labelText = tip;
+    progress_.mode = MBProgressHUDModeText;
+    progress_.userInteractionEnabled = NO;
+    [[[UIApplication sharedApplication].windows lastObject] addSubview:progress_];
+    [progress_ show:YES];
+    [progress_ showAnimated:YES whileExecutingBlock:^{
+        sleep(1);
+    } completionBlock:^{
+        [progress_ release];
+        [progress_ removeFromSuperview];
+    }];
+
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    NSLog(@"fail");
+    [self endOfResultList];
+    [self finishRefresh];
+}
+
+#pragma mark - Table view data source
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return [m_dataArray count];
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSMutableDictionary *dataDic = m_dataArray[indexPath.row];
+    float cellHeight = [CommunityDetailCell getCellHeightWithDict:dataDic withHandler:self];
+    return cellHeight;
+}
+
+- (UITableViewCell*)tableView:(UITableView*)tableView cellForRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    static NSString* identifier = @"cell";
+    CommunityDetailCell* cell =
+    [tableView dequeueReusableCellWithIdentifier:identifier];
+    if (!cell) {
+        cell = [[[CommunityDetailCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier] autorelease];
+        cell.backgroundColor = [UIColor clearColor];
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    }
+    if (IS_OS_8_OR_LATER)//分割线到头
+    {
+        cell.preservesSuperviewLayoutMargins = NO;
+    }
+    if (m_dataArray.count && indexPath.row < [m_dataArray count]) {
+        NSMutableDictionary *dataDic = m_dataArray[indexPath.row];
+//        NSString *imagePath = dataDic[@"iconUrl"];
+        
+        
+        NSString *imagePath = [dataDic[@"iconUrl"] stringByAppendingString:@"?imageView2/1/w/100/h/100"];
+        UIImage *define = [UIImage imageNamed:@"common.bundle/common/conversation_logo.png"];
+        [cell.m_headerView sd_setImageWithURL:[NSURL URLWithString:imagePath] placeholderImage:define];
+        
+//        if ([imagePath length]) {
+//            UIImage *image = [m_OperationQueue getImageForUrl:imagePath];
+//            if (image) {
+//                cell.m_headerView.image = image;
+//            }else {
+//                if (tableView.dragging == NO && tableView.decelerating == NO)//table停止不再滑动的时候下载图片（先用默认的图片来代替Cell的image）
+//                {
+//                    [m_OperationQueue startIconDownload:imagePath forIndexPath:indexPath setNo:0];
+//                }
+//                cell.m_headerView.image =[UIImage imageNamed:@"common.bundle/common/center_my-family_head_icon.png"];
+//            }
+//        }
+//        else {
+//            cell.m_headerView.image = [UIImage imageNamed:@"common.bundle/common/center_my-family_head_icon.png"];
+//        }
+        WS(weakSelf);
+        __block UITableView *weakTable = m_tableView;
+        __block  CommunityDetailCell* weakCell = cell;
+        [cell setCommunityDetailBlock:^(TopicEventType topicEventType, NSDictionary *discussDict) {
+             NSIndexPath * myIndexPath = [weakTable indexPathForCell:weakCell];
+            [weakSelf handleEventWithTopicEventType:topicEventType andWithData:discussDict andWithIndexpath:myIndexPath];
+        } withDict:dataDic];
+    }
+    return cell;
+}
+
+- (void)tableView:(UITableView*)tableView didSelectRowAtIndexPath:(NSIndexPath*)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    NSMutableDictionary *dataDic = m_dataArray[indexPath.row];
+    if ([dataDic[@"isMainPost"] boolValue])//yes 主贴
+    {
+        m_topicEventType = TopicAddReply;
+        inputToolbar.textView.placeholder = @"回复帖子";
+        [inputToolbar.textView.internalTextView becomeFirstResponder];
+         butPic.enabled = YES;
+    }
+    else
+    {
+         m_seleteIndexpath = [indexPath retain];
+         [self topicReplyReplayWithDict:dataDic];
+    }
+}
+
+- (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if ([cell respondsToSelector:@selector(setSeparatorInset:)]) {
+        [cell setSeparatorInset:UIEdgeInsetsZero];
+    }
+    if ([cell respondsToSelector:@selector(setLayoutMargins:)]) {
+        [cell setLayoutMargins:UIEdgeInsetsZero];
+    }
+}
+
+- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return NO;
+}
+
+- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    if (editingStyle == UITableViewCellEditingStyleDelete) {
+        //删除消息
+        [m_dataArray removeObjectAtIndex:indexPath.row];
+        [m_tableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
+    }
+    else if (editingStyle == UITableViewCellEditingStyleInsert) {
+        // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view.
+    }
+}
+
+- (void)showImageForDownload:(NSDictionary *)imageDicInfo
+{
+    NSMutableDictionary *dicCansu = [[NSMutableDictionary alloc] initWithDictionary:imageDicInfo];
+    [self performSelectorOnMainThread:@selector(setSellerTableCellImage:) withObject:dicCansu waitUntilDone:YES];
+}
+
+- (void)setSellerTableCellImage:(NSDictionary*)canshu
+{
+    UIImage *image = [canshu objectForKey:@"image"];
+    NSIndexPath *indexPath = [canshu objectForKey:@"indexPath"];
+    [canshu release];
+    
+    CommunityDetailCell *cell = (CommunityDetailCell*)[m_tableView cellForRowAtIndexPath:indexPath];
+    cell.m_headerView.image = image;
+}
+
+#pragma  mark - scrollViewDelegate
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
+{
+    [self hideInputDate];
+    [self resstajustPickerView];
+    
+    [self.view endEditing:YES];
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView
+{
+    [m_headView egoRefreshScrollViewDidScroll:scrollView];
+}
+
+//UIScrollView滚动停止
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+{
+    //上拉加载  拖动过程中
+    if(m_loadingMore == NO)
+    {
+        // 下拉到最底部时显示更多数据
+        if( !m_loadingMore && scrollView.contentOffset.y >= ( scrollView.contentSize.height - scrollView.frame.size.height - 45) )
+        {
+            [self getDataSource];
+        }
+    }
+    if (!m_dataArray.count) {
+        return;
+    }
+//    NSArray *visiblePaths = [m_tableView indexPathsForVisibleRows];
+//    //row 为1 是section 里面为row 为1的情况
+//    [m_OperationQueue loadImagesForOnscreenRows:visiblePaths isRow:YES];
+}
+
+//UIScrollView松开手指
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
+{
+//    if (!decelerate)//手指松开且不滚动
+//    {
+//        NSArray *visiblePaths = [m_tableView indexPathsForVisibleRows];
+//        [m_OperationQueue loadImagesForOnscreenRows:visiblePaths isRow:YES];
+//    }
+    [m_headView egoRefreshScrollViewDidEndDragging:scrollView];
+}
+
+
+#pragma mark - EGORefreshTableHeaderDelegate
+//收起刷新
+- (void)finishRefresh{
+    
+    [m_headView egoRefreshScrollViewDataSourceDidFinishedLoading:m_tableView];
+    m_isloading = NO;
+}
+
+- (void)egoRefreshTableHeaderDidTriggerRefresh:(EGORefreshTableHeaderView *)view
+{
+    if (m_isloading) {
+        return;
+    }
+    m_isloading = YES;
+    //下拉刷新 开始请求新数据 ---原数据清除
+    m_nowPage = 1;//复位
+    [self getDataSource];
+}
+
+- (BOOL)egoRefreshTableHeaderDataSourceIsLoading:(EGORefreshTableHeaderView *)view
+{
+    return m_isloading;
+}
+
+- (NSDate *)egoRefreshTableHeaderDataSourceLastUpdated:(EGORefreshTableHeaderView *)view
+{
+    return [NSDate date];
+}
+
+- (void)endOfResultList
+{
+    UILabel *lab = (UILabel*)[m_tableView.tableFooterView viewWithTag:tableFooterViewLabTag];
+    lab.text = @"已到底部";
+    lab.frame = CGRectMake(0, 0, kDeviceWidth, 45);
+    UIActivityIndicatorView *activi = (UIActivityIndicatorView*)[m_tableView.tableFooterView viewWithTag:tableFooterViewActivityTag];
+    [activi removeFromSuperview];
+}
+
+#pragma mark -inputButtoDelegate
+- (void)sendMsgChar
+{
+    [self sendButton:nil];
+}
+//发送图片消息
+- (void)inputButtonPressedPic
+{
+    [self.view endEditing:YES];
+    if (m_array.count)
+    {
+        [self adjustPickerView];
+        return;
+    }
+    WS(weakSelf);
+    ImagePicker *picker = [[ImagePicker alloc] initWithId:self];
+    picker.selectHeadPhoto = NO;
+//    __block CommunityDetailViewController *weakSelf = self;
+     picker.maxCount =  maxCount;
+    [picker setPickerViewBlock:^(id content) {
+        [m_array removeAllObjects];
+        
+        if ([content isKindOfClass:[NSArray class]])
+        {
+            [weakSelf actionWithAsstes:content];
+        }
+        else {
+            [weakSelf setImageWithDate:content];
+        }
+        [weakSelf adjustPickerView];
+        [picker release];
+    }];
+}
+
+//键盘位置修正
+-(void)adjustPickerView
+{
+    // 键盘高度
+    float height = 253;
+    NSTimeInterval time = 0.3;
+    [UIView animateWithDuration:time animations:^{
+        // 将toolBar的位置放到键盘上方
+        if (inputToolbar.frameY == originInputToolbarFrame.origin.y)
+        {
+            [self.view bringSubviewToFront:inputToolbar];
+            inputToolbar.frameY -= height;
+        }
+        [self createPickerView];
+    } completion:^(BOOL finished) {
+        
+    }];
+}
+
+-(void)resstajustPickerView
+{
+//    m_topicEventType = TopicAddReply;
+//    inputToolbar.textView.placeholder = NSLocalizedString(@"写跟帖信息",nil);
+//    [inputToolbar.textView clearText];
+    // 键盘高度
+    if (m_communityPickerView)
+    {
+        [UIView animateWithDuration:0.3 animations:^{
+            // 将toolBar的位置放到键盘上方
+            // 键盘高度
+            inputToolbar.frameY = originInputToolbarFrame.origin.y;
+            m_communityPickerView.frameY = inputToolbar.bottom;
+        }];
+    }
+    [self resstajustFaceView];
+}
+
+-(void)resstajustFaceView
+{
+    // 键盘高度
+    if (m_emgView)
+    {
+        [UIView animateWithDuration:0.3 animations:^{
+            // 将toolBar的位置放到键盘上方
+            // 键盘高度
+            inputToolbar.frameY = originInputToolbarFrame.origin.y;
+            m_emgView.frameY = inputToolbar.bottom;
+        }];
+    }
+}
+
+// 代理回调方法
+- (void)actionWithAsstes:(NSArray *)assets{
+    for (ALAsset * asset in assets)
+    {
+        if ([asset isKindOfClass:[ALAsset class]]) {
+            CGImageRef ref = [[asset  defaultRepresentation] fullScreenImage];
+            UIImage *image = [UIImage imageWithCGImage:ref];
+            [self setImageWithDate:image];
+        }
+    }
+}
+
+- (void)setImageWithDate:(UIImage*)image
+{
+    NSData *imageData = UIImageJPEGRepresentation(image, Define_picScale);
+    UIImage * m_selectImage = [UIImage imageWithData:imageData];
+    [m_array addObject:m_selectImage];
+    //缩略图
+}
+
+//发送文字消息
+- (BOOL)inputButtonPressed:(NSString *)inputText isLishi:(BOOL)islishi
+{
+    if(inputText.length == 0){
+        [Common TipDialog:NSLocalizedString(@"请输入回复内容",nil)];
+    }else{
+        [self sendButton:nil];
+    }
+    return YES;
+}
+
+
+//回复内容
+-(void)relpalyContentWithPictureAndMessage
+{
+    if (m_communityPickerView)
+    {
+          m_array = m_communityPickerView.dataArray;
+    }
+    if (m_array.count)
+    {
+        [self uploadingImageArray];
+    }
+    else
+    {
+        [self topicReplyMsg];
+    }
+}
+
+- (void)inputButtonLuyin:(BOOL)isShow
+{
+    
+}
+
+- (void)sendPic:(UIImage*)image isLishi:(BOOL)is
+{
+
+}
+#pragma mark - 键盘移坐标
+//当键盘出现时候上移坐标
+- (void	)keyboardWillShow:(NSNotification *)aNotification {
+    
+    // 获得键盘大小
+    NSDictionary *info = [aNotification userInfo];
+    NSValue *aValue = [info objectForKey:UIKeyboardFrameEndUserInfoKey];
+    CGSize keyboardSize = [aValue CGRectValue].size;
+    
+    [self showInputDataView:keyboardSize.height];
+    
+    // 将textView滚动到最后
+}
+
+- (void)showInputDataView:(float)height
+{
+    [self.view bringSubviewToFront:inputToolbar];
+     keyBordButton.hidden = NO;
+    [UIView animateWithDuration:0.3 animations:^{
+        // 将toolBar的位置放到键盘上方
+        CGRect frame = originInputToolbarFrame;
+        frame.origin.y -= height;
+        inputToolbar.frame = frame;
+        //调整textView的高度
+        frame = m_tableView.frame;
+        frame.size.height = inputToolbar.frame.origin.y;
+        m_tableView.frame = frame;
+    }];
+}
+
+//当键盘消失时候下移坐标
+- (void)keyboardWillHide:(NSNotification *)aNotification {
+    //    self.view.userInteractionEnabled = NO;
+    [self hideInputDate];
+}
+
+- (void)hideInputDate
+{
+    [UIView animateWithDuration:0.3 animations:^{
+        inputToolbar.frame = originInputToolbarFrame;
+         m_tableView.frame = originMTableViewFrame;
+         keyBordButton.hidden = YES;
+    }];
+}
+
+#pragma mark - 显示图片
+//点击表情
+- (void)SendTheFaceStr:(NSString *)faceStr isDelete:(BOOL)dele
+{
+    if (dele) {
+        inputToolbar.textView.text = [MLEmojiLabel deleteWithOriginalString:inputToolbar.textView.text];
+    }
+    else {
+        inputToolbar.textView.text = [inputToolbar.textView.text stringByAppendingString:faceStr];
+    }
+}
+
+- (void)showPicWithDict:(NSDictionary *)cellDict
+{
+//   CommunityDetailCell * cell = (CommunityDetailCell*)[m_tableView cellForRowAtIndexPath:m_seleteIndexpath];
+    NSArray *pictureArray =  cellDict[@"pictureArray"];
+    int imageCount = (int)pictureArray.count;
+    int indexImage = (int)[cellDict[kImageViewIndex] integerValue];
+    UIView *pictureViews = cellDict[kImageViewKey];
+    // 1.封装图片数据
+    NSMutableArray *photos = [NSMutableArray array];
+    for (int i= 0; i<imageCount; i++)
+    {
+        NSString *imagePath = pictureArray[i];
+
+        MJPhoto *photo = [[MJPhoto alloc] init];
+        photo.url = [NSURL URLWithString:imagePath]; // 图片路径
+        UIImageView *imgeView = (UIImageView*)[pictureViews viewWithTag:BeginImageTag+i];
+        if (imgeView)
+        {
+            photo.srcView = imgeView; // 来源于哪个UIImageView
+        }
+        [photos addObject:photo];
+        [photo release];
+    }
+    // 2.显示相册
+    MJPhotoBrowser *browser = [[MJPhotoBrowser alloc] init];
+    browser.delegate = self;
+    browser.currentPhotoIndex = indexImage; // 弹出相册时显示的第一张图片是？
+    browser.photos = photos; //设置所有的图片
+    [browser show];
+    [browser release];
+}
+
+- (void)photoBrowser:(MJPhotoBrowser *)photoBrowser didChangedToPageAtIndex:(NSUInteger)index;
+{
+    
+}
+
+#pragma mark -routerEvent
+- (void)routerEventWithName:(NSString *)eventName userInfo:(id)userInfo
+{
+    if ([userInfo isKindOfClass:[NSString class]])
+    {
+        NSArray *array = [userInfo componentsSeparatedByString:@"."];
+        if (array.count != 3)
+        {
+            return;
+        }
+        NSMutableDictionary *m_infodict = [@{kUserIdKangxun :[array firstObject],
+                                             kUserTypeKangxun:array[1],
+                                             kUserIsSelfKangxun:array[2]
+                                             } mutableCopy];
+        [self headerImageTapWithInfoDict:m_infodict];
+        [m_infodict release];
+    }
+    NSLog(@"%@---eventName-%@",userInfo,eventName);
+}
+
+#pragma mark -set-getUi
+-(void)removeSelectPostView
+{
+    SelectPostView *selectPostView = (SelectPostView *)[self.view viewWithTag:SelectPostViewTag];
+    if (selectPostView)
+    {
+        [selectPostView removeView];
+        selectPostView = nil;
+    }
+    [self actionbuttonAnamation];
+}
+
+-(void)actionbuttonAnamation
+{
+    rotationAnimation = !rotationAnimation;
+    CABasicAnimation *rotation;
+    rotation = [CABasicAnimation animationWithKeyPath:@"transform.rotation"];
+    rotation.fromValue = [NSNumber numberWithFloat:rotationAnimation? 0: M_PI];
+    rotation.toValue = [NSNumber numberWithFloat:rotationAnimation?M_PI:0];
+    rotation.duration = 0.2; // Speed
+    rotation.removedOnCompletion = NO;
+    rotation.fillMode = kCAFillModeForwards;
+    rotation.repeatCount = 1; // Repeat forever. Can be a finite number.
+    [selectContentBtn.imageView.layer addAnimation:rotation forKey:@"Spin"];
+}
+
+-(UIButton * )creatViewWithTitle:(NSString *)title andWithImgePath:(NSString *)imgePathString withSuperView:(UIView *)superView
+{
+    float defualtWeight = 65;
+    if (!title.length | !imgePathString.length)
+    {
+        return nil;
+    }
+    UIImage *imgeNormal = [UIImage imageNamed:imgePathString];
+    
+    UIButton* customBtn =  [UIButton buttonWithType:UIButtonTypeCustom];
+    customBtn.titleLabel.font = [UIFont systemFontOfSize:12];
+    CGSize  size = [title sizeWithFont:selectContentBtn.titleLabel.font];
+    [customBtn setTitle:title forState:UIControlStateNormal];
+    [customBtn setTitleColor:[CommonImage colorWithHexString:@"999999"] forState:UIControlStateNormal];
+    [customBtn setImage:imgeNormal forState:UIControlStateNormal];
+    float factWeight = size.width + imgeNormal.size.width;
+    factWeight = factWeight >defualtWeight?factWeight :defualtWeight;
+    //    [selectContentBtn setImageEdgeInsets:UIEdgeInsetsMake(0, size.width+15, 0, 0)];
+    [customBtn setTitleEdgeInsets:UIEdgeInsetsMake(0, 8, 0, 0)];
+    //    [customBtn addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
+    [superView addSubview:customBtn];
+    customBtn.frame = CGRectMake(0, 0, factWeight, 25);
+    
+    UILabel *lineLabel = [Common createLabel:CGRectMake(customBtn.width-0.5, (customBtn.height-10)/2.0, 0.5, 10) TextColor:nil Font:nil textAlignment:NSTextAlignmentCenter labTitle:nil];
+    lineLabel.backgroundColor = [CommonImage colorWithHexString:LINE_COLOR];
+    [customBtn addSubview:lineLabel];
+    return customBtn;
+}
+
+// 按钮上得跟帖数减少
+-(void)adjustTargetButton:(UIButton *)targetButton withChangeCount:(int)ChangeCount
+{
+    NSString *title = targetButton.titleLabel.text;
+    if (!title.length)
+    {
+        return;
+    }
+    int newCount = MAX(title.intValue + ChangeCount ,0);
+    NSString *newCountTitle = [NSString stringWithFormat:@"%d",newCount];//数值
+    //    float defualtWeight = 75;//默认值
+    [targetButton setTitle:newCountTitle forState:UIControlStateNormal];
+    //    UIImage *imgeNormal = targetButton.imageView.image;
+    //    CGSize  size = [targetButton.titleLabel.text sizeWithFont:targetButton.titleLabel.font];
+    //    [targetButton setImageEdgeInsets:UIEdgeInsetsMake(0, size.width+10, 0, -(size.width+10))];
+    //    [targetButton setTitleEdgeInsets:UIEdgeInsetsMake(0, -imgeNormal.size.width, 0, imgeNormal.size.width)];
+}
+//更新跟帖数量
+-(void)upateHeadViewDisscussBtnCountWithChangeCount:(int)ChangeCount
+{
+    UIView *headView = [self.view viewWithTag:1110];
+    UIButton *disscussBtn = (UIButton *)[headView viewWithTag:1003];
+    if (disscussBtn )
+    {
+        [self adjustTargetButton:disscussBtn withChangeCount:ChangeCount];
+    }
+}
+//重新设置跟帖数量
+-(void)disscussCountBtnCount:(NSString *)changeCount
+{
+    UIView *headView = [self.view viewWithTag:1110];
+    UIButton *disscussBtn = (UIButton *)[headView viewWithTag:1003];
+    if (disscussBtn )
+    {
+        int newCount = MAX(changeCount.intValue  ,0);
+        NSString *newCountTitle = [NSString stringWithFormat:@"%d",newCount];//数值
+        [disscussBtn setTitle:newCountTitle forState:UIControlStateNormal];
+    }
+}
+//重新设置赞数量
+-(void)praiseCountBtnCount:(NSString *)changeCount
+{
+    UIView *headView =  [self.view viewWithTag:1110];
+    UIButton *praiseCount = (UIButton *)[headView viewWithTag:1004];
+    if (praiseCount )
+    {
+        int newCount = MAX(changeCount.intValue  ,0);
+        NSString *newCountTitle = [NSString stringWithFormat:@"%d",newCount];//数值
+        [praiseCount setTitle:newCountTitle forState:UIControlStateNormal];
+    }
+}
+//更新赞数量
+-(void)upateHeadViewPriaseCountWithChangeCount:(int)ChangeCount
+{
+    UIView *headView =  [self.view viewWithTag:1110];
+    UIButton *praiseCount = (UIButton *)[headView viewWithTag:1004];
+    if (praiseCount )
+    {
+        [self adjustTargetButton:praiseCount withChangeCount:ChangeCount];
+    }
+}
+//处理数据
+-(float)getContentHeightWithDict:(NSMutableDictionary *)dataDict withKeyConentString:(NSString *)conentString withContentWidth:(float)width withFront:(CGFloat)titleFront withAdjustHeight:(float)adjustHeight
+{
+    float hightContent = 0;
+    hightContent = [dataDict[kTextHeight] floatValue];
+    if (hightContent > 0)
+    {
+        return hightContent;
+    }
+    
+    m_emojiLabel = [RichTextView setEmgText:conentString withOldEmojiLabel:m_emojiLabel withContentWeight:width withTitleFront:titleFront];
+    hightContent = ceilf(m_emojiLabel.size.height) + adjustHeight;
+    [dataDict setObject:[NSString stringWithFormat:@"%f",hightContent] forKey:kTextHeight];
+    if (adjustHeight)
+    {
+           [dataDict setObject:[NSString stringWithFormat:@"%f", ceilf(m_emojiLabel.size.width)] forKey:kTextWidth];
+    }
+    return hightContent;
+}
+
+@end

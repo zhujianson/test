@@ -1,0 +1,391 @@
+//
+//  VideoDetailViewController.m
+//  healthManagement1.0
+//
+//  Created by xuguohong on 16/7/11.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "VideoDetailViewController.h"
+#import <MediaPlayer/MPMoviePlayerController.h>
+#import <MediaPlayer/MediaPlayer.h>
+#import "KXMoviePlayer.h"
+#import "RightCollectionViewCell.h"
+#import "HeaderCollectionReusableView.h"
+
+
+@interface VideoDetailViewController ()<UICollectionViewDataSource,UICollectionViewDelegate,UICollectionViewDelegateFlowLayout>
+{
+    KXMoviePlayer* m_moviePlayerView;
+    
+    UIView *m_headerInfotView;//标题阅读数
+    UIView *m_headerDescView;//标题阅读数
+    
+    NSMutableDictionary *m_dic;
+    
+    UICollectionView *_rightCollectionView;
+}
+
+@end
+
+@implementation VideoDetailViewController
+
+- (id)init
+{
+    self = [super init];
+    if (self) {
+        self.m_isHideNavBar = YES;
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    [m_moviePlayerView stopMoviePlayer];
+}
+
+
+//播放视频
+- (void)createMovPlay:(NSString*)URL
+{
+    if (!m_moviePlayerView)
+    {
+        m_moviePlayerView = [[KXMoviePlayer alloc] init];
+    }
+    [m_moviePlayerView loadMoviePlayerWithUrl:URL inParentViewControler:self];
+}
+
+/**
+ *  播放视频
+ *
+ */
+//- (void)createMovPlay:(NSString*)URL
+//{
+//    if (!m_moviePlayerView)
+//    {
+//        m_moviePlayerView = [[KXMoviePlayer alloc] init];
+//    }
+//    [m_moviePlayerView loadMoviePlayerInWindowWithUrl:URL];
+//}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    
+    [self loadDataForServer];
+}
+- (void)loadDataForServer
+{
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [dic setObject:self.m_superDic[@"id"] forKey:@"id"];
+
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:get_course_video_detail values:dic requestKey:get_course_video_detail delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"", nil)];
+}
+
+- (UIView*)createHeaderViewInfo
+{
+    m_headerInfotView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 85)];
+    
+    UIView *top = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 50)];
+    [m_headerInfotView addSubview:top];
+    
+    UILabel *labTitle = [Common createLabel];
+    labTitle.tag = 100;
+    labTitle.frame = CGRectMake(15, 0, top.width-30, top.height);
+    labTitle.font = [UIFont systemFontOfSize:17];
+    labTitle.textColor = [UIColor blackColor];
+    labTitle.numberOfLines = 2;
+    labTitle.text = @"健身教练教你瘦大腿";
+    [top addSubview:labTitle];
+    
+    UILabel *labType = [Common createLabel];
+    labType.tag = 101;
+    labType.frame = CGRectMake(0, 0, 50, 18);
+    labType.font = [UIFont systemFontOfSize:12];
+    labType.textColor = [UIColor whiteColor];
+    labType.layer.cornerRadius = 9;
+    labType.clipsToBounds = YES;
+    labType.text = @"评测后免费";
+    [top addSubview:labType];
+    
+    UIView *line = [Common createLineLabelWithHeight:50];
+    [top addSubview:line];
+    
+    UIView *bottom = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, m_headerInfotView.height - top.height)];
+    [m_headerInfotView addSubview:bottom];
+    
+    NSArray *array = @[@"", @"", @""];
+    UIButton *but;
+    for (int i = 0; i < 3; i++) {
+        but = [UIButton buttonWithType:UIButtonTypeCustom];
+        but.userInteractionEnabled = i;
+        but.tag = 200+i;
+        [but setTitleColor:[CommonImage colorWithHexString:@"666666"] forState:UIControlStateNormal];
+        but.titleLabel.font = [UIFont systemFontOfSize:11];
+        [but setImage:[UIImage imageNamed:array[i]] forState:UIControlStateNormal];
+        [but addTarget:self action:@selector(butEventHeader:) forControlEvents:UIControlEventTouchUpInside];
+        [bottom addSubview:but];
+    }
+    
+    return m_headerInfotView;
+}
+
+- (void)setHeaderViewInfo:(NSDictionary*)dic
+{
+    UILabel *labTitle = [m_headerInfotView viewWithTag:100];
+    labTitle.text = dic[@"video_title"];
+    CGSize size = [Common sizeForString:labTitle.text andFont:labTitle.font.pointSize];
+    labTitle.width = MIN(m_headerInfotView.width-30, size.width);
+    
+    UILabel *labType = [m_headerInfotView viewWithTag:101];
+    NSDictionary *item = [self getTypeString:dic[@"video_state"]];
+    labType.text = item[@"title"];//视频状态  0可以观看  1需要测评  2需要解锁   3需要付费
+    if (labType.text.length) {
+        labType.backgroundColor = item[@"color"];
+        float labTypeWidth = [Common sizeForString:labType.text andFont:labType.font.pointSize].width+10;
+        labType.width = labTypeWidth;
+        labType.top = labTitle.height-9;
+        if (size.width + labTypeWidth + 5 > m_headerInfotView.width-30) {
+            labType.top = labTitle.height/2+9;
+        }
+    }
+    
+    UIButton *but = [m_headerInfotView viewWithTag:200];
+    [but setTitle:dic[@"video_show_times"] forState:UIControlStateNormal];
+    
+    but = [m_headerInfotView viewWithTag:201];
+    [but setTitle:dic[@"like_num"] forState:UIControlStateNormal];
+    
+    but = [m_headerInfotView viewWithTag:202];
+    [but setTitle:dic[@"dislike_num"] forState:UIControlStateNormal];
+}
+
+- (NSDictionary*)getTypeString:(NSString*)type
+{
+    NSString *title, *color = @"";
+    //视频状态  0可以观看  1需要测评  2需要解锁   3需要付费
+    switch ([type intValue]) {
+        case 0:
+            title = @"";
+            break;
+        case 1:
+            title = @"评测后免费";
+            color = @"42dc83";
+            break;
+        case 2:
+            title = @"锁定";
+            color = @"729bfc";
+            break;
+        case 3:
+            title = @"付费";
+            color = @"ff654c";
+            break;
+            
+        default:
+            break;
+    }
+    
+    return @{@"title":title, @"color":color};
+}
+
+- (void)butEventHeader:(UIButton*)but
+{
+    if ([m_dic[@"is_like"] intValue]) {
+        [Common TipDialog:@"你1231231"];
+        return;
+    }
+    
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:course_like_or_dislike values:dic requestKey:course_like_or_dislike delegate:self controller:self actiViewFlag:1 title:@""];
+}
+
+//简介
+- (UIView*)createDescView
+{
+    m_headerDescView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 50)];
+    
+    return m_headerDescView;
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    
+    [m_moviePlayerView stopMoviePlayer];
+}
+
+- (void)didFinishFail:(ASIHTTPRequest*)loader
+{
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest*)loader
+{
+}
+
+
+- (void)CreatRightCollectionView
+{
+    UICollectionViewFlowLayout *flowayout = [[UICollectionViewFlowLayout alloc]init];
+    flowayout.minimumInteritemSpacing = 0.f;
+    flowayout.minimumLineSpacing = 0.5f;
+    flowayout.itemSize = CGSizeMake((kDeviceWidth-40)/2, 55+190/2*kDeviceWidth/375);
+    flowayout.headerReferenceSize = CGSizeMake(kDeviceWidth, 60);
+    UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, -400, kDeviceWidth, 400)];
+    headerView.backgroundColor = [CommonImage colorWithHexString:VERSION_BACKGROUD_COLOR2];
+    
+    _rightCollectionView = [[UICollectionView alloc]initWithFrame:CGRectMake(0, 0, self.view.width, self.view.height-49-45-64) collectionViewLayout:flowayout];
+    [_rightCollectionView registerClass:[HeaderCollectionReusableView class] forSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"hxwHeader"];
+//    [_rightCollectionView registerClass:[FooterCollectionReusableView class] forSupplementaryViewOfKind:UICollectionElementKindSectionFooter withReuseIdentifier:@"hxwFooter"];
+    
+    [_rightCollectionView addSubview:headerView];
+    
+    [_rightCollectionView registerClass:[RightCollectionViewCell class] forCellWithReuseIdentifier:@"RightCollectionViewCell"];
+    
+    [_rightCollectionView setBackgroundColor:[CommonImage colorWithHexString:@"ffffff"]];
+    
+    //    _rightCollectionView.dele
+    _rightCollectionView.delegate = self;
+    _rightCollectionView.dataSource = self;
+    
+    [self.view addSubview:_rightCollectionView];
+}
+
+#pragma mark------CollectionView的代理方法
+-(NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section
+{
+    return 2;
+}
+
+-(UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    RightCollectionViewCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"RightCollectionViewCell" forIndexPath:indexPath];
+    //    cell.layer.borderColor = [CommonImage colorWithHexString:LINE_COLOR].CGColor;
+    //    cell.layer.borderWidth = 0.5;
+    //    cell.backgroundColor = [UIColor whiteColor];
+    //根据左边点击的indepath更新右边内容;
+    //    if (indexPath.row%2) {
+    //        cell.imageview.frame = [Common rectWithOrigin:cell.imageview.frame x:5 y:0];
+    //    }else{
+    //        cell.imageview.frame = [Common rectWithOrigin:cell.imageview.frame x:15 y:0];
+    //    }
+    //    cell.titleLabel.frame = [Common rectWithOrigin:cell.titleLabel.frame x:cell.imageview.left y:0];
+    //    cell.sparkImage.frame = [Common rectWithOrigin:cell.sparkImage.frame x:cell.imageview.left y:0];
+    //    cell.readingLab.frame = [Common rectWithOrigin:cell.readingLab.frame x:cell.imageview.left+15 y:0];
+    
+//    cell.titleLabel.text = m_allData[indexPath.row][@"courseTitle"];
+//    cell.readingLab.text = [NSString stringWithFormat:@"%@",m_allData[indexPath.row][@"browseNum"]];
+//    
+//    [CommonImage setImageFromServer:[NSString stringWithFormat:@"%@",m_allData[indexPath.row][@"iconUrl"]] View:cell.imageview Type:2];
+//    cell.viedoType.image = [self setImageTypeWithStr:[NSString stringWithFormat:@"%@",m_allData[indexPath.row][@"isFree"]]];
+    
+    return cell;
+}
+
+- (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView
+{
+    return 1;
+}
+
+- (UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath
+{
+    
+    UICollectionReusableView *headView =[collectionView dequeueReusableSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"hxwHeader" forIndexPath:indexPath];;
+    headView.backgroundColor = [UIColor whiteColor];
+    
+    UIView * view = (UIView*)[headView viewWithTag:100];
+    if (!view) {
+        view = [[UIView alloc]initWithFrame:CGRectMake(15, 10, kDeviceWidth-30, 40)];
+        view.backgroundColor = [CommonImage colorWithHexString:VERSION_BACKGROUD_COLOR2];
+        view.tag = 100;
+        [headView addSubview:view];
+        
+        UIView * v2 = [[UIView alloc]init];
+        [view addSubview:v2];
+        
+        UIImage * image = [UIImage imageNamed:@"common.bundle/classroom/gossip"];
+        UIImageView * imageV= [[UIImageView alloc]initWithFrame:CGRectMake(0, 0, image.size.width, 40)];
+        imageV.contentMode  = UIViewContentModeCenter;
+        imageV.image = image;
+        [v2 addSubview:imageV];
+        //        [CommonImage setImageFromServer:[NSString stringWithFormat:@"%@",_m_dic[@"icon_url"]] View:imageV Type:2];
+        
+//        NSString * text = _m_dic[@"explain"];
+//        CGSize size = [Common sizeForString:text andFont:15];
+//        UILabel * lab = [Common createLabel:CGRectMake(imageV.right+10, 0, size.width, 40) TextColor:@"666666" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentCenter labTitle:text];
+//        [v2 addSubview:lab];
+//        v2.frame  = CGRectMake((view.width - lab.right)/2, 0, lab.right, 40);
+    }
+    //    UIViewController * contro = self.view.superview.viewController;
+    
+    return headView;
+}
+
+
+- (UIImage*)setImageTypeWithStr:(NSString*)str
+{
+    UIImage * image;
+    switch ([str intValue]) {
+        case 0:
+            image = [UIImage imageNamed:@"common.bundle/home/free"];
+            break;
+        case 1:
+            image = [UIImage imageNamed:@"common.bundle/home/charge"];
+            break;
+        case 2:
+            image = [UIImage imageNamed:@"common.bundle/home/unlock"];
+            
+            break;
+            
+        default:
+            break;
+    }
+    return image;
+}
+
+
+-(UIEdgeInsets)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout insetForSectionAtIndex:(NSInteger)section
+{
+    return UIEdgeInsetsMake(0, 15, 0, 15);
+}
+//
+//-(CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath
+//{
+//    return CGSizeMake(kDeviceWidth/2, 55+190/2*kDeviceWidth/375);
+//}
+
+//返回头footerView的大小
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout referenceSizeForFooterInSection:(NSInteger)section
+{
+    CGSize size = {kDeviceWidth, 0};
+    //    if (m_allData.count-1 == section) {
+    size = CGSizeMake(kDeviceWidth, 10);
+    //    }
+    return size;
+}
+
+//UICollectionView被选中时调用的方法
+-(void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    //    UICollectionViewCell * cell = (UICollectionViewCell *)[collectionView cellForItemAtIndexPath:indexPath];
+    //    cell.backgroundColor = [UIColor whiteColor];
+    
+    NSLog(@"%ld",(long)indexPath.row);
+    
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

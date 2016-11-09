@@ -1,0 +1,35 @@
+//
+//  FriendListTableView.h
+//  jiuhaohealth4.0
+//
+//  Created by xjs on 15/5/15.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "Common.h"
+//#import "IconOperationQueue.h"
+#import "EGORefreshTableHeaderView.h"
+#import "FriendApplyViewController.h"
+
+typedef void (^FriendListViewViewBlock)(NSDictionary *dataDic);
+
+@interface FriendListTableView : CommonViewController<UITableViewDataSource, UITableViewDelegate,EGORefreshTableHeaderDelegate,UIAlertViewDelegate>
+{
+    FriendListViewViewBlock m_FriendBlock;
+    
+    NSMutableArray *m_dataArray;
+//    IconOperationQueue *m_OperationQueue;
+    EGORefreshTableHeaderView *m_headView;
+    BOOL m_isloading;
+    NSIndexPath *m_deleteIndexpath;//删除
+}
+
+@property (nonatomic, assign) ENUM_FRIEND_TYPE type;//1糖友,2医生
+
+@property (nonatomic, retain) NSMutableDictionary *FoodImageDic;
+
+@property (nonatomic, assign) UITableView* m_tableView;
+
+- (void)setFoundListViewViewBlock:(FriendListViewViewBlock)_Friend;
+- (void)getDataSource;
+@end

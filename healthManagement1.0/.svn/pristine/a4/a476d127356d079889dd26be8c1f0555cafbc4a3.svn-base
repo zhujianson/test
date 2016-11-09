@@ -1,0 +1,47 @@
+//
+//  PostListViewController.h
+//  jiuhaohealth4.0
+//
+//  Created by 王敏 on 15-4-16.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+typedef void(^TableViewScrollViewBlock) (CGFloat contentOffsetY);
+
+typedef void (^DidSelectedPostBlock)(void);
+
+typedef enum {
+    ALLPosts = 0,
+    EssencePosts=1,
+    ExpertPosts = 2
+    
+}PostType;
+
+
+
+
+@interface PostListViewController : CommonViewController
+
+@property (nonatomic,retain) NSString *groupId;//圈子id
+@property (nonatomic,retain) NSString *keyword;//搜索关键字
+
+@property (nonatomic,assign) PostType type;
+@property (nonatomic, assign) float m_tableHeight;
+
+@property (nonatomic,retain) UITableView *postTableView;;
+
+@property (nonatomic,copy) TableViewScrollViewBlock tableViewScrollViewBlock;
+
+@property (nonatomic,copy) DidSelectedPostBlock didSelectedBlock;
+
+@property (nonatomic,assign) BOOL isfromSearchListFlag;
+
+- (void)addNewPost:(NSDictionary *)newPostDic;
+
+- (void)searchPostWithString:(NSString *)searchText;
+
+- (void)getDataSource;
+
+@end

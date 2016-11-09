@@ -1,0 +1,36 @@
+//
+//  BluetoothManager.h
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 16/2/23.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+static NSString *const kDeviceSaveTime = @"kDeviceSaveTime";
+static NSString *const kWeightDevice =@"kWeightDevice";
+
+@protocol BluetoothManagerDelegate <NSObject>
+
+-(void)changeConnectState:(BOOL)state;
+
+@end
+
+@interface BluetoothManager : NSObject
+
+@property (nonatomic,weak) id <BluetoothManagerDelegate>bluetoothManagerDelegate;
+@property (nonatomic,assign) BOOL showDeviceListView;//设备列表
+@property (nonatomic,assign) BOOL m_isConnected;//状态
+
++ (instancetype)sharedInstance;
+
+-(void)startScanDevice;
+-(void)closeScanDevice;
+
+-(void)connectWithSerialNO:(NSDictionary *)dict;
+-(void)disconnectWithSerialNO:(NSString *)serialNO;
+
++(void)saveDeviceModel:(NSDictionary *)deviceDict;
++(NSMutableDictionary *)fetchSaveDeviceModel;
+@end

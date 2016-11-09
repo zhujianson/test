@@ -1,0 +1,172 @@
+//
+//  HomeTableViewCell.m
+//  healthManagement1.0
+//
+//  Created by xjs on 16/7/1.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import "HomeTableViewCell.h"
+
+@implementation HomeTableViewCell
+{
+    UILabel * titleLab;
+    UILabel * readingLab;
+    UIImageView * pickerImage;
+    
+}
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        titleLab = [Common createLabel:CGRectMake(15, 0, kDeviceWidth-90-30, 130/2) TextColor:@"333333" Font:[UIFont systemFontOfSize:17] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        titleLab.numberOfLines = 2;
+        [self.contentView addSubview:titleLab];
+        
+        readingLab = [Common createLabel:CGRectMake(15, titleLab.bottom, 200, 20) TextColor:@"999999" Font:[UIFont systemFontOfSize:11] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        [self.contentView addSubview:readingLab];
+        
+        pickerImage = [[UIImageView alloc]initWithFrame:CGRectMake(kDeviceWidth-15, 15, 90, 60)];
+        [self.contentView addSubview:pickerImage];
+        
+    }
+    return self;
+    
+}
+
+- (void)setInformationWithDic:(NSDictionary*)dic
+{
+    NSLog(@"%@",dic);
+    titleLab.text = dic[@"postName"];
+    [CommonImage setImageFromServer:dic[@"img"] View:pickerImage Type:2];
+    
+    NSMutableAttributedString *titleString = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@",dic[@"viewCount"]]];
+    UIImage *tuImage = [UIImage imageNamed:@"common.bundle/home/see_img.png"];
+    NSTextAttachment *tu = [[NSTextAttachment alloc] init];
+    tu.image = tuImage;
+    tu.bounds = CGRectMake(0, -2, tuImage.size.width, tuImage.size.height);
+    NSAttributedString *tuAttrStr = [NSAttributedString attributedStringWithAttachment:tu];
+    [titleString insertAttributedString:tuAttrStr atIndex:0];
+    
+    readingLab.attributedText = titleString;
+}
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end
+
+@implementation SoundTableViewCell
+{
+    UILabel * titleLab;
+    UILabel * nameLab;
+    UILabel * dataLab;
+    UILabel * readingLab;
+
+    UIButton * soundBtn;
+    UIImageView * headerImage;
+}
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+ 
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        titleLab = [Common createLabel:CGRectMake(15, 15, kDeviceWidth-30, 45) TextColor:@"333333" Font:[UIFont systemFontOfSize:17] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        titleLab.numberOfLines = 2;
+        [self.contentView addSubview:titleLab];
+
+        nameLab = [Common createLabel:CGRectMake(titleLab.left, titleLab.bottom, 40, 25) TextColor:@"999999" Font:[UIFont systemFontOfSize:12] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        [self.contentView addSubview:nameLab];
+        
+        dataLab = [Common createLabel:CGRectMake(nameLab.right, titleLab.bottom, 200, 25) TextColor:@"999999" Font:[UIFont systemFontOfSize:12] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        [self.contentView addSubview:dataLab];
+
+
+        headerImage = [[UIImageView alloc]initWithFrame:CGRectMake(15, dataLab.bottom+5, 35, 35)];
+        headerImage.layer.cornerRadius = headerImage.width/2;
+        headerImage.backgroundColor = [UIColor redColor];
+        [self.contentView addSubview:headerImage];
+        
+        soundBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        soundBtn.frame = CGRectMake(headerImage.right+10, headerImage.top, 160, headerImage.height);
+        [soundBtn setBackgroundImage:[UIImage imageNamed:@"common.bundle/home/sound.png"] forState:UIControlStateNormal];
+        [self.contentView addSubview:soundBtn];
+        
+    }
+    return self;
+    
+}
+
+- (void)setSoundInfoWithDic:(NSDictionary*)dic
+{
+    titleLab.text = dic[@"title"];
+    nameLab.text = dic[@"name"];
+    dataLab.text = dic[@"job"];
+//    titleLab.text = dic[@""];
+    
+}
+
+@end
+
+@implementation VideoTableViewCell
+{
+    UIImageView * pickerImage;
+    UIImageView * pickerImage2;
+
+    UILabel * titleLab;
+    UILabel * readingLab;
+    UILabel * titleLab2;
+    UILabel * readingLab2;
+
+}
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        
+        pickerImage = [[UIImageView alloc]initWithFrame:CGRectMake(15, 15, (kDeviceWidth-40)/2, 190/2)];
+        pickerImage.backgroundColor = [UIColor redColor];
+        [self.contentView addSubview:pickerImage];
+        
+        titleLab = [Common createLabel:CGRectMake(pickerImage.left, pickerImage.bottom+5, pickerImage.width, 20) TextColor:@"333333" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        [self.contentView addSubview:titleLab];
+        
+        readingLab = [Common createLabel:CGRectMake(titleLab.left+10, titleLab.bottom, 100, 25) TextColor:@"999999" Font:[UIFont systemFontOfSize:12] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        [self.contentView addSubview:readingLab];
+
+        pickerImage2 = [[UIImageView alloc]initWithFrame:CGRectMake(kDeviceWidth/2+5, 15, (kDeviceWidth-40)/2, 190/2)];
+        pickerImage2.backgroundColor = [UIColor redColor];
+        [self.contentView addSubview:pickerImage2];
+        
+        titleLab2 = [Common createLabel:CGRectMake(pickerImage2.left, pickerImage2.bottom+5, pickerImage.width, 20) TextColor:@"333333" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        [self.contentView addSubview:titleLab2];
+        
+        readingLab2 = [Common createLabel:CGRectMake(titleLab2.left+10, titleLab2.bottom, 100, 25) TextColor:@"999999" Font:[UIFont systemFontOfSize:12] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        [self.contentView addSubview:readingLab2];
+
+    }
+    return self;
+    
+}
+
+- (void)setVideoInfoWithDic:(NSDictionary*)dic
+{
+    titleLab.text = dic[@"title1"];
+    readingLab.text = dic[@"reading1"];
+    titleLab2.text = dic[@"title2"];
+    readingLab2.text = dic[@"reading2"];
+
+}
+
+@end

@@ -1,0 +1,30 @@
+//
+//  KXShareManager.h
+//  jiuhaohealth4.0
+//
+//  Created by wangmin on 15/9/11.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import <TencentOpenAPI/QQApiInterface.h>
+#import <TencentOpenAPI/TencentOAuth.h>
+
+@interface KXShareManager : NSObject
+
++ (KXShareManager *)sharedManager;
+
+//- (void)initPlatform;
+
+typedef void(^ShareCallBlock)(BOOL isOK);
+
+- (void)noneUIShareAllButtonClickHandler:(id)sender
+                                 Content:(NSString *)contentStrings
+                               ImagePath:(UIImage *)imagePath
+                                AndTitle:(NSString *)titleString
+                                     Url:(NSString *)url
+                          haveCustomItem:(BOOL)haveCutomItem;
+
+- (void)sendWXFriendList:(NSDictionary*)dic withBlock:(ShareCallBlock)bl;
+
+@end

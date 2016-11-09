@@ -1,0 +1,288 @@
+//
+//  WalletViewController.m
+//  jiuhaohealth4.0
+//
+//  Created by 徐国洪 on 15-4-16.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "WalletViewController.h"
+#import "WalletWebView.h"
+#import "WebViewController.h"
+#import "TradingViewController.h"
+//#import "ToolsViewController.h"
+#import "NoticeDetailViewController.h"
+
+@interface WalletViewController ()<UIAlertViewDelegate>
+{
+    NSMutableArray * m_dataArr;
+    
+}
+@end
+
+@implementation WalletViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"健康服务";
+    [self getWallet];
+
+    self.view.backgroundColor = [UIColor whiteColor];
+    // Do any additional setup after loading the view.
+}
+
+- (void)withdraw
+{
+    WalletWebView * wallet = [[WalletWebView alloc]init];
+    wallet.title = @"交易记录";
+    NSString *requestURL;
+    NSMutableDictionary *dicc = [NSMutableDictionary dictionary];
+    requestURL = [NSString stringWithFormat:@"http://wx.kangxun360.com/static/points/list.html?token=%@",g_nowUserInfo.userToken];
+    [wallet setM_dicInfo:dicc];
+    wallet.m_url = requestURL;
+    [self.navigationController pushViewController:wallet animated:YES];
+    [wallet release];
+}
+
+- (void)touchMoney:(UIButton*)btn
+{
+    switch (btn.tag-200) {
+        case 0:
+        {
+//            WSS(weakSelf);
+            NoticeDetailViewController *noticeDetailVC = [[NoticeDetailViewController alloc] init];
+            noticeDetailVC.m_isHideNavBar = NO;
+            noticeDetailVC.title = @"健康报告";
+            [noticeDetailVC setKXBlock:^(id content) {
+//                [weakSelf refreshScore];
+            }];
+            NSString *requestURL = g_nowUserInfo.reportUrl;
+            NSMutableDictionary *dicc = [NSMutableDictionary dictionary];
+            [dicc setObject:requestURL forKey:@"url"];
+            noticeDetailVC.m_url = requestURL;
+//            NSString *isShare = [self getShareFromDict:m_dict withKey:@"reportShare"];
+//            [dicc setObject:isShare forKey:@"isShare"];
+            [noticeDetailVC setM_dicInfo:dicc];
+            noticeDetailVC.shareURL = requestURL;
+            noticeDetailVC.titleName = @"健康报告";
+            noticeDetailVC.subTitle = @"健康报告";
+            [self.navigationController pushViewController:noticeDetailVC animated:YES];
+        }
+            break;
+        case 1:
+        {
+//            ToolsViewController *toolVC = [[ToolsViewController alloc] init];
+//            [self.navigationController pushViewController:toolVC animated:YES];
+        }
+            
+            break;
+
+        default:
+            break;
+    }
+}
+
+- (void)createView
+{
+//    UIView * view = [[UIView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, 170)];
+//    view.backgroundColor = [CommonImage colorWithHexString:@"ffffff"];
+//    [self.view addSubview:view];
+//    [view release];
+//    
+    UIView *lineView = nil;
+//    lineView  = [[UIView alloc] initWithFrame:CGRectMake(kDeviceWidth/2-0.25,50,0.5, 70)];
+//    lineView.backgroundColor =  [CommonImage colorWithHexString:@"e6e6e6"];
+//    [self.view addSubview:lineView];
+//    [lineView release];
+//    
+//    UIButton * btn;
+//    UILabel * lab;
+//    NSArray * arr = [NSArray arrayWithObjects:@"健康报告",@"健康工具", nil];
+//
+//    for (int i = 0; i<2; i++) {
+//        btn = [UIButton buttonWithType:UIButtonTypeCustom];
+//        [btn setImage:[UIImage imageNamed:[NSString stringWithFormat:@"common.bundle/wallet/money_new%d.png",i]] forState:UIControlStateNormal];
+//        btn.frame = CGRectMake(kDeviceWidth/2*i, 0,kDeviceWidth/2, view.height);
+//        btn.tag = 200+i;
+//        [btn addTarget:self action:@selector(touchMoney:) forControlEvents:UIControlEventTouchUpInside];
+//        [view addSubview:btn];
+//        [btn setImageEdgeInsets:UIEdgeInsetsMake(-25,
+//                                                         0,
+//                                                         0.0,
+//                                                         0.0)];
+////skfsynr@icloud.com
+//        lab = [Common createLabel:CGRectMake(kDeviceWidth/2*i, 115, kDeviceWidth/2, 25) TextColor:@"666666" Font:[UIFont systemFontOfSize:17] textAlignment:NSTextAlignmentCenter labTitle:arr[i]];
+//        [view addSubview:lab];
+////
+//    }
+    int num = 0;
+    NSLog(@"%d",num);
+    
+    CGFloat w,h;
+    UIButton * backViewBtn = nil;
+    CGFloat viewW = kDeviceWidth/3,viewH = 125*kDeviceWidth/375;
+    UIScrollView * m_scroll = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 0, kDeviceWidth, kDeviceHeight)];
+    m_scroll.backgroundColor = [UIColor clearColor];
+    [self.view addSubview:m_scroll];
+    
+    
+    for (int i = 0; i<m_dataArr.count; i++) {
+        h = i%3;
+        w = i/3;
+        __block UIImageView * imageV;
+        backViewBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        
+        backViewBtn.tag = 100+i;
+        backViewBtn.frame = CGRectMake(h * viewW, w * viewH, viewW, viewH);
+        [m_scroll addSubview:backViewBtn];
+        NSString * titleBtn = m_dataArr[i][@"buttonName"];
+
+        imageV = [[UIImageView alloc]initWithFrame:CGRectMake(0, 0, 40, 40)];
+        imageV.image = [UIImage imageNamed:@"common.bundle/common/conversation_logo.png"];
+        imageV.center = CGPointMake(backViewBtn.width/2, (backViewBtn.height-30)/2);
+        imageV.contentMode = UIViewContentModeScaleAspectFit;
+        [backViewBtn addSubview:imageV];
+        [imageV release];
+        if (m_dataArr[i][@"image"]) {
+        imageV.image = [UIImage imageNamed:[NSString stringWithFormat:@"common.bundle/wallet/money_new%@.png",m_dataArr[i][@"image"]]];
+        }else{
+        [CommonImage setImageFromServer:m_dataArr[i][@"imgUrl"] View:imageV Type:2];
+        }
+        [backViewBtn.titleLabel setContentMode:UIViewContentModeCenter];
+        [backViewBtn.titleLabel setBackgroundColor:[UIColor clearColor]];
+        [backViewBtn.titleLabel setFont:[UIFont systemFontOfSize:14]];
+        [backViewBtn.titleLabel setTextColor:[CommonImage colorWithHexString:m_dataArr[i][@"colour"]]];
+        [backViewBtn setTitleEdgeInsets:UIEdgeInsetsMake(40,
+                                                         0,
+                                                         0.0,
+                                                         0.0)];
+        [backViewBtn setTitleColor:[CommonImage colorWithHexString:m_dataArr[i][@"colour"]] forState:UIControlStateNormal];
+        [backViewBtn setTitleColor:[CommonImage colorWithHexString:@"999999"] forState:UIControlStateHighlighted];
+        [backViewBtn setTitle:titleBtn forState:UIControlStateNormal];
+        [backViewBtn addTarget:self action:@selector(setJumpEvents:) forControlEvents:UIControlEventTouchUpInside];
+        
+    }
+    int lineNum = (int)(m_dataArr.count-1)/3+2;
+    for (int i = 0; i<lineNum; i++) {
+        lineView  = [[UIView alloc] initWithFrame:CGRectMake(0, backViewBtn.height*i-0.25,kDeviceWidth, 0.5)];
+        lineView.backgroundColor =  [CommonImage colorWithHexString:@"e6e6e6"];
+        [m_scroll addSubview:lineView];
+        [lineView release];
+    }
+    
+    for (int i = 0; i<2; i++) {
+        lineView  = [[UIView alloc] initWithFrame:CGRectMake(backViewBtn.width*(i+1)-0.25, 0,0.5, backViewBtn.bottom)];
+        lineView.backgroundColor =  [CommonImage colorWithHexString:@"e6e6e6"];
+        [m_scroll addSubview:lineView];
+        [lineView release];
+    }
+    m_scroll.contentSize = CGSizeMake(0, backViewBtn.bottom);
+    [m_scroll release];
+
+}
+
+- (void)getWallet
+{
+    NSMutableDictionary* dic = [NSMutableDictionary dictionary];
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GET_WALLET_SWITCH values:dic requestKey:GET_WALLET_SWITCH delegate:self controller:self actiViewFlag:1 title:NSLocalizedString(@"加载中...", nil)];
+    
+}
+
+//转化分享字段
+-(NSString *)getShareFromDict:(NSDictionary *)dict withKey:(NSString *)key
+{
+    NSString *isShare = @"1";
+    if ([@"0" isEqualToString:[Common isNULLString3:dict[key]]])//内容为0 为不可以分享
+    {
+        isShare = @"0";
+    }
+    return isShare;
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    [Common TipDialog2:@"网络异常"];
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest *)loader
+{
+    NSString* responseString = [loader responseString];
+    NSDictionary* dic = [responseString KXjSONValueObject];
+    NSDictionary * dict = dic[@"head"];
+    if (![[dict objectForKey:@"state"] intValue]) {
+        if ([loader.username isEqualToString:GET_WALLET_SWITCH]) {
+            NSArray * arr = dic[@"body"][@"list"];
+            m_dataArr = [[NSMutableArray alloc]init];
+            NSDictionary * m_d = @{@"buttonName": @"健康报告",@"colour": @"666666",@"image": @"0",@"islink": @"1",@"linkUrl": g_nowUserInfo.reportUrl};
+            [m_dataArr addObject:m_d];
+            m_d = @{@"buttonName": @"健康工具",@"colour": @"666666",@"image": @"1",@"islink": @"1",@"linkUrl": @""};
+            [m_dataArr addObject:m_d];
+
+            for (NSDictionary * d in arr) {
+//                if ([d[@"switchKey"] intValue]) {
+                    [m_dataArr addObject:d];
+//                }
+            }
+            [self createView];
+        }
+    }else{
+        [Common TipDialog2:dict[@"msg"]];
+    }
+}
+
+- (void)setJumpEvents:(UIButton*)btn
+{
+    
+    NSDictionary * dic = m_dataArr[btn.tag-100];
+    if ([dic[@"buttonName"] isEqualToString:@"健康工具"]) {
+//        ToolsViewController *toolVC = [[ToolsViewController alloc] init];
+//        [self.navigationController pushViewController:toolVC animated:YES];
+        return;
+    }
+    if ([dic[@"walletKey"] isEqualToString:@"wallet_customer_service"]) {
+        UIAlertView* alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"提示", nil)
+                                                        message:@"确定拨打客服电话！"
+                                                       delegate:self cancelButtonTitle:@"确定" otherButtonTitles:@"取消", nil];
+        [alert show];
+        [alert release];
+        return;
+    }
+    if (![dic[@"islink"] intValue]) {
+        return;
+    }
+    WalletWebView * wallet = [[WalletWebView alloc]init];
+    wallet.title = dic[@"buttonName"];
+    NSString *requestURL;
+    NSMutableDictionary *dicc = [NSMutableDictionary dictionary];
+    requestURL = dic[@"linkUrl"];
+    [dicc setObject:requestURL forKey:@"url"];
+    [dicc setObject:@"0" forKey:@"isShare"];
+    wallet.m_url = requestURL;
+    [wallet setM_dicInfo:dicc];
+    [self.navigationController pushViewController:wallet animated:YES];
+    [wallet release];
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (!buttonIndex) {
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:[NSString stringWithFormat:@"tel:%@",HOTLINEPHONE]]];
+    }
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

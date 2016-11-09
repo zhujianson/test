@@ -1,0 +1,46 @@
+//
+//  RightCollectionViewCell.m
+//  Group
+//
+//  Created by randy on 16/3/1.
+//  Copyright © 2016年 Randy. All rights reserved.
+//
+
+#import "RightCollectionViewCell.h"
+
+@implementation RightCollectionViewCell
+
+
+-(id)initWithFrame:(CGRect)frame
+{
+
+    self = [super initWithFrame:frame];
+    
+    if (self)
+    {
+        _imageview = [[UIImageView alloc]initWithFrame:CGRectMake(15, 0, self.size.width-20, 190/2*kDeviceWidth/375)];
+        _imageview.backgroundColor = [UIColor redColor];
+        _imageview.contentMode = UIViewContentModeScaleAspectFill;
+        [self addSubview:_imageview];
+        
+        _viedoType = [[UIImageView alloc]initWithFrame:CGRectMake(_imageview.width-65/2, 0, 65/2, 65/2)];
+        [_imageview addSubview:_viedoType];
+
+        _titleLabel = [Common createLabel:CGRectMake(_imageview.left, _imageview.bottom+5, kDeviceWidth/2-20, 20) TextColor:@"000000" Font:[UIFont systemFontOfSize:15] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        [self addSubview:_titleLabel];
+
+        UIImage * image = [UIImage imageNamed:@"common.bundle/home/spark"];
+        _sparkImage = [[UIImageView alloc]initWithFrame:CGRectMake(_imageview.left, _titleLabel.bottom, image.size.width, 25)];
+        _sparkImage.image = image;
+        _sparkImage.contentMode = UIViewContentModeCenter;
+        [self addSubview:_sparkImage];
+
+        _readingLab = [Common createLabel:CGRectMake(_titleLabel.left+15, _titleLabel.bottom, 100, 25) TextColor:@"ff654c" Font:[UIFont systemFontOfSize:12] textAlignment:NSTextAlignmentLeft labTitle:nil];
+        [self addSubview:_readingLab];
+        
+    }
+
+    return self;
+}
+
+@end

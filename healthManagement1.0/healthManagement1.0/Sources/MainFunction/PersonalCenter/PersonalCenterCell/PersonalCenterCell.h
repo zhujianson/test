@@ -1,0 +1,20 @@
+//
+//  PersonalCenterCell.h
+//  jiuhaohealth2.1
+//
+//  Created by jiuhao-yangshuo on 14-7-25.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface PersonalCenterCell : UITableViewCell
+
+@property(nonatomic,retain) UILabel *labelName;
+@property(nonatomic,retain) UIImageView *cellImageView;
+@property(nonatomic,retain) UILabel *labelTip;
+
+- (void)setDicInfo:(NSDictionary *)dic;
+- (void)createBtn:(id)object isShow:(BOOL)isShow array:(NSArray*)arr;
+
+@end

@@ -1,0 +1,15 @@
+//
+//  EnterWeightView.h
+//  healthManagement1.0
+//
+//  Created by jiuhao-yangshuo on 16/6/3.
+//  Copyright © 2016年 xuGuohong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface EnterWeightView : UIView
+
++(void )showEnterWeightViewWithBlock:(KXBasicBlock)block;
+
+@end

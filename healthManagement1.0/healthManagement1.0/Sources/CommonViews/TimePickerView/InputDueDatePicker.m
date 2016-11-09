@@ -1,0 +1,141 @@
+//
+//  InputDueDatePicker.m
+//  dayima
+//
+//  Created by user on 14-2-20.
+//  Copyright (c) 2014年 user. All rights reserved.
+//
+
+#import "InputDueDatePicker.h"
+#define SIZE_HEIGHT 260
+
+@implementation InputDueDatePicker {
+    InputDueDatePickerBlock _inBlock;
+    UIView* m_view;
+    UIView *m_viewB;
+}
+@synthesize inputDueDatePicker = _inputDueDatePicker;
+//@synthesize dueAccessoryView = _dueAccessoryView;
+
+- (void)dealloc
+{
+    [_inputDueDatePicker release];
+//    [_dueAccessoryView release];
+    [m_view release];
+    [super dealloc];
+}
+
+- (id)initWithTitle:(NSString*)title
+{
+    self = [super init];
+    if (self) {
+        m_view = [[UIView alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        m_view.backgroundColor = [UIColor clearColor];
+		UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(hideView:)];
+        [m_view addGestureRecognizer:tap];
+       [tap release];
+
+        m_viewB = [[UIView alloc] init];
+//        m_viewB.layer.cornerRadius = 4;
+//        m_viewB.clipsToBounds = YES;
+        [m_view addSubview:m_viewB];
+        
+        //头
+        UIView *dueAccessoryView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kDeviceWidth, 35)];
+        dueAccessoryView.tag = 541;
+        dueAccessoryView.backgroundColor = [CommonImage colorWithHexString:The_ThemeColor];
+        [m_viewB addSubview:dueAccessoryView];
+        [dueAccessoryView release];
+        
+        UILabel *labTitle = [Common createLabel];
+        labTitle.frame = CGRectMake(7, 0, kDeviceWidth-120, dueAccessoryView.height);
+        labTitle.backgroundColor = [UIColor clearColor];
+        labTitle.textColor = [UIColor whiteColor];
+        labTitle.font = [UIFont systemFontOfSize:17];
+        labTitle.text = title;
+        [dueAccessoryView addSubview:labTitle];
+        [labTitle release];
+        
+        UIButton *but = [[UIButton alloc] initWithFrame:CGRectMake(kDeviceWidth-55, 0, 60, dueAccessoryView.height)];
+        [but setTitle:@"完成" forState:UIControlStateNormal];
+        [but setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        [but addTarget:self action:@selector(saveDueDatePicker) forControlEvents:UIControlEventTouchUpInside];
+        but.titleLabel.font = [UIFont systemFontOfSize:17];
+        [dueAccessoryView addSubview:but];
+        [but release];
+        
+        //时间选择器
+        _inputDueDatePicker = [[UIDatePicker alloc] initWithFrame:CGRectMake(0, dueAccessoryView.bottom, dueAccessoryView.width, kDeviceHeight/3)];
+        _inputDueDatePicker.clipsToBounds = YES;
+        NSLocale* locale = [[NSLocale alloc] initWithLocaleIdentifier:@"zh_CN"]; //设置为中文显示
+        _inputDueDatePicker.locale = locale;
+        [locale release];
+        NSDate* nowDate = [NSDate date];
+        
+        //初始化默认数据
+        _inputDueDatePicker.timeZone = [NSTimeZone localTimeZone];
+        _inputDueDatePicker.datePickerMode = UIDatePickerModeDate;
+        [_inputDueDatePicker setBackgroundColor:[CommonImage colorWithHexString:VERSION_BACKGROUD_COLOR]];
+        //        self.inputDueDatePicker.date = minDate;
+        //        self.inputDueDatePicker.minimumDate = minDate;
+        _inputDueDatePicker.maximumDate = nowDate;
+        [m_viewB addSubview:_inputDueDatePicker];
+        
+        m_viewB.frame = CGRectMake(0, kDeviceHeight+64, kDeviceWidth, _inputDueDatePicker.bottom);
+        //初始化_dueAccessoryView
+        [APP_DELEGATE addSubview:m_view];
+        [self showView];
+    }
+    return self;
+}
+
+//确定按钮触发的方法
+- (void)saveDueDatePicker
+{
+    NSDate* date = _inputDueDatePicker.date;
+    NSLog(@"date is %@", date);
+    _inBlock(date);
+	[self hideView:nil];
+
+}
+- (void)setInputDueDatePickerBlock:(InputDueDatePickerBlock)date
+{
+    _inBlock = [date copy];
+}
+
+- (void)hideView:(UITapGestureRecognizer*)view
+{
+//	if (view || view.view.tag == 541) {
+//		return;
+//	}
+    [UIView animateWithDuration:0.35 animations:^{
+//        m_viewB.frame = [Common rectWithOrigin:_inputDueDatePicker.frame x:0 y:kDeviceHeight+64];
+        m_viewB.transform = CGAffineTransformMakeTranslation(0, 0);
+//        _dueAccessoryView.frame = [Common rectWithOrigin:_dueAccessoryView.frame x:0 y:kDeviceHeight+64];
+        m_view.backgroundColor = [UIColor clearColor];
+    } completion:^(BOOL finished) {
+        [m_view removeFromSuperview];
+        [self removeFromSuperview];
+    }];
+}
+
+- (void)showView
+{
+    [UIView animateWithDuration:0.35 animations:^{
+        m_view.backgroundColor = [UIColor colorWithWhite:0 alpha:0.3];
+//        m_viewB.frame = [Common rectWithOrigin:_inputDueDatePicker.frame x:0 y:kDeviceHeight-SIZE_HEIGHT+108];
+        m_viewB.transform = CGAffineTransformMakeTranslation(0, -m_viewB.height);
+//    _dueAccessoryView.frame = [Common rectWithOrigin:_dueAccessoryView.frame x:0 y:kDeviceHeight-SIZE_HEIGHT+108-40];
+    }];
+}
+
+/*
+// Only override drawRect: if you perform custom drawing.
+// An empty implementation adversely affects performance during animation.
+- (void)drawRect:(CGRect)rect
+{
+    // Drawing code
+}
+*/
+
+@end

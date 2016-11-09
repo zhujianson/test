@@ -1,0 +1,22 @@
+//
+//  TopicDetailsViewController.h
+//  jiuhaohealth2.1
+//
+//  Created by xjs on 14-8-31.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "Common.h"
+#import "WebViewController.h"
+
+@interface TopicDetailsViewController : WebViewController<UIActionSheetDelegate>
+//@property (nonatomic,retain) ExpertTopicTableViewCell * experCell;
+@property (nonatomic,retain) NSDictionary * m_dic;
+//- (id)initWithTitle:(NSString*)title;
+
+
+- (void)showStatusBar;//状态栏隐藏/显示
+
+- (void)hideStatusBar;
+
+@end

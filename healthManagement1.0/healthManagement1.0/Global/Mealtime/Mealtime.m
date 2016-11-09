@@ -1,0 +1,197 @@
+//
+//  Mealtime.m
+//  jiuhaohealth4.0
+//
+//  Created by 徐国洪 on 15-6-25.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "Mealtime.h"
+
+@implementation Mealtime
+@synthesize mealtimeBlock;
+
+#pragma mark - 本地文件
++ (NSMutableDictionary*)getLocal
+{
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    
+    NSString *filePath = [[Common datePath] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@%@.plist", g_nowUserInfo.userid, @"Mealtime"]];
+    BOOL isExist = [[NSFileManager defaultManager] fileExistsAtPath:filePath];
+    if (isExist) {
+        dic = [NSMutableDictionary dictionaryWithContentsOfFile:filePath];
+    }
+    
+    return dic;
+}
+
++ (void)writeMealtime:(NSDictionary*)dic
+{
+    NSString *path = [Common datePath];
+    NSString *filePath = [path stringByAppendingPathComponent:[NSString stringWithFormat:@"%@%@.plist", g_nowUserInfo.userid, @"Mealtime"]];
+    BOOL isExist = [[NSFileManager defaultManager] fileExistsAtPath:filePath];
+    if (!isExist) {
+        //不存在创建
+        if (dic) {
+            BOOL ok = [dic writeToFile:filePath atomically:YES];
+            NSLog(@"-----ok:%d",ok);
+        }
+    }
+    else {
+        [dic writeToFile:filePath atomically:YES];
+    }
+}
+#pragma end
+
+
+- (id)initWithBlock:(MealtimeBlock)Mblock withType:(MealtimeType)type withView:(id)view
+{
+    self = [super init];
+    if (self) {
+        [g_winDic setObject:[NSMutableArray array] forKey:[NSString stringWithFormat:@"%x", (unsigned int)self]];
+        
+        m_vc = view;
+        
+        NSMutableDictionary *dic = [Mealtime getLocal];
+        
+        mealtimeType = type;
+        self.mealtimeBlock = Mblock;
+        if (dic && dic.count) {
+            [self fengzhuangMealtime:dic];
+//        }else{
+        }
+        [self getDateForServer];
+    }
+    
+    return self;
+}
+
+- (void)writerMealtime:(NSMutableArray*)array
+{
+    NSMutableDictionary *dic = [Mealtime getLocal];
+    [dic setObject:array forKey:@"result_set"];
+    
+    [Mealtime writeMealtime:dic];
+}
+
+/**
+ *  获取进餐时段0
+ */
+- (void)getDateForServer
+{
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    BOOL is = (BOOL)m_vc;
+    if (is) {
+        is = mealtimeBlock?1:0;
+    }
+    [[CommonHttpRequest defaultInstance] sendNewPostRequest:GET_TIME_CONF_1 values:dic requestKey:GET_TIME_CONF_1 delegate:self controller:m_vc actiViewFlag:is title:nil];
+}
+
+- (void)fengzhuangMealtime:(NSMutableDictionary*)dic
+{
+    NSMutableArray *mealtime = dic[@"result_set"];
+    
+    switch (mealtimeType) {
+        case allMealtime:
+            [self returnBlock:mealtime];
+            break;
+            
+        default:
+        {
+            NSMutableDictionary *today;
+            for (today in mealtime) {
+                if ([dic[@"type"] isEqualToString:today[@"type"]]) {
+                    break;
+                }
+            }
+            switch (mealtimeType) {
+                case todayMealtime:
+                {
+                    [self returnBlock:today];
+                }
+                    break;
+                case nowMealtimeConf:
+                {
+                    NSString *strTime = [CommonDate getServerTime:[CommonDate getLongTime] type:1];
+                    NSArray *timeArray = [strTime componentsSeparatedByString:@":"];
+                    int hour = [timeArray[0] intValue];
+                    int nowTime = [[strTime stringByReplacingOccurrencesOfString:@":" withString:@""] intValue];
+                    int ershisi = nowTime;
+                    if (!hour) {
+                        ershisi = [[@"24" stringByAppendingString:timeArray[1]] intValue];
+                    }
+                    int start, end;
+                    NSString *timebuffer;
+                    NSArray *test;
+                    
+                    BOOL is = NO;
+                    NSArray *conf = [NSArray arrayWithObjects:@"one", @"tow", @"three", @"four", @"five", @"six", @"seven", @"eight", nil];
+                    for (int i = 0; i < conf.count; i++) {
+                        test = [[today objectForKey:conf[i]] componentsSeparatedByString:@"-"];
+                        start = [[test[0] stringByReplacingOccurrencesOfString:@":" withString:@""] intValue];
+                        end = [[test[1] stringByReplacingOccurrencesOfString:@":" withString:@""] intValue];
+                        
+                        if (start > end) {
+                            end += 2400;
+                        }
+                        
+                        if ((nowTime >= start || ershisi > start) && nowTime < end) {
+                            is = YES;
+                            timebuffer = [CommonUser getIntBloodSugarArray][i];
+                            [self returnBlock:[NSString stringWithFormat:@"%@", timebuffer]];
+                            break;
+                        }
+                    }
+                    if (!is) {
+                        timebuffer = [CommonUser getIntBloodSugarArray][0];
+                        [self returnBlock:[NSString stringWithFormat:@"%@", timebuffer]];
+                    }
+                }
+                    break;
+                    
+                default:
+                    break;
+            }
+        }
+            break;
+    }
+}
+
+- (void)returnBlock:(id)dic
+{
+    if (mealtimeBlock) {
+        mealtimeBlock(dic);
+        [mealtimeBlock release];
+        mealtimeBlock = nil;
+    }
+}
+
+- (void)didFinishFail:(ASIHTTPRequest *)loader
+{
+    
+}
+
+- (void)didFinishSuccess:(ASIHTTPRequest *)loader
+{
+    NSString *responseString = [loader responseString];
+    NSDictionary *dic = [responseString KXjSONValueObject];
+    NSDictionary *head = [dic objectForKey:@"head"];
+    if (![[head objectForKey:@"state"] intValue])
+    {
+        NSMutableDictionary *body = [dic objectForKey:@"body"];
+        
+        if ([loader.username isEqualToString:GET_TIME_CONF_1]) {
+            [Mealtime writeMealtime:body];
+            [self fengzhuangMealtime:body];
+            
+            [g_winDic removeObjectForKey:[NSString stringWithFormat:@"%x", (unsigned int)self]];
+            [self release];
+        }
+    }
+    else {
+        [Common TipDialog:[head objectForKey:@"msg"]];
+    }
+}
+
+
+@end

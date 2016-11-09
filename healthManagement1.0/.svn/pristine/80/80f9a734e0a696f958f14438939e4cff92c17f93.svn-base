@@ -1,0 +1,214 @@
+//
+//  TopicTableViewCell.m
+//  jiuhaohealth2.1
+//
+//  Created by 徐国洪 on 14-8-16.
+//  Copyright (c) 2014年 xuGuohong. All rights reserved.
+//
+
+#import "TopicTableViewCell.h"
+
+/**
+ *  头
+ */
+@implementation TopicTableViewCell1
+@synthesize infoDic;
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        m_imageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 80, 80)];
+        [self.contentView addSubview:m_imageView];
+        
+        m_labTitle = [Common createLabel];
+        m_labTitle.frame = CGRectMake(10, 10, 100, 20);
+        m_labTitle.font = [UIFont systemFontOfSize:15];
+        [self.contentView addSubview:m_labTitle];
+        
+        UIButton *but = [UIButton buttonWithType:UIButtonTypeCustom];
+        [but setTitle:@"更多" forState:UIControlStateNormal];
+        [but addTarget:self action:@selector(butEventMore) forControlEvents:UIControlEventTouchUpInside];
+        [self.contentView addSubview:but];
+    }
+    return self;
+}
+
+- (void)setInfoDic:(NSDictionary *)dic
+{
+    infoDic = dic;
+	m_labTitle.text = [dic objectForKey:@"productName"];
+}
+
+- (void)setIconImage:(UIImage *)image
+{
+	[m_imageView setImage:image];
+}
+
+- (void)butEventMore
+{
+}
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+- (void)dealloc
+{
+    [m_imageView release];
+    [m_labTitle release];
+    
+    [super dealloc];
+}
+
+@end
+
+
+
+/**
+ *  图文
+ */
+@implementation TopicTableViewCell2
+@synthesize infoDic;
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        m_imageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 80, 80)];
+        [self.contentView addSubview:m_imageView];
+        
+        m_labTitle = [Common createLabel];
+        m_labTitle.frame = CGRectMake(10, 10, 100, 20);
+        m_labTitle.font = [UIFont systemFontOfSize:15];
+        [self.contentView addSubview:m_labTitle];
+        
+        m_labDetail = [Common createLabel];
+        m_labDetail.frame = CGRectMake(50, 50, 100, 100);
+        m_labDetail.font = [UIFont systemFontOfSize:14];
+        m_labDetail.textColor = [CommonImage colorWithHexString:@""];
+        [self.contentView addSubview:m_labDetail];
+        
+        UIButton *but = [UIButton buttonWithType:UIButtonTypeCustom];
+        [but setTitle:@"热门" forState:UIControlStateNormal];
+        [but addTarget:self action:@selector(butEventRemen) forControlEvents:UIControlEventTouchUpInside];
+        [self.contentView addSubview:but];
+    }
+    return self;
+}
+
+- (void)setInfoDic:(NSDictionary *)dic
+{
+    infoDic = dic;
+	m_labTitle.text = [dic objectForKey:@"productName"];
+    m_labDetail.text = [dic objectForKey:@""];
+}
+
+- (void)setIconImage:(UIImage *)image
+{
+	[m_imageView setImage:image];
+}
+
+- (void)butEventRemen
+{
+}
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+    
+    // Configure the view for the selected state
+}
+
+- (void)dealloc
+{
+    [m_imageView release];
+    [m_labTitle release];
+    [m_labDetail release];
+    
+    [super dealloc];
+}
+
+@end
+
+
+
+/**
+ *  图文
+ */
+@implementation TopicTableViewCell3
+@synthesize infoDic;
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        
+        m_labTitle = [Common createLabel];
+        m_labTitle.frame = CGRectMake(10, 10, 100, 20);
+        m_labTitle.font = [UIFont systemFontOfSize:15];
+        [self.contentView addSubview:m_labTitle];
+        
+        m_labDetail = [Common createLabel];
+        m_labDetail.frame = CGRectMake(50, 50, 100, 100);
+        m_labDetail.font = [UIFont systemFontOfSize:14];
+        m_labDetail.textColor = [CommonImage colorWithHexString:@""];
+        [self.contentView addSubview:m_labDetail];
+        
+        m_button = [[UIButton alloc] initWithFrame:CGRectMake(240, 20, 60, 30)];
+        m_button.hidden = YES;
+        [m_button setTitle:@"看一下" forState:UIControlStateNormal];
+        [m_button addTarget:self action:@selector(butEventRemen) forControlEvents:UIControlEventTouchUpInside];
+        [self.contentView addSubview:m_button];
+    }
+    return self;
+}
+
+- (void)setInfoDic:(NSDictionary *)dic
+{
+    infoDic = dic;
+	m_labTitle.text = [dic objectForKey:@"productName"];
+    m_labDetail.text = [dic objectForKey:@""];
+    
+    m_button.hidden = [[dic objectForKey:@""] boolValue];
+    [m_button setTitle:[dic objectForKey:@""] forState:UIControlStateNormal];
+}
+
+- (void)butEventRemen
+{
+}
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+    
+    // Configure the view for the selected state
+}
+
+- (void)dealloc
+{
+    [m_labTitle release];
+    [m_labDetail release];
+    
+    [super dealloc];
+}
+
+@end

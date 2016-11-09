@@ -1,0 +1,106 @@
+//
+//  FriendModel.m
+//  healthManagement1.0
+//
+//  Created by 徐国洪 on 15/10/16.
+//  Copyright © 2015年 xuGuohong. All rights reserved.
+//
+
+#import "FriendModel.h"
+
+@implementation FriendModel
+
+
++ (NSMutableArray*)getFriendMArray:(NSDictionary*)dic
+{
+    NSMutableArray *nArray = [NSMutableArray array];
+    
+    FriendModel *friendM;
+    
+    NSArray *doctors = dic[@"doctors"];
+    NSMutableArray *docArray = [NSMutableArray array];
+    for (int i = 0; i < doctors.count; i++) {
+        friendM = [[FriendModel alloc] initWithDic:doctors[i]];
+        [docArray addObject:friendM];
+    }
+    if (docArray.count) {
+        NSMutableDictionary *doctorsDic = [NSMutableDictionary dictionary];
+        [doctorsDic setObject:@"我的医生" forKey:@"title"];
+        [doctorsDic setObject:docArray forKey:@"array"];
+        [nArray addObject:doctorsDic];
+    }
+    
+    NSArray *otherDoctors = dic[@"otherDoctors"];
+    NSMutableArray *otherDocArray = [NSMutableArray array];
+    for (int i = 0; i < otherDoctors.count; i++) {
+        friendM = [[FriendModel alloc] initWithDic:otherDoctors[i]];
+        [otherDocArray addObject:friendM];
+    }
+    if (otherDocArray.count) {
+        NSMutableDictionary *otherDoctorsDic = [NSMutableDictionary dictionary];
+        [otherDoctorsDic setObject:@"更多医生" forKey:@"title"];
+        [otherDoctorsDic setObject:otherDocArray forKey:@"array"];
+        [nArray addObject:otherDoctorsDic];
+    }
+    
+    return nArray;
+}
+
+
+- (id)initWithDic:(NSDictionary*)dic
+{
+    self = [super init];
+    if (self) {
+        self.accountId = [NSString stringWithFormat:@"%@", dic[@"accountId"]];
+        self.nickName = [Common isNULLString3:dic[@"nickName"]];
+        self.userPhoto = [Common isNULLString3:dic[@"userPhoto"]];
+        self.channelName = [Common isNULLString3:dic[@"channelName"]];
+        self.typeName = [Common isNULLString3:dic[@"typeName"]];
+        self.typeColor = [Common isNULLString3:dic[@"typeColor"]];
+        self.info = [Common isNULLString3:dic[@"info"]];
+        self.expectMessage = [Common isNULLString3:dic[@"expectMessage"]];
+        self.impressions = dic[@"impressions"];
+        self.chatContent = [Common isNULLString3:dic[@"chatContent"]];
+        self.chatTime = (long)([dic[@"chatTime"] longLongValue]/1000);
+        self.chatContentType = [dic[@"chatContentType"] intValue];
+        self.unReadCount = [dic[@"unReadCount"] intValue];
+    }
+    
+    return self;
+}
+
+- (NSMutableDictionary*)getFriendModelDic
+{
+    NSMutableDictionary *dic = [[NSMutableDictionary alloc] init];
+    
+    [dic setObject:self.accountId forKey:@"accountId"];
+    [dic setObject:self.nickName forKey:@"nickName"];
+    [dic setObject:self.userPhoto forKey:@"userPhoto"];
+    [dic setObject:self.channelName forKey:@"channelName"];
+    [dic setObject:self.typeName forKey:@"typeName"];
+    [dic setObject:self.typeColor forKey:@"typeColor"];
+    [dic setObject:self.info forKey:@"info"];
+    [dic setObject:self.expectMessage forKey:@"expectMessage"];
+    [dic setObject:self.impressions forKey:@"impressions"];
+    [dic setObject:self.chatContent forKey:@"chatContent"];
+    [dic setObject:[NSNumber numberWithLong:self.chatTime] forKey:@"chatTime"];
+    [dic setObject:[NSNumber numberWithLong:self.unReadCount] forKey:@"unReadCount"];
+    [dic setObject:[NSNumber numberWithLong:self.chatContentType] forKey:@"chatContentType"];
+    
+    return dic;
+}
+
+- (void)dealloc
+{
+    self.userPhoto = nil;
+    self.nickName = nil;
+    self.typeColor = nil;
+    self.accountId = nil;
+    self.channelName = nil;
+    self.typeName = nil;
+    self.info = nil;
+    self.impressions = nil;
+    self.chatContent = nil;
+}
+
+@end

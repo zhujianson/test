@@ -1,0 +1,181 @@
+ //
+//  FriendListViewController.m
+//  jiuhaohealth3.0
+//
+//  Created by jiuhao-yangshuo on 15-3-9.
+//  Copyright (c) 2015年 xuGuohong. All rights reserved.
+//
+
+#import "FriendListViewController.h"
+#import "FriendListCell.h"
+#import "IconOperationQueue.h"
+#import "EGORefreshTableHeaderView.h"
+#import "FriendApplyViewController.h"
+#import "ShowConsultViewController.h"
+#import "AddBuddy.h"
+#import "FoodRecordViewController.h"
+
+#import "RadarDoctorViewController.h"
+#import "InvitationDoctorViewController.h"
+#import "LookingDoctorViewController.h"
+
+#import "FriendListTableView.h"
+
+@implementation FriendListViewController
+{
+    FriendListTableView * m_doctorView;
+    FriendListTableView * m_friendView;
+    UISegmentedControl * segmentedControl;
+}
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+//        self.title = @"医生和朋友";
+//        self.log_pageID = 85;
+//        UIBarButtonItem *right = [Common createNavBarButton:self setEvent:@selector(butAddEvent) withNormalImge:@"common.bundle/nav/newadd_btn_pre.png" andHighlightImge:nil];
+//        self.navigationItem.rightBarButtonItem = right;
+        UIBarButtonItem *right = [[UIBarButtonItem alloc] initWithTitle:@"添加 " style:UIBarButtonItemStylePlain target:self action:@selector(butAddEvent)];
+        self.navigationItem.rightBarButtonItem = right;
+        [right release];
+
+    }
+    return self;
+}
+
+- (BOOL)closeNowView
+{
+    [super closeNowView];
+    
+    //正常返回从医生列表里面
+    for (UIViewController *subVC in self.navigationController.viewControllers)
+    {
+        if ([subVC isKindOfClass:[FoodRecordViewController class]])
+        {
+            [self.navigationController popToRootViewControllerAnimated:YES];
+            return NO;
+        }
+    }
+    return YES;
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    if (m_doctorView) {
+        [m_doctorView viewWillAppear:animated];
+    }
+    if (m_friendView) {
+        [m_friendView viewWillAppear:animated];
+    }
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    m_nowPage = 1;
+    
+    NSArray *segmentedArray = [NSArray arrayWithObjects:@"医生",@"糖友",nil];
+    //初始化UISegmentedControl
+    CGFloat w = 185*kDeviceWidth/375;
+    
+    segmentedControl = [[[UISegmentedControl alloc]initWithItems:segmentedArray]autorelease];
+    segmentedControl.frame = CGRectMake((kDeviceWidth-w)/2, 25/2, w, 30);
+    NSDictionary *dic = [NSDictionary dictionaryWithObjectsAndKeys:[CommonImage colorWithHexString:COLOR_FF5351],UITextAttributeTextColor,  [UIFont fontWithName:@"SnellRoundhand-Bold"size:14],UITextAttributeFont ,[UIColor whiteColor],UITextAttributeTextShadowColor ,nil];
+    [segmentedControl setTitleTextAttributes:dic forState:UIControlStateNormal];
+
+    segmentedControl.selectedSegmentIndex = 0;//设置默认选择项索引
+    segmentedControl.tintColor = [CommonImage colorWithHexString:VERSION_TEXT_COLOR];
+    segmentedControl.segmentedControlStyle = UISegmentedControlStylePlain;//设置样式
+    [segmentedControl addTarget:self action:@selector(segmented) forControlEvents:UIControlEventValueChanged];
+    self.navigationItem.titleView = segmentedControl;
+    
+    m_doctorView = [[FriendListTableView alloc]init];
+    m_doctorView.type = doctorApply;
+    m_doctorView.m_superClass = self;
+    m_doctorView.FoodImageDic = self.FoodImageDic;
+    m_doctorView.view.frame = CGRectMake(0, 0, kDeviceWidth, kDeviceHeight+64);
+    [self.view addSubview:m_doctorView.view];
+    [m_doctorView setFoundListViewViewBlock:^(NSDictionary *dataDic) {
+        if (dataDic[@"applyCount"]) {
+            FriendApplyViewController * friend = [[FriendApplyViewController alloc] init];
+            friend.applyType = doctorApply;
+            [self.navigationController pushViewController:friend animated:YES];
+            [friend release];
+        }
+        else {
+            [self toShowConsultViewController:[dataDic mutableCopy]];
+        }
+    }];
+}
+
+- (void)segmented
+{
+    if (!m_friendView) {
+        m_friendView = [[FriendListTableView alloc]init];
+        m_friendView.type = userApply;
+        m_friendView.m_superClass = self;
+        m_friendView.FoodImageDic = self.FoodImageDic;
+        m_friendView.view.frame = m_doctorView.view.frame;
+        [self.view addSubview:m_friendView.view];
+        [m_friendView setFoundListViewViewBlock:^(NSDictionary *dataDic) {
+            if (dataDic[@"applyCount"]) {
+                FriendApplyViewController * friend = [[FriendApplyViewController alloc]init];
+                friend.applyType = userApply;
+                [self.navigationController pushViewController:friend animated:YES];
+                [friend release];
+            }
+            else {
+                [self toShowConsultViewController:[dataDic mutableCopy]];
+            }
+        }];
+    }
+    if (!segmentedControl.selectedSegmentIndex) {
+        m_friendView.view.hidden = YES;
+        m_doctorView.view.hidden = NO;
+    }else{
+        m_friendView.view.hidden = NO;
+        m_doctorView.view.hidden = YES;
+    }
+}
+
+- (void)butAddEvent
+{
+//    if (!segmentedControl.selectedSegmentIndex) {
+//        LookingDoctorViewController * radar = [[LookingDoctorViewController alloc]init];
+//        [self.navigationController pushViewController:radar animated:YES];
+//        [radar release];
+//    }else{
+        AddBuddy* code = [[AddBuddy alloc] init];
+        //                edit.log_pageID = 82;
+        code.title = @"查找";
+        [self.navigationController pushViewController:code animated:YES];
+        [code release];
+//    }
+}
+
+- (void)dealloc
+{
+    [super dealloc];
+}
+
+- (void)toShowConsultViewController:(NSMutableDictionary*)dic
+{
+    ShowConsultViewController *showConsultVC = [[ShowConsultViewController alloc] init];
+    [showConsultVC setM_dicInfo:dic];
+    showConsultVC.title = @"问医生";
+    showConsultVC.log_pageID = 59;
+    if (self.FoodImageDic) {
+        showConsultVC.FoodImageDic = self.FoodImageDic;
+//        [self.FoodImageDic release];
+        self.FoodImageDic = nil;
+    }
+    [self.navigationController pushViewController:showConsultVC animated:YES];
+    [showConsultVC release];
+    [dic release];
+}
+
+@end
+
+
+
