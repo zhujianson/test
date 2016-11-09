@@ -10,11 +10,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "healthManagement1.0/Sources/MainFunction/DefauleViewController.m"
-            timestampString = "495425819.793366"
+            timestampString = "500368832.180909"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "713"
-            endingLineNumber = "713"
+            startingLineNumber = "712"
+            endingLineNumber = "712"
             landmarkName = "-gotoSelectViewController"
             landmarkType = "7">
          </BreakpointContent>
@@ -668,11 +668,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "healthManagement1.0/Sources/MainFunction/DefauleViewController.m"
-            timestampString = "495425819.793366"
+            timestampString = "500368832.180909"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "92"
-            endingLineNumber = "92"
+            startingLineNumber = "91"
+            endingLineNumber = "91"
             landmarkName = "-creatViewControolers"
             landmarkType = "7">
          </BreakpointContent>
@@ -876,11 +876,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "healthManagement1.0/Sources/MainFunction/DefauleViewController.m"
-            timestampString = "495425819.793366"
+            timestampString = "500368832.180909"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "497"
-            endingLineNumber = "497"
+            startingLineNumber = "496"
+            endingLineNumber = "496"
             landmarkName = "-removeImage:"
             landmarkType = "7">
          </BreakpointContent>
@@ -1036,11 +1036,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "healthManagement1.0/Sources/MainFunction/DefauleViewController.m"
-            timestampString = "495425819.793366"
+            timestampString = "500368832.180909"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "814"
-            endingLineNumber = "814"
+            startingLineNumber = "813"
+            endingLineNumber = "813"
             landmarkName = "-didFinishSuccess:"
             landmarkType = "7">
          </BreakpointContent>
@@ -1052,11 +1052,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "healthManagement1.0/Sources/MainFunction/DefauleViewController.m"
-            timestampString = "495425819.793366"
+            timestampString = "500368832.180909"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "368"
-            endingLineNumber = "368"
+            startingLineNumber = "367"
+            endingLineNumber = "367"
             landmarkName = "-setTabbarTip"
             landmarkType = "7">
             <Locations>
@@ -1228,11 +1228,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "healthManagement1.0/Sources/MainFunction/DefauleViewController.m"
-            timestampString = "495425819.793366"
+            timestampString = "500368832.180909"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "378"
-            endingLineNumber = "378"
+            startingLineNumber = "377"
+            endingLineNumber = "377"
             landmarkName = "-btnClick:"
             landmarkType = "7">
          </BreakpointContent>

@@ -81,7 +81,6 @@
     
     //健康小屋检查项目
     ReportViewController *com = [[ReportViewController alloc] init];
-//    com.m_tableHeight = kDeviceHeight - g_tabbarHeight;
     CommonNavViewController *nav3 = [[CommonNavViewController alloc] initWithRootViewController:com];
     [com release];
     nav3.m_DefalutViewCon = self;
